@@ -2,17 +2,18 @@
 
 ## Critical
 
-1. **Unity 6 Editor is not installed.** There is no playable 3D client, no NGO session, no
-   dedicated-server binary, and no PC/Android/iOS build. Everything in `client/` is a skeleton.
-2. **No live multiplayer exists yet.** The networking layer (NGO transport, snapshots,
-   prediction, dedicated server hosting) is designed but not written. Nothing here should be
-   described as an online game.
-3. **Docker daemon was not running**, so PostgreSQL and Redis were never live-tested. The API
+1. **No live multiplayer exists yet.** The networking layer (NGO transport, snapshots,
+   prediction, dedicated server hosting) is designed but not written (targeted for Phase 2).
+2. **Docker daemon was not running**, so PostgreSQL and Redis were never live-tested. The API
    runs on SQLite for local development only.
-4. **iOS builds require macOS.** This machine is Windows.
+3. **iOS builds require macOS.** This machine is Windows.
 
-## Corrected
+## Corrected / Resolved
 
+4. **Phase 1 Complete:** Unity 6 LTS 6000.6.9f1 is verified and active. The playable 3D client
+   has been built (`Builds/Windows/OutrunAftermath.exe`) with character controller, input system,
+   dual FPS/TPS camera rig with occlusion collision prevention, 3-weapon tactical arsenal, damageable
+   targets/hazards, tactical HUD, and Dead City greybox level.
 5. Phase 0 documentation claimed the simulation and API were tested. They did not compile.
    Both now build and the suite passes (73 tests). Treat any older claim as invalid.
 
