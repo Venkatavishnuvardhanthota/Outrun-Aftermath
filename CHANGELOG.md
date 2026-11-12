@@ -2,6 +2,19 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [0.3.0] - 2026-11-12 - Phase 1: Core Unity Foundation
+
+### Added
+- Real Input System integration (`InputManager.cs`) supporting PC (WASD, mouse) and Gamepad.
+- Dual perspective camera rig (`CameraRig.cs`) with seamless FPS/TPS toggling, occlusion collision detection, ADS FOV zoom, and procedural recoil kick.
+- Locomotion Character Motor (`CharacterMotor.cs`) supporting walk, run, sprint, crouch, slide, jump, and downed crawl, with consistent hitboxes across perspectives.
+- Player Lifecycle system (`PlayerHealth.cs`) with 100 Health + 50 Armor, 30s bleed-out downed state, hold-to-revive with damage interruption, elimination, and auto-respawn.
+- Tactical Weapon & Combat system (`WeaponSystem.cs`) with 3 weapons (Vanguard-4 AR, Breacher-12 Shotgun, Sidekick-9 Pistol), fire modes, spread bloom dynamics, bullet tracers, and headshot multipliers.
+- Damageable targets and explosive hazard barrels (`DamageableTarget.cs`).
+- Tactical in-game HUD (`TacticalHUD.cs`) with dynamic crosshair spread, hitmarkers, health/armor bars, ammo counter, reload meter, 360° compass, downed alert overlay, and controls guide.
+- Procedural Dead City Sector 4 greybox environment (`DeadCityEnvironment.cs`) with avenues, multi-story buildings, sniper terraces, container stacks, cover barricades, and extraction zone.
+- Verified standalone Windows player build (`Builds/Windows/OutrunAftermath.exe`) running with 0 errors or exceptions.
+
 ## [0.2.0] - 2026-11-12
 
 ### Added

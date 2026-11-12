@@ -25,6 +25,9 @@ obj/
 TestResults/
 coverage/
 
+# Logs
+*.log
+
 # Unity
 [Ll]ibrary/
 [Tt]emp/
@@ -45,6 +48,9 @@ sysinfo.txt
 *.unitypackage
 *.app
 InitTestScene*.unity*
+
+# Logs
+*.log
 
 # Unity generated
 client/[Ll]ibrary/

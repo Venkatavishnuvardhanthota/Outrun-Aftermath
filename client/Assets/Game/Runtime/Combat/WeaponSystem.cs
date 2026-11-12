@@ -1,0 +1,451 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using OutrunAftermath.Client.Runtime.Input;
+using OutrunAftermath.Client.Runtime.CameraSystem;
+using OutrunAftermath.Client.Runtime.Character;
+
+namespace OutrunAftermath.Client.Runtime.Combat
+{
+    public enum FireMode
+    {
+        FullAuto,
+        SemiAuto,
+        Burst
+    }
+
+    [System.Serializable]
+    public sealed class WeaponData
+    {
+        public string id;
+        public string displayName;
+        public FireMode fireMode;
+        public float damage = 28f;
+        public float headshotMultiplier = 2.0f;
+        public float roundsPerMinute = 650f;
+        public int magazineSize = 30;
+        public int currentMagazine = 30;
+        public int reserveAmmo = 120;
+        public float reloadTime = 2.2f;
+        public float range = 85f;
+        public float baseSpread = 1.2f;
+        public float maxSpread = 6.5f;
+        public float recoilPitch = 1.1f;
+        public float recoilYaw = 0.45f;
+        public int pelletsPerShot = 1; // 8 for shotguns
+    }
+
+    /// <summary>
+    /// Tactical Weapon System for OUTRUN: AFTERMATH.
+    /// Supports multiple weapon slots, ADS accuracy bonuses, dynamic spread bloom,
+    /// procedural recoil impulse, hit registration, and realistic ammo lifecycle.
+    /// </summary>
+    public sealed class WeaponSystem : MonoBehaviour
+    {
+        [Header("Equipped Arsenal")]
+        [SerializeField] private List<WeaponData> loadout = new List<WeaponData>();
+        [SerializeField] private int activeSlotIndex = 0;
+
+        [Header("Gun Rig & Visuals")]
+        [SerializeField] private Transform gunRoot;
+        [SerializeField] private Transform muzzlePoint;
+        [SerializeField] private LayerMask hitMask = ~0;
+
+        private CameraRig _cameraRig;
+        private CharacterMotor _motor;
+        private PlayerHealth _health;
+
+        private float _nextFireTime;
+        private float _currentSpread;
+        private bool _isReloading;
+        private float _reloadTimer;
+        private Vector3 _gunLocalRestPos = new Vector3(0.24f, -0.2f, 0.45f);
+        private Vector3 _gunAdsPos = new Vector3(0f, -0.14f, 0.32f);
+        private Vector3 _proceduralRecoil;
+
+        public event Action<WeaponData> OnWeaponSwitched;
+        public event Action<int, int> OnAmmoChanged; // currentMag, reserve
+        public event Action<bool, bool> OnHitConfirmed; // isHit, isHeadshot (kill confirmation)
+        public event Action OnFired;
+        public event Action OnReloadStarted;
+        public event Action OnReloadCompleted;
+
+        public WeaponData CurrentWeapon => (loadout.Count > 0 && activeSlotIndex < loadout.Count) ? loadout[activeSlotIndex] : null;
+        public bool IsReloading => _isReloading;
+        public float ReloadProgress => _isReloading ? (1f - (_reloadTimer / CurrentWeapon.reloadTime)) : 0f;
+        public float CurrentSpread => _currentSpread;
+
+        public void Initialize(CameraRig cameraRig, CharacterMotor motor, PlayerHealth health)
+        {
+            _cameraRig = cameraRig;
+            _motor = motor;
+            _health = health;
+
+            if (loadout.Count == 0)
+            {
+                // Default 3-weapon tactical loadout
+                loadout.Add(new WeaponData
+                {
+                    id = "vanguard4",
+                    displayName = "Vanguard-4 Assault Rifle",
+                    fireMode = FireMode.FullAuto,
+                    damage = 28f,
+                    headshotMultiplier = 2.0f,
+                    roundsPerMinute = 620f,
+                    magazineSize = 30,
+                    currentMagazine = 30,
+                    reserveAmmo = 150,
+                    reloadTime = 2.2f,
+                    range = 100f,
+                    baseSpread = 1.1f,
+                    maxSpread = 5.2f,
+                    recoilPitch = 1.15f,
+                    recoilYaw = 0.4f,
+                    pelletsPerShot = 1
+                });
+
+                loadout.Add(new WeaponData
+                {
+                    id = "breacher12",
+                    displayName = "Breacher-12 Tactical Shotgun",
+                    fireMode = FireMode.SemiAuto,
+                    damage = 16f, // 16 * 8 = 128 point blank
+                    headshotMultiplier = 1.5f,
+                    roundsPerMinute = 160f,
+                    magazineSize = 8,
+                    currentMagazine = 8,
+                    reserveAmmo = 40,
+                    reloadTime = 2.8f,
+                    range = 35f,
+                    baseSpread = 3.8f,
+                    maxSpread = 7.5f,
+                    recoilPitch = 3.2f,
+                    recoilYaw = 0.8f,
+                    pelletsPerShot = 8
+                });
+
+                loadout.Add(new WeaponData
+                {
+                    id = "sidekick9",
+                    displayName = "Sidekick-9 Combat Pistol",
+                    fireMode = FireMode.SemiAuto,
+                    damage = 34f,
+                    headshotMultiplier = 2.0f,
+                    roundsPerMinute = 440f,
+                    magazineSize = 15,
+                    currentMagazine = 15,
+                    reserveAmmo = 75,
+                    reloadTime = 1.6f,
+                    range = 65f,
+                    baseSpread = 0.8f,
+                    maxSpread = 4.0f,
+                    recoilPitch = 0.85f,
+                    recoilYaw = 0.3f,
+                    pelletsPerShot = 1
+                });
+            }
+
+            SetupVisualGunRig();
+            EquipSlot(0);
+        }
+
+        private void SetupVisualGunRig()
+        {
+            if (gunRoot == null && _cameraRig != null)
+            {
+                var gunHolder = new GameObject("GunRig");
+                gunHolder.transform.SetParent(_cameraRig.UnityCamera.transform);
+                gunHolder.transform.localPosition = _gunLocalRestPos;
+                gunHolder.transform.localRotation = Quaternion.identity;
+                gunRoot = gunHolder.transform;
+
+                // Procedural stylized gun mesh
+                var gunBody = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                gunBody.name = "GunBody";
+                gunBody.transform.SetParent(gunRoot);
+                gunBody.transform.localPosition = new Vector3(0f, 0f, 0.15f);
+                gunBody.transform.localScale = new Vector3(0.08f, 0.12f, 0.45f);
+                var col = gunBody.GetComponent<Collider>();
+                if (col != null) Destroy(col);
+
+                var mat = gunBody.GetComponent<Renderer>()?.material;
+                if (mat != null) mat.color = new Color(0.18f, 0.2f, 0.22f);
+
+                // Barrel
+                var barrel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                barrel.name = "GunBarrel";
+                barrel.transform.SetParent(gunRoot);
+                barrel.transform.localPosition = new Vector3(0f, 0.03f, 0.42f);
+                barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                barrel.transform.localScale = new Vector3(0.04f, 0.15f, 0.04f);
+                var bCol = barrel.GetComponent<Collider>();
+                if (bCol != null) Destroy(bCol);
+
+                var bMat = barrel.GetComponent<Renderer>()?.material;
+                if (bMat != null) bMat.color = new Color(0.12f, 0.13f, 0.14f);
+
+                // Muzzle tip
+                var muzzle = new GameObject("MuzzleTip");
+                muzzle.transform.SetParent(gunRoot);
+                muzzle.transform.localPosition = new Vector3(0f, 0.03f, 0.58f);
+                muzzlePoint = muzzle.transform;
+            }
+        }
+
+        public void ProcessWeapons(PlayerInputState input)
+        {
+            if (_health != null && _health.State != PlayerLifeState.Alive)
+            {
+                return; // Disabled when downed or eliminated
+            }
+
+            var weapon = CurrentWeapon;
+            if (weapon == null) return;
+
+            // Weapon slot switching (1, 2, 3)
+            if (input.WeaponSlot > 0 && input.WeaponSlot <= loadout.Count)
+            {
+                EquipSlot(input.WeaponSlot - 1);
+                return;
+            }
+
+            // Reload logic
+            if (_isReloading)
+            {
+                _reloadTimer -= Time.deltaTime;
+                if (_reloadTimer <= 0f)
+                {
+                    CompleteReload();
+                }
+            }
+            else if (input.Reload)
+            {
+                StartReload();
+            }
+
+            // Spread dynamics
+            UpdateSpread(input);
+
+            // Firing logic
+            bool wantsToFire = (weapon.fireMode == FireMode.FullAuto) ? input.FireHeld : input.Fire;
+
+            if (wantsToFire && Time.time >= _nextFireTime && !_isReloading)
+            {
+                if (weapon.currentMagazine > 0)
+                {
+                    ExecuteShot(weapon, input.Aim);
+                }
+                else
+                {
+                    // Empty mag click
+                    _nextFireTime = Time.time + 0.35f;
+                    StartReload();
+                }
+            }
+
+            // Procedural gun animation (ADS alignment and recoil recovery)
+            UpdateGunVisuals(input.Aim);
+        }
+
+        private void UpdateSpread(PlayerInputState input)
+        {
+            var weapon = CurrentWeapon;
+            if (weapon == null) return;
+
+            float targetSpread = weapon.baseSpread;
+
+            // ADS tightens spread significantly
+            if (input.Aim) targetSpread *= 0.35f;
+
+            // Stance modifier
+            if (_motor != null)
+            {
+                if (_motor.Stance == MovementStance.Crouching) targetSpread *= 0.7f;
+                else if (_motor.Stance == MovementStance.Sliding || !_motor.IsGrounded) targetSpread *= 2.4f;
+                else if (input.Sprint) targetSpread *= 1.8f;
+                else if (_motor.CurrentSpeed > 0.5f) targetSpread *= 1.4f;
+            }
+
+            // Smooth recovery towards target spread
+            _currentSpread = Mathf.Lerp(_currentSpread, targetSpread, Time.deltaTime * 8f);
+        }
+
+        private void ExecuteShot(WeaponData weapon, bool isAiming)
+        {
+            weapon.currentMagazine--;
+            _nextFireTime = Time.time + (60f / weapon.roundsPerMinute);
+
+            // Increase spread per shot
+            _currentSpread = Mathf.Min(weapon.maxSpread, _currentSpread + (weapon.baseSpread * 0.45f));
+
+            // Camera recoil
+            if (_cameraRig != null)
+            {
+                float aimMultiplier = isAiming ? 0.65f : 1.0f;
+                _cameraRig.ApplyRecoilImpulse(weapon.recoilPitch * aimMultiplier, weapon.recoilYaw * aimMultiplier);
+            }
+
+            // Procedural gun kick
+            _proceduralRecoil += new Vector3(
+                UnityEngine.Random.Range(-0.015f, 0.015f),
+                0.025f,
+                -0.07f
+            );
+
+            // Raycast shot execution
+            Ray baseRay = _cameraRig.GetAimRay();
+            bool registeredAnyHit = false;
+            bool registeredHeadshot = false;
+
+            for (int i = 0; i < weapon.pelletsPerShot; i++)
+            {
+                Vector3 spreadDir = CalculateSpreadDirection(baseRay.direction, _currentSpread);
+                Ray shotRay = new Ray(baseRay.origin, spreadDir);
+
+                if (Physics.Raycast(shotRay, out RaycastHit hit, weapon.range, hitMask, QueryTriggerInteraction.Ignore))
+                {
+                    registeredAnyHit = true;
+
+                    // Check headshot (e.g. hit height relative to target or collider name)
+                    bool isHeadshot = hit.collider.name.ToLower().Contains("head") ||
+                                      (hit.point.y - hit.collider.bounds.min.y) > (hit.collider.bounds.size.y * 0.75f);
+
+                    if (isHeadshot) registeredHeadshot = true;
+
+                    float actualDamage = isHeadshot ? weapon.damage * weapon.headshotMultiplier : weapon.damage;
+
+                    // Falloff over distance
+                    float distanceFactor = 1f - Mathf.Clamp01(hit.distance / weapon.range) * 0.45f;
+                    actualDamage *= distanceFactor;
+
+                    // Apply damage to target
+                    var damageable = hit.collider.GetComponentInParent<IDamageable>();
+                    if (damageable != null)
+                    {
+                        damageable.TakeDamage(actualDamage, hit.point, hit.normal, isHeadshot);
+                    }
+
+                    var playerHealth = hit.collider.GetComponentInParent<PlayerHealth>();
+                    if (playerHealth != null && playerHealth != _health)
+                    {
+                        playerHealth.TakeDamage(actualDamage, hit.point);
+                    }
+
+                    var rb = hit.collider.attachedRigidbody;
+                    if (rb != null)
+                    {
+                        rb.AddForceAtPosition(shotRay.direction * actualDamage * 4f, hit.point, ForceMode.Impulse);
+                    }
+
+                    // Render bullet tracer
+                    StartCoroutine(RenderTracer(muzzlePoint != null ? muzzlePoint.position : baseRay.origin, hit.point));
+                }
+                else
+                {
+                    // Bullet tracer into the distance
+                    Vector3 endPoint = shotRay.origin + shotRay.direction * weapon.range;
+                    StartCoroutine(RenderTracer(muzzlePoint != null ? muzzlePoint.position : baseRay.origin, endPoint));
+                }
+            }
+
+            if (registeredAnyHit)
+            {
+                OnHitConfirmed?.Invoke(true, registeredHeadshot);
+            }
+
+            OnFired?.Invoke();
+            OnAmmoChanged?.Invoke(weapon.currentMagazine, weapon.reserveAmmo);
+        }
+
+        private Vector3 CalculateSpreadDirection(Vector3 forward, float spreadAngleDegrees)
+        {
+            float spreadRadius = Mathf.Tan(spreadAngleDegrees * Mathf.Deg2Rad);
+            Vector2 randomCircle = UnityEngine.Random.insideUnitCircle * spreadRadius;
+
+            Vector3 right = Vector3.Cross(forward, Vector3.up).normalized;
+            if (right.sqrMagnitude < 0.001f) right = Vector3.right;
+            Vector3 up = Vector3.Cross(right, forward).normalized;
+
+            return (forward + right * randomCircle.x + up * randomCircle.y).normalized;
+        }
+
+        private IEnumerator RenderTracer(Vector3 start, Vector3 end)
+        {
+            var lineObj = new GameObject("BulletTracer");
+            var line = lineObj.AddComponent<LineRenderer>();
+            line.startWidth = 0.035f;
+            line.endWidth = 0.015f;
+            line.positionCount = 2;
+            line.SetPosition(0, start);
+            line.SetPosition(1, end);
+
+            var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? 
+                         Shader.Find("Sprites/Default") ?? 
+                         Shader.Find("Unlit/Color");
+            if (shader != null)
+            {
+                var mat = new Material(shader);
+                mat.color = new Color(1f, 0.85f, 0.35f, 0.85f);
+                line.material = mat;
+            }
+
+            yield return new WaitForSeconds(0.045f);
+            Destroy(lineObj);
+        }
+
+        public void StartReload()
+        {
+            var weapon = CurrentWeapon;
+            if (weapon == null || _isReloading) return;
+            if (weapon.currentMagazine >= weapon.magazineSize || weapon.reserveAmmo <= 0) return;
+
+            _isReloading = true;
+            _reloadTimer = weapon.reloadTime;
+            OnReloadStarted?.Invoke();
+        }
+
+        private void CompleteReload()
+        {
+            var weapon = CurrentWeapon;
+            if (weapon != null)
+            {
+                int needed = weapon.magazineSize - weapon.currentMagazine;
+                int transfer = Mathf.Min(needed, weapon.reserveAmmo);
+                weapon.currentMagazine += transfer;
+                weapon.reserveAmmo -= transfer;
+
+                OnAmmoChanged?.Invoke(weapon.currentMagazine, weapon.reserveAmmo);
+            }
+
+            _isReloading = false;
+            OnReloadCompleted?.Invoke();
+        }
+
+        public void EquipSlot(int slotIndex)
+        {
+            if (slotIndex < 0 || slotIndex >= loadout.Count) return;
+
+            activeSlotIndex = slotIndex;
+            _isReloading = false;
+            _currentSpread = CurrentWeapon.baseSpread;
+
+            OnWeaponSwitched?.Invoke(CurrentWeapon);
+            OnAmmoChanged?.Invoke(CurrentWeapon.currentMagazine, CurrentWeapon.reserveAmmo);
+        }
+
+        private void UpdateGunVisuals(bool isAiming)
+        {
+            if (gunRoot == null) return;
+
+            Vector3 targetLocalPos = isAiming ? _gunAdsPos : _gunLocalRestPos;
+            targetLocalPos += _proceduralRecoil;
+
+            gunRoot.localPosition = Vector3.Lerp(gunRoot.localPosition, targetLocalPos, Time.deltaTime * 18f);
+            gunRoot.localRotation = Quaternion.Slerp(gunRoot.localRotation, Quaternion.identity, Time.deltaTime * 14f);
+
+            // Recoil recovery
+            _proceduralRecoil = Vector3.Lerp(_proceduralRecoil, Vector3.zero, Time.deltaTime * 12f);
+        }
+    }
+}
