@@ -45,6 +45,7 @@ namespace OutrunAftermath.Client.Runtime.Character
         public event Action OnRevived;
         public event Action OnEliminated;
 
+        public bool IsServerControlled { get; set; }
         public PlayerLifeState State => _state;
         public float CurrentHealth => currentHealth;
         public float MaxHealth => maxHealth;
@@ -52,6 +53,27 @@ namespace OutrunAftermath.Client.Runtime.Character
         public float MaxArmor => maxArmor;
         public float BleedOutRemaining => _bleedOutTimer;
         public float ReviveProgress => _reviveProgress;
+
+        public void SetAllowRespawn(bool allow) => allowRespawn = allow;
+
+        public void ApplyReplicatedState(float health, float armor, PlayerLifeState newState, float bleedOutRemaining, float reviveProgress)
+        {
+            var prevState = _state;
+            currentHealth = health;
+            currentArmor = armor;
+            _state = newState;
+            _bleedOutTimer = bleedOutRemaining;
+            _reviveProgress = reviveProgress;
+
+            OnHealthArmorChanged?.Invoke(currentHealth, currentArmor);
+
+            if (prevState != newState)
+            {
+                if (newState == PlayerLifeState.Downed) OnDowned?.Invoke();
+                else if (newState == PlayerLifeState.Alive) OnRevived?.Invoke();
+                else if (newState == PlayerLifeState.Eliminated) OnEliminated?.Invoke();
+            }
+        }
 
         private void Awake()
         {
@@ -63,6 +85,8 @@ namespace OutrunAftermath.Client.Runtime.Character
 
         private void Update()
         {
+            if (IsServerControlled) return;
+
             if (_state == PlayerLifeState.Downed || _state == PlayerLifeState.BeingRevived)
             {
                 _bleedOutTimer -= Time.deltaTime;

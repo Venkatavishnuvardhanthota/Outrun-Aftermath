@@ -70,11 +70,21 @@ namespace OutrunAftermath.Client.Runtime.Combat
         public event Action OnFired;
         public event Action OnReloadStarted;
         public event Action OnReloadCompleted;
+        public event Action<Ray, float, int> OnNetworkFireRequested; // baseRay, spreadDeg, slotIndex
 
+        public bool IsNetworkManaged { get; set; }
+        public IReadOnlyList<WeaponData> Loadout => loadout;
+        public int ActiveSlotIndex => activeSlotIndex;
         public WeaponData CurrentWeapon => (loadout.Count > 0 && activeSlotIndex < loadout.Count) ? loadout[activeSlotIndex] : null;
         public bool IsReloading => _isReloading;
-        public float ReloadProgress => _isReloading ? (1f - (_reloadTimer / CurrentWeapon.reloadTime)) : 0f;
+        public float ReloadProgress => _isReloading && CurrentWeapon != null ? (1f - (_reloadTimer / CurrentWeapon.reloadTime)) : 0f;
         public float CurrentSpread => _currentSpread;
+        public Vector3 MuzzleWorldPosition => muzzlePoint != null ? muzzlePoint.position : (_cameraRig != null && _cameraRig.UnityCamera != null ? _cameraRig.UnityCamera.transform.position : transform.position + Vector3.up * 1.5f);
+
+        private void Awake()
+        {
+            EnsureDefaultLoadout();
+        }
 
         public void Initialize(CameraRig cameraRig, CharacterMotor motor, PlayerHealth health)
         {
@@ -82,6 +92,13 @@ namespace OutrunAftermath.Client.Runtime.Combat
             _motor = motor;
             _health = health;
 
+            EnsureDefaultLoadout();
+            SetupVisualGunRig();
+            EquipSlot(0);
+        }
+
+        public void EnsureDefaultLoadout()
+        {
             if (loadout.Count == 0)
             {
                 // Default 3-weapon tactical loadout
@@ -145,14 +162,11 @@ namespace OutrunAftermath.Client.Runtime.Combat
                     pelletsPerShot = 1
                 });
             }
-
-            SetupVisualGunRig();
-            EquipSlot(0);
         }
 
         private void SetupVisualGunRig()
         {
-            if (gunRoot == null && _cameraRig != null)
+            if (gunRoot == null && _cameraRig != null && _cameraRig.UnityCamera != null)
             {
                 var gunHolder = new GameObject("GunRig");
                 gunHolder.transform.SetParent(_cameraRig.UnityCamera.transform);
@@ -294,7 +308,16 @@ namespace OutrunAftermath.Client.Runtime.Combat
             );
 
             // Raycast shot execution
-            Ray baseRay = _cameraRig.GetAimRay();
+            Ray baseRay = _cameraRig != null ? _cameraRig.GetAimRay() : new Ray(transform.position + Vector3.up * 1.6f, transform.forward);
+
+            if (IsNetworkManaged)
+            {
+                OnNetworkFireRequested?.Invoke(baseRay, _currentSpread, activeSlotIndex);
+                OnFired?.Invoke();
+                OnAmmoChanged?.Invoke(weapon.currentMagazine, weapon.reserveAmmo);
+                return;
+            }
+
             bool registeredAnyHit = false;
             bool registeredHeadshot = false;
 
@@ -303,7 +326,7 @@ namespace OutrunAftermath.Client.Runtime.Combat
                 Vector3 spreadDir = CalculateSpreadDirection(baseRay.direction, _currentSpread);
                 Ray shotRay = new Ray(baseRay.origin, spreadDir);
 
-                if (Physics.Raycast(shotRay, out RaycastHit hit, weapon.range, hitMask, QueryTriggerInteraction.Ignore))
+                if (TryRaycastExcludingSelf(shotRay, weapon.range, out RaycastHit hit))
                 {
                     registeredAnyHit = true;
 
@@ -339,13 +362,13 @@ namespace OutrunAftermath.Client.Runtime.Combat
                     }
 
                     // Render bullet tracer
-                    StartCoroutine(RenderTracer(muzzlePoint != null ? muzzlePoint.position : baseRay.origin, hit.point));
+                    StartCoroutine(RenderTracer(MuzzleWorldPosition, hit.point));
                 }
                 else
                 {
                     // Bullet tracer into the distance
                     Vector3 endPoint = shotRay.origin + shotRay.direction * weapon.range;
-                    StartCoroutine(RenderTracer(muzzlePoint != null ? muzzlePoint.position : baseRay.origin, endPoint));
+                    StartCoroutine(RenderTracer(MuzzleWorldPosition, endPoint));
                 }
             }
 
@@ -356,6 +379,49 @@ namespace OutrunAftermath.Client.Runtime.Combat
 
             OnFired?.Invoke();
             OnAmmoChanged?.Invoke(weapon.currentMagazine, weapon.reserveAmmo);
+        }
+
+        public void TriggerRemoteHitConfirm(bool isHit, bool isHeadshot)
+        {
+            if (isHit)
+            {
+                OnHitConfirmed?.Invoke(true, isHeadshot);
+            }
+        }
+
+        public void SpawnVisualTracer(Vector3 start, Vector3 end)
+        {
+            StartCoroutine(RenderTracer(start, end));
+        }
+
+        public void SetGunRigVisible(bool visible)
+        {
+            if (gunRoot != null)
+            {
+                gunRoot.gameObject.SetActive(visible);
+            }
+        }
+
+        private bool TryRaycastExcludingSelf(Ray ray, float maxDist, out RaycastHit closestHit)
+        {
+            var hits = Physics.RaycastAll(ray, maxDist, hitMask, QueryTriggerInteraction.Ignore);
+            float bestDist = float.MaxValue;
+            closestHit = default;
+            bool found = false;
+
+            for (int i = 0; i < hits.Length; i++)
+            {
+                if (hits[i].collider == null) continue;
+                if (hits[i].collider.transform.IsChildOf(transform)) continue;
+
+                if (hits[i].distance < bestDist)
+                {
+                    bestDist = hits[i].distance;
+                    closestHit = hits[i];
+                    found = true;
+                }
+            }
+            return found;
         }
 
         private Vector3 CalculateSpreadDirection(Vector3 forward, float spreadAngleDegrees)

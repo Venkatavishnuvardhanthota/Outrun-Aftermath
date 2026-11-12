@@ -6,6 +6,7 @@
     "Unity.TextMeshPro",
     "UnityEngine.UI",
     "Unity.Netcode.Runtime",
+    "Unity.Networking.Transport",
     "Unity.Collections",
     "Unity.Mathematics",
     "Unity.RenderPipelines.Universal.Runtime",

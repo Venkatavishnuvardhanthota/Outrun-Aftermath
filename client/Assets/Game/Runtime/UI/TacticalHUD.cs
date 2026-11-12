@@ -42,7 +42,10 @@ namespace OutrunAftermath.Client.Runtime.UI
         // Tactical Status & Compass
         private Text _compassText;
         private Text _perspectiveBadge;
+        private Text _networkBadge;
         private Text _missionText;
+        private Text _killFeedText;
+        private readonly System.Collections.Generic.List<string> _feedLines = new System.Collections.Generic.List<string>();
         private GameObject _controlsPanel;
         private bool _controlsVisible = true;
 
@@ -174,10 +177,22 @@ namespace OutrunAftermath.Client.Runtime.UI
             _missionText = CreateText(topPanel.transform, "MissionText", "SECTOR: DEAD CITY | RECON & COMBAT EXTRACTION", defaultFont, 13, TextAnchor.MiddleCenter, new Vector2(0f, -12f), new Vector2(480f, 20f), new Color(0.7f, 0.85f, 0.9f));
 
             // Perspective badge (Top Left)
-            _perspectiveBadge = CreateText(canvasGo.transform, "PerspectiveBadge", "[FIRST PERSON : T TO TOGGLE]", defaultFont, 14, TextAnchor.MiddleLeft, new Vector2(40f, -30f), new Vector2(300f, 25f), Color.yellow);
+            _perspectiveBadge = CreateText(canvasGo.transform, "PerspectiveBadge", "[FIRST PERSON : T TO TOGGLE]", defaultFont, 14, TextAnchor.MiddleLeft, new Vector2(180f, -30f), new Vector2(300f, 25f), Color.yellow);
             var pRect = _perspectiveBadge.GetComponent<RectTransform>();
             pRect.anchorMin = new Vector2(0f, 1f);
             pRect.anchorMax = new Vector2(0f, 1f);
+
+            // Network & Faction Badge (Top Left below Perspective)
+            _networkBadge = CreateText(canvasGo.transform, "NetworkBadge", "[OFFLINE PRACTICE]", defaultFont, 13, TextAnchor.MiddleLeft, new Vector2(180f, -56f), new Vector2(320f, 24f), Color.cyan);
+            var nRect = _networkBadge.GetComponent<RectTransform>();
+            nRect.anchorMin = new Vector2(0f, 1f);
+            nRect.anchorMax = new Vector2(0f, 1f);
+
+            // Kill / Event Feed (Top Left below Network Badge)
+            _killFeedText = CreateText(canvasGo.transform, "KillFeed", "", defaultFont, 13, TextAnchor.UpperLeft, new Vector2(210f, -150f), new Vector2(380f, 140f), new Color(0.95f, 0.95f, 0.95f, 0.9f));
+            var kfRect = _killFeedText.GetComponent<RectTransform>();
+            kfRect.anchorMin = new Vector2(0f, 1f);
+            kfRect.anchorMax = new Vector2(0f, 1f);
 
             // 5. Controls Helper (Top Right)
             _controlsPanel = CreatePanel(canvasGo.transform, "ControlsPanel", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-30f, -30f), new Vector2(280f, 210f), new Color(0.05f, 0.06f, 0.08f, 0.85f));
@@ -300,6 +315,30 @@ namespace OutrunAftermath.Client.Runtime.UI
         public void UpdateAmmoDisplay(int current, int reserve)
         {
             if (_ammoText != null) _ammoText.text = $"{current} / {reserve}";
+        }
+
+        public void SetMissionStatus(string statusText)
+        {
+            if (_missionText != null) _missionText.text = statusText;
+        }
+
+        public void SetNetworkStatus(string badgeText)
+        {
+            if (_networkBadge != null) _networkBadge.text = badgeText;
+        }
+
+        public void AddKillFeedMessage(string message)
+        {
+            _feedLines.Add(message);
+            if (_feedLines.Count > 5)
+            {
+                _feedLines.RemoveAt(0);
+            }
+
+            if (_killFeedText != null)
+            {
+                _killFeedText.text = string.Join("\n", _feedLines);
+            }
         }
 
         private void HandleDowned()

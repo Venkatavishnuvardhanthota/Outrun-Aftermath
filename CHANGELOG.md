@@ -2,6 +2,20 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [0.4.0] - 2026-11-12 - Phase 2: First Multiplayer Prototype
+
+### Added
+- NGO 2.13.3 multiplayer stack (`NetworkSessionController`, `NetworkMatchManager`, `NetworkPlayerController`) with `UnityTransport` supporting Dedicated Server, Listen Host, Remote Client, and Offline Solo Practice.
+- `NetworkPlayer.prefab` with `NetworkObject`, `AuthorityMode = Owner` `NetworkTransform`, character physics, weapon system, faction torso/head colliders, and remote overhead nameplates.
+- Server-authoritative weapon hit registration (`FireWeaponRpc`) with `Physics.RaycastAll` self-exclusion, fire-rate/origin anti-cheat checks, headshot multipliers, and `NetworkVariable` armor/health/downed/kill state replication.
+- Interactive `LobbyConnectionUI` overlay for IP/Port configuration and deployment selection.
+- Verified 3-process live localhost UDP test (Dedicated Server + 2 separate Client executables exchanging bidirectional damage and downed state replication) and Offline Solo Practice mode.
+
+### Fixed
+- Bypassed `UnityTransport` 2.13.3 `-ip` CLI port-parsing bug via `forceOverrideCommandLineArgs: true` on `SetConnectionData`.
+- Populated `WeaponSystem` default loadout during `Awake()` (`EnsureDefaultLoadout()`) so Dedicated Server instances validate non-owner client weapons properly.
+- Grounded faction spawn heights (`y = 0.06f`) in `NetworkMatchManager` to prevent spawn-drop trajectory mismatch during early shots.
+
 ## [0.3.0] - 2026-11-12 - Phase 1: Core Unity Foundation
 
 ### Added

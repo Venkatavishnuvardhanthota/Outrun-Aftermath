@@ -168,3 +168,52 @@ FPS/TPS switching, basic combat and HUD, driven by this simulation for damage an
 ### Next phase
 
 Phase 2: First Multiplayer Prototype (NGO NetworkManager, NetworkPlayer replication, server-authoritative shooting/damage sync via Netcode for GameObjects, and two-client test).
+
+---
+
+## Phase 2 — 2026-11-12 (First Multiplayer Prototype)
+
+### Completed features
+
+- **NGO Networking & Transport Layer** (`Game/Multiplayer/NetworkSessionController.cs`):
+  Integrated Netcode for GameObjects (NGO 2.13.3) with `UnityTransport` over UDP, supporting Dedicated Server (`-server`), Listen Host (`-host`), Remote Client (`-client`), Offline Solo Practice (`-offline`), interactive Lobby mode, `-connect-ip` / `-connect-port` endpoint flags (working around UTP 2.13.3's `-ip` port-parsing bug via `forceOverrideCommandLineArgs: true`), `-autotest-shoot`, and graceful `-autoclose`.
+- **Authoritative Match Coordinator** (`Game/Multiplayer/NetworkMatchManager.cs`):
+  Server-authoritative match lifecycle (`WaitingForPlayers` -> `InProgress` -> `Ended` -> round restart), balanced Rogue vs. Sentinel faction assignment (`SpawnAsPlayerObject`), kill/downed feeds (`BroadcastFeedRpc`), team score/headcount `NetworkVariable`s, match timer, and victory evaluation.
+- **Replicated Player & Server-Authoritative Combat** (`Game/Multiplayer/NetworkPlayerController.cs`):
+  Owner-predicted movement via `NetworkTransform` (`AuthorityMode = Owner`) paired with server-authoritative hit registration (`FireWeaponRpc`), `Physics.RaycastAll` self-collider exclusion, fire-rate & origin proximity anti-cheat checks, displacement monitoring, `NetHealth` / `NetArmor` / `NetLifeState` / `NetBleedOutRemaining` / `NetReviveProgress` / `NetKills` / `NetDeaths` replication, owner FPS `ShadowsOnly` body visibility, remote faction visuals (`Body_Torso`, `Head_Crit`, overhead nameplate), and teammate/self revive RPCs.
+- **Connection & Deployment UI** (`Game/Multiplayer/LobbyConnectionUI.cs`):
+  Tactical uGUI overlay with Server IP/UDP Port fields and Host Match / Join Match / Dedicated Server / Offline Solo Practice controls.
+- **Subsystem Integration & Prefab/Scene Pipeline** (`WeaponSystem.cs`, `PlayerHealth.cs`, `TacticalHUD.cs`, `GameBootstrap.cs`, `BuildScript.cs`):
+  Added server-side `EnsureDefaultLoadout()` so Dedicated Server holds weapon stats for non-owner players, server-controlled health replication guard, HUD network badge & kill-feed log, `NetworkPlayer.prefab` generation & `DefaultNetworkPrefabs.asset` registration, and `Main.unity` NGO scene wiring.
+
+### Files created
+
+- `client/Assets/Game/Multiplayer/NetworkSessionController.cs`
+- `client/Assets/Game/Multiplayer/NetworkMatchManager.cs`
+- `client/Assets/Game/Multiplayer/NetworkPlayerController.cs`
+- `client/Assets/Game/Multiplayer/LobbyConnectionUI.cs`
+- `client/Assets/Game/Multiplayer/Prefabs/NetworkPlayer.prefab`
+
+### Files modified
+
+- `client/Assets/Game/Core/GameBootstrap.cs` (branches Offline Practice vs `NetworkSessionController` deployment)
+- `client/Assets/Game/Runtime/Combat/WeaponSystem.cs` (`IsNetworkManaged`, `EnsureDefaultLoadout`, `RaycastAll` self-exclusion, remote tracers/hitmarkers)
+- `client/Assets/Game/Runtime/Character/PlayerHealth.cs` (`IsServerControlled`, `ApplyReplicatedState`)
+- `client/Assets/Game/Runtime/UI/TacticalHUD.cs` (network/faction badge and kill feed display)
+- `client/Assets/Game/OutrunAftermath.Client.asmdef` (added `Unity.Networking.Transport`)
+- `client/Assets/Editor/OutrunAftermath.Client.Editor.asmdef` (added `Unity.Netcode.Runtime`)
+- `client/Assets/Editor/BuildScript.cs` (builds `NetworkPlayer.prefab`, updates `DefaultNetworkPrefabs.asset`, places `NetworkManager` + `NetworkMatchManager` in `Main.unity`)
+
+### Tests executed
+
+1. **Unity 6 Windows Build (`BuildScript.BuildWindows`)**: Exit code `0`, output `client/Builds/Windows/OutrunAftermath.exe` cleanly built with `NetworkPlayer.prefab` and NGO scene setup.
+2. **Offline Solo Practice (`-offline -autoclose 3`)**: Exit code `0`; logs verified `[NetworkSession] Starting Offline Practice Mode.` and `[OUTRUN: AFTERMATH] Offline Solo Practice Systems Online. Player Ready.` with 0 exceptions.
+3. **Host + Client Live UDP Test (`-host` + `-client` on `127.0.0.1:7777`)**: Both exited `0`; verified Host (`OP-01` ROGUE) and Client (`OP-02` SENTINEL) spawn, `FireWeaponRpc` hit registration, and `HP: 100 -> 29.2`, `Armor: 50 -> 0` replication.
+4. **3-Process Dedicated Server + 2 Clients Live UDP Test (`-server` + `-client` + `-client` on `127.0.0.1:7777`)**:
+   - All 3 processes exited cleanly (`SRV_EXIT=0; C1_EXIT=0; C2_EXIT=0`).
+   - Dedicated Server spawned `OP-02 (ROGUE)` and `OP-03 (SENTINEL)`.
+   - Bidirectional server-authoritative combat confirmed in server log (`OP-03` hit `HP 100 -> 0.0, Armor 50 -> 0.0, State=Downed`; `OP-02` hit `HP 100 -> 9.2, Armor 50 -> 0.0, State=Alive`) and mirrored identically in `client1_mp.log` and `client2_mp.log`.
+
+### Next phase
+
+Phase 3: Ground Operations Mode & Operator Abilities (integrate `shared/OutrunAftermath.Simulation` contract/DLL into Unity, Rogue/Sentinel operator abilities & cooldowns, and Ground Operations match rules/objectives on Dead City).

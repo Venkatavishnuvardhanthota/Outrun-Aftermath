@@ -2,7 +2,8 @@
   "name": "OutrunAftermath.Client.Editor",
   "rootNamespace": "OutrunAftermath.Client.Editor",
   "references": [
-    "OutrunAftermath.Client"
+    "OutrunAftermath.Client",
+    "Unity.Netcode.Runtime"
   ],
   "includePlatforms": [
     "Editor"

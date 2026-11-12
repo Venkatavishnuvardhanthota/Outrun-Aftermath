@@ -5,13 +5,14 @@ using OutrunAftermath.Client.Runtime.Character;
 using OutrunAftermath.Client.Runtime.Combat;
 using OutrunAftermath.Client.Runtime.UI;
 using OutrunAftermath.Client.Runtime.Environment;
+using OutrunAftermath.Client.Multiplayer;
 
 namespace OutrunAftermath.Client
 {
     /// <summary>
     /// Master Game Bootstrap for OUTRUN: AFTERMATH.
-    /// Orchestrates game initialization, environment construction, player instantiation,
-    /// camera rig binding, weapon systems, and tactical HUD.
+    /// Orchestrates environment construction and wires Offline Solo Practice vs
+    /// Netcode Multiplayer Session startup.
     /// </summary>
     public sealed class GameBootstrap : MonoBehaviour
     {
@@ -26,6 +27,7 @@ namespace OutrunAftermath.Client
         private WeaponSystem _weapons;
         private CameraRig _cameraRig;
         private TacticalHUD _hud;
+        private NetworkSessionController _sessionController;
 
         private void Awake()
         {
@@ -35,9 +37,17 @@ namespace OutrunAftermath.Client
             InitializeGame();
         }
 
+        private void OnDestroy()
+        {
+            if (_sessionController != null)
+            {
+                _sessionController.OnOfflinePracticeRequested -= HandleOfflinePracticeRequested;
+            }
+        }
+
         private void InitializeGame()
         {
-            Debug.Log("[OUTRUN: AFTERMATH] Bootstrapping Phase 1 Core Engine...");
+            Debug.Log("[OUTRUN: AFTERMATH] Bootstrapping Core Engine...");
 
             // 1. Build greybox environment if needed
             if (buildEnvironmentOnStart && GameObject.Find("DeadCity_Sector4") == null)
@@ -52,13 +62,30 @@ namespace OutrunAftermath.Client
                 inputGo.AddComponent<InputManager>();
             }
 
-            // 3. Spawn and Setup Player
+            // 3. Defer player spawning to NetworkSessionController if present in scene
+            _sessionController = FindAnyObjectByType<NetworkSessionController>();
+            if (_sessionController != null)
+            {
+                _sessionController.OnOfflinePracticeRequested += HandleOfflinePracticeRequested;
+                Debug.Log("[OUTRUN: AFTERMATH] NetworkSessionController detected. Awaiting deployment mode...");
+            }
+            else
+            {
+                // Fallback for isolated offline scenes without NGO
+                HandleOfflinePracticeRequested();
+            }
+        }
+
+        private void HandleOfflinePracticeRequested()
+        {
+            if (_playerRoot != null) return;
+
             SetupPlayer();
-
-            // 4. Setup HUD
             SetupHUD();
+            _hud.SetNetworkStatus("[OFFLINE PRACTICE]");
+            _hud.SetMissionStatus("DEAD CITY SECTOR 4 — SOLO TRAINING");
 
-            Debug.Log("[OUTRUN: AFTERMATH] Phase 1 Core Systems Online. Player Ready.");
+            Debug.Log("[OUTRUN: AFTERMATH] Offline Solo Practice Systems Online. Player Ready.");
         }
 
         private void SetupPlayer()
@@ -114,7 +141,8 @@ namespace OutrunAftermath.Client
 
         private void Update()
         {
-            if (InputManager.Instance == null) return;
+            // Only drive local offline player here; networked owners are driven by NetworkPlayerController.OwnerTick()
+            if (_playerRoot == null || InputManager.Instance == null) return;
 
             var input = InputManager.Instance.Current;
 
