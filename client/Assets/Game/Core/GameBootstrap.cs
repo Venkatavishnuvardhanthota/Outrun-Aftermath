@@ -86,6 +86,13 @@ namespace OutrunAftermath.Client
             _hud.SetNetworkStatus("[OFFLINE PRACTICE]");
             _hud.SetMissionStatus("DEAD CITY SECTOR 4 — SOLO TRAINING");
 
+            if (FindAnyObjectByType<Runtime.Vehicles.NetworkVehicleController>() == null)
+            {
+                var vehGo = new GameObject("Practice_WastelandRaptor");
+                vehGo.transform.position = new Vector3(4.5f, 0.45f, -10f);
+                vehGo.AddComponent<Runtime.Vehicles.NetworkVehicleController>();
+            }
+
             Debug.Log("[OUTRUN: AFTERMATH] Offline Solo Practice Systems Online. Player Ready.");
         }
 

@@ -51,6 +51,12 @@ namespace OutrunAftermath.Client.Runtime.UI
         private Text _objectiveStatusText;
         private Slider _objectiveSlider;
 
+        // Vehicle Telemetry & Crew Panel
+        private GameObject _vehiclePanel;
+        private Text _vehicleSpeedText;
+        private Text _vehicleHealthText;
+        private Slider _vehicleNitroBar;
+
         // Weapon & Ammo
         private Text _weaponNameText;
         private Text _ammoText;
@@ -209,6 +215,14 @@ namespace OutrunAftermath.Client.Runtime.UI
             _reloadBar = reloadGo.GetComponent<Slider>();
             _reloadBar.gameObject.SetActive(false);
 
+            // 3B. Vehicle Telemetry Panel (Bottom Right above Weapon Panel)
+            _vehiclePanel = CreatePanel(canvasGo.transform, "VehiclePanel", new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-40f, 160f), new Vector2(300f, 95f), new Color(0.08f, 0.1f, 0.14f, 0.85f));
+            _vehicleSpeedText = CreateText(_vehiclePanel.transform, "VehSpeed", "0 KM/H", defaultFont, 24, TextAnchor.MiddleRight, new Vector2(-20f, 25f), new Vector2(140f, 32f), new Color(0.2f, 0.9f, 1f));
+            _vehicleHealthText = CreateText(_vehiclePanel.transform, "VehHealth", "HULL: 900 / 900\nENG: 220 | TIRE: 120", defaultFont, 11, TextAnchor.MiddleLeft, new Vector2(15f, 25f), new Vector2(160f, 30f), Color.white);
+            var nitroBarGo = CreateSlider(_vehiclePanel.transform, "VehNitro", new Vector2(15f, 10f), new Vector2(270f, 8f), new Color(1f, 0.45f, 0.1f));
+            _vehicleNitroBar = nitroBarGo.GetComponent<Slider>();
+            _vehiclePanel.SetActive(false);
+
             // 4. Compass & Mission Header (Top Center)
             var topPanel = CreatePanel(canvasGo.transform, "TopHeader", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(500f, 60f), new Color(0.06f, 0.08f, 0.1f, 0.65f));
             _compassText = CreateText(topPanel.transform, "CompassText", "000° N", defaultFont, 18, TextAnchor.MiddleCenter, new Vector2(0f, 15f), new Vector2(300f, 24f), Color.white);
@@ -243,7 +257,7 @@ namespace OutrunAftermath.Client.Runtime.UI
             // 5. Controls Helper (Top Right)
             _controlsPanel = CreatePanel(canvasGo.transform, "ControlsPanel", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-30f, -30f), new Vector2(280f, 230f), new Color(0.05f, 0.06f, 0.08f, 0.85f));
             CreateText(_controlsPanel.transform, "ControlsTitle", "TACTICAL CONTROLS (F1/H)", defaultFont, 14, TextAnchor.UpperCenter, new Vector2(0f, -10f), new Vector2(260f, 20f), Color.cyan);
-            string controls = "WASD - Tactical Locomotion\nSHIFT - Sprint | C - Crouch/Slide\nSPACE - Jump\nLEFT CLICK - Fire | RIGHT CLICK - ADS\nQ - Tactical Ability | F - Ultimate Ability\nT - Toggle Camera (FPS / TPS)\nR - Reload | 1, 2, 3 - Switch Weapon\nE - Interact / Revive / Hack\nESC - Free Cursor";
+            string controls = "WASD - Move / Drive Vehicle\nSHIFT - Sprint / Nitro | C - Crouch/Slide\nSPACE - Jump / Handbrake Drift\nLEFT CLICK - Fire / Mounted Turret\nQ - Tactical Ability | F - Ultimate Ability\nT - Toggle Perspective (FPS / TPS)\n1-4 - Switch Seat | X - Dismount\nE - Interact / Revive / Board / Hack\nESC - Free Cursor";
             CreateText(_controlsPanel.transform, "ControlsBody", controls, defaultFont, 12, TextAnchor.UpperLeft, new Vector2(15f, -35f), new Vector2(250f, 185f), Color.white);
 
             // 6. Downed / Bleed-Out Overlay
@@ -379,6 +393,45 @@ namespace OutrunAftermath.Client.Runtime.UI
                 _controlsVisible = !_controlsVisible;
                 if (_controlsPanel != null) _controlsPanel.SetActive(_controlsVisible);
             }
+
+            // Vehicle Telemetry
+            var currentVeh = FindLocalVehicle();
+            if (currentVeh != null)
+            {
+                if (_vehiclePanel != null) _vehiclePanel.SetActive(true);
+                if (_vehicleSpeedText != null)
+                {
+                    int kmh = Mathf.RoundToInt(currentVeh.NetSpeedMps.Value * 3.6f);
+                    _vehicleSpeedText.text = $"{kmh} KM/H";
+                }
+                if (_vehicleNitroBar != null)
+                {
+                    _vehicleNitroBar.value = currentVeh.NetNitroFuel.Value / 100f;
+                }
+                if (_vehicleHealthText != null)
+                {
+                    _vehicleHealthText.text = $"HULL: {Mathf.CeilToInt(currentVeh.NetBodyHealth.Value)} / {currentVeh.Definition.BodyHealth}\nENG: {Mathf.CeilToInt(currentVeh.NetEngineHealth.Value)} | TIRE: {Mathf.CeilToInt(currentVeh.NetTireHealth.Value)}";
+                }
+            }
+            else
+            {
+                if (_vehiclePanel != null) _vehiclePanel.SetActive(false);
+            }
+        }
+
+        private Runtime.Vehicles.NetworkVehicleController FindLocalVehicle()
+        {
+            if (Camera.main != null)
+            {
+                var veh = Camera.main.GetComponentInParent<Runtime.Vehicles.NetworkVehicleController>();
+                if (veh != null) return veh;
+            }
+            var player = Unity.Netcode.NetworkManager.Singleton?.LocalClient?.PlayerObject;
+            if (player != null)
+            {
+                return player.GetComponentInParent<Runtime.Vehicles.NetworkVehicleController>();
+            }
+            return null;
         }
 
         private void TriggerHitMarker(bool hit, bool headshot)

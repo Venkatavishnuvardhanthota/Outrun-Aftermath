@@ -33,6 +33,7 @@ namespace OutrunAftermath.Client.Multiplayer
 
         public string ActiveIp { get; private set; } = "127.0.0.1";
         public ushort ActivePort { get; private set; } = 7777;
+        public int ActiveGameMode { get; private set; } = 0; // 0 = Ground, 1 = Convoy
         public bool IsSessionStarted { get; private set; }
         public bool AutoTestShootEnabled { get; private set; }
         private float _autoQuitSeconds;
@@ -94,6 +95,10 @@ namespace OutrunAftermath.Client.Multiplayer
                 {
                     port = parsedPort;
                 }
+                else if (arg.Equals("-convoy", StringComparison.OrdinalIgnoreCase))
+                {
+                    ActiveGameMode = 1; // Convoy Operations Mode
+                }
             }
 
             if (_autoQuitSeconds > 0f)
@@ -132,7 +137,11 @@ namespace OutrunAftermath.Client.Multiplayer
         public bool StartDedicatedServer(string ip, ushort port)
         {
             ConfigureTransport("0.0.0.0", port);
-            Debug.Log($"[NetworkSession] Starting Dedicated Server on 0.0.0.0:{port}...");
+            Debug.Log($"[NetworkSession] Starting Dedicated Server on 0.0.0.0:{port} (Mode={(ActiveGameMode == 1 ? "CONVOY" : "GROUND")})...");
+            if (NetworkMatchManager.Instance != null)
+            {
+                NetworkMatchManager.Instance.SetGameMode(ActiveGameMode);
+            }
             bool ok = NetworkManager.Singleton.StartServer();
             IsSessionStarted = ok;
             if (ok)
@@ -150,7 +159,11 @@ namespace OutrunAftermath.Client.Multiplayer
         public bool StartHostSession(string ip, ushort port)
         {
             ConfigureTransport(ip, port, listenAll: true);
-            Debug.Log($"[NetworkSession] Starting Host on {ip}:{port}...");
+            Debug.Log($"[NetworkSession] Starting Host on {ip}:{port} (Mode={(ActiveGameMode == 1 ? "CONVOY" : "GROUND")})...");
+            if (NetworkMatchManager.Instance != null)
+            {
+                NetworkMatchManager.Instance.SetGameMode(ActiveGameMode);
+            }
             bool ok = NetworkManager.Singleton.StartHost();
             IsSessionStarted = ok;
             if (ok)
@@ -317,6 +330,39 @@ namespace OutrunAftermath.Client.Multiplayer
             if (NetworkObjectiveTerminal.Instance != null)
             {
                 Debug.Log($"[NET_TEST] Objective Terminal Uplink Progress={NetworkObjectiveTerminal.Instance.Progress.Value:F1}%, Contested={NetworkObjectiveTerminal.Instance.IsContested.Value}");
+            }
+
+            // Test Vehicle Operations if vehicles are present
+            var allVehicles = FindObjectsByType<Runtime.Vehicles.NetworkVehicleController>();
+            if (allVehicles.Length > 0)
+            {
+                var myVehicle = localPlayer.GetComponentInParent<Runtime.Vehicles.NetworkVehicleController>() ?? allVehicles[0];
+                Debug.Log($"[NET_TEST] Testing Vehicle: ID={myVehicle.NetVehicleId.Value}, Hull={myVehicle.NetBodyHealth.Value}, Engine={myVehicle.NetEngineHealth.Value}, Tires={myVehicle.NetTireHealth.Value}, Mount={myVehicle.NetMountHealth.Value}");
+
+                // Driver test
+                if (myVehicle.SeatDriverClientId.Value == localPlayer.OwnerClientId)
+                {
+                    Debug.Log("[NET_TEST] Driver sending forward throttle & nitro boost...");
+                    myVehicle.SendDriveInputRpc(1.0f, 0.2f, false, true);
+                    yield return new WaitForSeconds(0.4f);
+                    Debug.Log($"[NET_TEST] Vehicle Speed={myVehicle.NetSpeedMps.Value:F1} m/s, Nitro={myVehicle.NetNitroFuel.Value:F1}%");
+
+                    // Test manual seat switch: Driver [0] -> Attacker [1]
+                    Debug.Log("[NET_TEST] Testing manual seat switch [1] (Attacker / Turret)...");
+                    myVehicle.RequestSwitchSeatRpc((int)OutrunAftermath.Simulation.Core.VehicleSeat.Attacker);
+                    yield return new WaitForSeconds(0.4f);
+                    Debug.Log($"[NET_TEST] Post-switch Occupancy: Driver={myVehicle.SeatDriverClientId.Value}, Attacker={myVehicle.SeatAttackerClientId.Value}");
+                }
+
+                // Turret test
+                if (myVehicle.SeatAttackerClientId.Value == localPlayer.OwnerClientId || myVehicle.SeatDriverClientId.Value == localPlayer.OwnerClientId)
+                {
+                    Debug.Log("[NET_TEST] Testing vehicle roof turret fire...");
+                    Vector3 turretPos = myVehicle.transform.position + Vector3.up * 1.7f;
+                    Vector3 turretFwd = myVehicle.transform.forward;
+                    myVehicle.FireVehicleWeaponRpc(0, turretPos, turretFwd);
+                    yield return new WaitForSeconds(0.3f);
+                }
             }
         }
 

@@ -12,6 +12,7 @@ using OutrunAftermath.Client.Runtime.Character;
 using OutrunAftermath.Client.Runtime.Combat;
 using OutrunAftermath.Client.Runtime.Abilities;
 using OutrunAftermath.Client.Runtime.Objectives;
+using OutrunAftermath.Client.Runtime.Vehicles;
 
 namespace OutrunAftermath.Client.Editor
 {
@@ -19,18 +20,20 @@ namespace OutrunAftermath.Client.Editor
     {
         private const string PlayerPrefabDir = "Assets/Game/Multiplayer/Prefabs";
         private const string PlayerPrefabPath = "Assets/Game/Multiplayer/Prefabs/NetworkPlayer.prefab";
+        private const string VehiclePrefabPath = "Assets/Game/Multiplayer/Prefabs/WastelandRaptor.prefab";
         private const string DefaultPrefabsAssetPath = "Assets/DefaultNetworkPrefabs.asset";
         private const string MainScenePath = "Assets/Scenes/Main.unity";
 
         public static void BuildWindows()
         {
-            Debug.Log("[BuildScript] Building Phase 2 Multiplayer Prefab & Scene...");
+            Debug.Log("[BuildScript] Building Phase 4 Convoy & Ground Operations Prefabs & Scene...");
 
-            // 1. Create / update NetworkPlayer prefab
+            // 1. Create / update NetworkPlayer and WastelandRaptor prefabs
             GameObject playerPrefab = CreateOrUpdateNetworkPlayerPrefab();
+            GameObject vehiclePrefab = CreateOrUpdateVehiclePrefab();
 
             // 2. Register in DefaultNetworkPrefabs list
-            NetworkPrefabsList defaultPrefabsList = EnsureDefaultNetworkPrefabs(playerPrefab);
+            NetworkPrefabsList defaultPrefabsList = EnsureDefaultNetworkPrefabs(playerPrefab, vehiclePrefab);
 
             // 3. Create clean Main.unity scene with NGO stack
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -64,6 +67,7 @@ namespace OutrunAftermath.Client.Editor
             matchManagerGo.AddComponent<NetworkObject>();
             var matchManager = matchManagerGo.AddComponent<NetworkMatchManager>();
             matchManager.SetPlayerPrefab(playerPrefab);
+            matchManager.SetVehiclePrefab(vehiclePrefab);
             EditorUtility.SetDirty(matchManager);
 
             // NetworkObjectiveTerminal (scene-placed NetworkObject for Ground Operations)
@@ -107,7 +111,7 @@ namespace OutrunAftermath.Client.Editor
                 throw new System.Exception($"Build failed: {summary.result} ({summary.totalErrors} errors)");
             }
 
-            Debug.Log($"[BuildScript] PHASE 3 BUILD SUCCEEDED! Total size: {summary.totalSize} bytes. Output: {outputPath}");
+            Debug.Log($"[BuildScript] PHASE 4 BUILD SUCCEEDED! Total size: {summary.totalSize} bytes. Output: {outputPath}");
         }
 
         private static GameObject CreateOrUpdateNetworkPlayerPrefab()
@@ -153,7 +157,42 @@ namespace OutrunAftermath.Client.Editor
             }
         }
 
-        private static NetworkPrefabsList EnsureDefaultNetworkPrefabs(GameObject playerPrefab)
+        private static GameObject CreateOrUpdateVehiclePrefab()
+        {
+            Directory.CreateDirectory(PlayerPrefabDir);
+
+            var tempRoot = new GameObject("WastelandRaptor");
+            try
+            {
+                // NetworkVehicleController brings NetworkObject, NetworkTransform, Rigidbody via RequireComponent
+                tempRoot.AddComponent<NetworkVehicleController>();
+
+                var netTransform = tempRoot.GetComponent<NetworkTransform>();
+                if (netTransform != null)
+                {
+                    netTransform.AuthorityMode = NetworkTransform.AuthorityModes.Server;
+                    netTransform.SyncPositionX = true;
+                    netTransform.SyncPositionY = true;
+                    netTransform.SyncPositionZ = true;
+                    netTransform.SyncRotAngleY = true;
+                    netTransform.Interpolate = true;
+                }
+
+                GameObject savedPrefab = PrefabUtility.SaveAsPrefabAsset(tempRoot, VehiclePrefabPath);
+                if (savedPrefab == null)
+                {
+                    throw new System.Exception($"Failed to save WastelandRaptor prefab at {VehiclePrefabPath}");
+                }
+                EditorUtility.SetDirty(savedPrefab);
+                return savedPrefab;
+            }
+            finally
+            {
+                Object.DestroyImmediate(tempRoot);
+            }
+        }
+
+        private static NetworkPrefabsList EnsureDefaultNetworkPrefabs(GameObject playerPrefab, GameObject vehiclePrefab)
         {
             var list = AssetDatabase.LoadAssetAtPath<NetworkPrefabsList>(DefaultPrefabsAssetPath);
             if (list == null)
@@ -162,17 +201,20 @@ namespace OutrunAftermath.Client.Editor
                 AssetDatabase.CreateAsset(list, DefaultPrefabsAssetPath);
             }
 
-            // Clean any null entries or stale entries for playerPrefab
+            // Clean any null entries or stale entries
             for (int i = list.PrefabList.Count - 1; i >= 0; i--)
             {
                 var entry = list.PrefabList[i];
-                if (entry == null || entry.Prefab == null || entry.Prefab == playerPrefab || entry.Prefab.name == "NetworkPlayer")
+                if (entry == null || entry.Prefab == null ||
+                    entry.Prefab == playerPrefab || entry.Prefab.name == "NetworkPlayer" ||
+                    entry.Prefab == vehiclePrefab || entry.Prefab.name == "WastelandRaptor")
                 {
                     list.Remove(entry);
                 }
             }
 
             list.Add(new NetworkPrefab { Prefab = playerPrefab });
+            list.Add(new NetworkPrefab { Prefab = vehiclePrefab });
             EditorUtility.SetDirty(list);
             return list;
         }

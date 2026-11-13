@@ -288,3 +288,75 @@ Phase 3: Ground Operations Mode & Operator Abilities (integrate `shared/OutrunAf
 ### Next phase
 
 Phase 4: Convoy Operations Mode & Vehicle Framework (Wasteland Raptor vehicle physics, 4 crew seats: Driver, Attacker, Support, Heavy; manual and automatic takeover seat switching; vehicle component damage; convoy match rules).
+
+---
+
+## Phase 4 — 2026-11-13 (Convoy Operations Mode & Vehicle Framework)
+
+### Completed features
+
+- **Vehicle Controller & Arcade Physics** (`client/Assets/Game/Runtime/Vehicles/NetworkVehicleController.cs`):
+  - Rigidbody-based arcade physics engine: forward and reverse drive forces, top speed (32 m/s / 115 km/h), acceleration (9 m/s²), responsive steering, handbrake drifting, and nitro boost (+45% acceleration, +25% top speed, consuming 35%/s nitro fuel with 12%/s recharge).
+  - Component health tracking: Hull/Body (900 HP), Engine (220 HP), Tires (120 HP), Mounted Weapon (100 HP).
+  - Dynamic handling degradation based on damage: damaged engine (<30% HP) reduces top speed and acceleration to 45%; punctured tires reduce grip to 30–65% and induce steering pull.
+  - Catastrophic hull failure triggers a 9.0m blast radius explosion dealing 220 damage, ejects/downs occupants, converts vehicle model into a charred wreck, and notifies match manager.
+  - Safe material fallbacks for headless/dedicated server execution (`CreateLitMaterial` handling Null graphics device).
+- **4-Crew Seat Management & Seamless Automatic Takeover**:
+  - 4 distinct crew positions: Driver (`0`), Attacker (`1`), Support (`2`), Heavy Recon (`3`).
+  - Proximity boarding via `[E]` (`BoardPlayerServer` / `RequestBoardVehicleRpc`) and dismounting via `[X]` (`RequestDismountRpc`).
+  - Manual seat switching via hotkeys `[1]`, `[2]`, `[3]`, `[4]` (`RequestSwitchSeatRpc`).
+  - **Automatic Driver Takeover** (`ServerHandleDriverIncapacitated`): seamlessly promotes the next available passenger (Attacker -> Support -> Heavy) to the Driver seat while swapping the incapacitated driver into the vacated passenger seat without stopping convoy momentum.
+  - Role-specific actions:
+    - **Driver**: throttle, steering, handbrake drift, nitro boost.
+    - **Attacker**: 360° roof turret aim and 500 RPM mounted machine gun fire with tracer replication.
+    - **Support**: in-transit vehicle repairs for Hull, Engine, Tires, and Turret Mount (`RequestSupportRepairRpc`).
+    - **Heavy Recon**: armor-piercing heavy rockets with 7.5m blast radius (175 damage).
+- **Convoy Operations Match Flow** (`client/Assets/Game/Multiplayer/NetworkMatchManager.cs`):
+  - Mode selector (`ActiveGameMode`: 0 = Ground Operations, 1 = Convoy Operations).
+  - Dedicated server spawns Rogue Convoy Raptor at `(-3.5, 0.45, -12)` and Sentinel Interceptor Raptor at `(3.5, 0.45, 40)`.
+  - Automatically boards connecting clients to their faction's vehicle.
+  - Destruction tracking and convoy victory conditions (`ReportVehicleDestroyedServer`).
+- **HUD & UI Telemetry** (`client/Assets/Game/Runtime/UI/TacticalHUD.cs`, `LobbyConnectionUI.cs`):
+  - Bottom-Right Vehicle Telemetry panel showing KM/H speedometer, Hull/Engine/Tire HP bars, and Nitro gauge.
+  - Controls guide updated for driving, seat switching (`1-4`), and dismounting (`X`).
+  - Practice vehicle spawned in `GameBootstrap.cs` for offline solo driving.
+- **Prefab & Build Automation** (`client/Assets/Editor/BuildScript.cs`):
+  - Automated authoring of `WastelandRaptor.prefab` (`NetworkObject`, `NetworkTransform`, `Rigidbody`, `BoxCollider`, `NetworkVehicleController`).
+  - Registration into `DefaultNetworkPrefabs.asset`.
+  - Compiled and built into Windows standalone player.
+
+### Files created
+
+- `client/Assets/Game/Runtime/Vehicles/NetworkVehicleController.cs`
+- `client/Assets/Game/Multiplayer/Prefabs/WastelandRaptor.prefab`
+- `run_phase4_test.ps1`
+
+### Files modified
+
+- `client/Assets/Editor/BuildScript.cs` (`WastelandRaptor.prefab` authoring, network prefab registration)
+- `client/Assets/Game/Core/GameBootstrap.cs` (spawns offline practice vehicle)
+- `client/Assets/Game/Multiplayer/LobbyConnectionUI.cs` (convoy mode selection and controls guide)
+- `client/Assets/Game/Multiplayer/NetworkMatchManager.cs` (`ActiveGameMode`, convoy vehicle spawning, player auto-boarding, convoy destruction reporting)
+- `client/Assets/Game/Multiplayer/NetworkPlayerController.cs` (proximity vehicle boarding, downed vehicle notification)
+- `client/Assets/Game/Multiplayer/NetworkSessionController.cs` (`-convoy` CLI argument, convoy auto-test routine)
+- `client/Assets/Game/Runtime/UI/TacticalHUD.cs` (vehicle speedometer and health telemetry panel)
+- `client/Assets/DefaultNetworkPrefabs.asset` (registered vehicle prefab)
+
+### Tests executed
+
+1. **Unity 6 Windows Build (`BuildScript.BuildWindows`)**:
+   - Exit code `0`: Built `client/Builds/Windows/OutrunAftermath.exe` (104,376,337 bytes).
+2. **3-Process Convoy Operations Live UDP Test (`run_phase4_test.ps1`)**:
+   - Dedicated Server (`:7777` with `-convoy`) + Client 1 (Rogue Driver) + Client 2 (Sentinel Driver).
+   - Server spawned Rogue Convoy Raptor at `(-3.50, 0.45, -12.00)` and Sentinel Interceptor Raptor at `(3.50, 0.45, 40.00)`.
+   - Verified auto-boarding: Client 1 boarded Rogue Raptor as Driver; Client 2 boarded Sentinel Raptor as Driver.
+   - Verified vehicle telemetry replication: ID `raptor`, Hull `900`, Engine `220`, Tires `120`, Mount `100`.
+   - Verified driving throttle and nitro boost command replication.
+   - Verified manual seat switch: Client 2 switched from Driver (`Seat 0`) to Attacker (`Seat 1`), resulting in `Driver=vacant, Attacker=2`.
+   - Verified roof turret weapon fire RPC.
+3. **Offline Solo Practice Vehicle Test (`-offline -autoclose 4`)**:
+   - Exit code `0`: verified offline solo practice systems initialized cleanly with practice vehicle.
+
+### Next phase
+
+Phase 5: Account & Backend Integration (connecting Unity client to ASP.NET Core API, authentication tokens, lobby/matchmaking endpoints, and match result persistence).

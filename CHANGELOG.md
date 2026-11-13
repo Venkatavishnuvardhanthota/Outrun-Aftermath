@@ -2,6 +2,24 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [0.6.0] - 2026-11-13 - Phase 4: Convoy Operations Mode & Vehicle Framework
+
+### Added
+- Real-time arcade vehicle physics controller (`NetworkVehicleController.cs`) with Rigidbody simulation, forward/reverse throttle, drifting handbrake, 115 km/h top speed, and rechargeable nitro boost (+45% acceleration, +25% top speed).
+- 4-Crew vehicle seat management (`Driver = 0`, `Attacker = 1`, `Support = 2`, `HeavyRecon = 3`) with proximity boarding (`[E]`), dismounting (`[X]`), and manual seat hotkeys (`[1]-[4]`).
+- Automatic Driver Takeover (`ServerHandleDriverIncapacitated`) seamlessly promoting living passengers to the driver seat and swapping the incapacitated driver to passenger position to maintain convoy momentum.
+- Multi-component vehicle health system (Hull 900 HP, Engine 220 HP, Tires 120 HP, Mounted Weapon 100 HP) with handling degradation and 9m blast radius catastrophic explosion.
+- Role-specific vehicle systems: Attacker 360° roof turret machine gun (500 RPM with tracer replication), Support in-transit repairs, Heavy Recon armor-piercing rockets (175 damage, 7.5m radius).
+- Convoy Operations match flow in `NetworkMatchManager`: spawns Rogue Convoy Raptor and Sentinel Interceptor Raptor, auto-boards deploying players, tracks vehicle destruction, and evaluates convoy victory conditions.
+- Tactical HUD Vehicle Telemetry panel showing KM/H speedometer, component health gauges, and nitro fuel meter.
+- Procedural `WastelandRaptor.prefab` generation, network registration, and standalone Windows player build integration.
+- Automated multi-process test script `run_phase4_test.ps1` verifying vehicle spawning, auto-boarding, throttle/nitro replication, manual seat switching, and turret fire.
+
+### Fixed
+- Fixed `NetworkVariable` pre-spawn write exception in `NetworkMatchManager.SetGameMode` by deferring network variable assignment to server spawn.
+- Replaced direct RPC invocations on dedicated server with `BoardPlayerServer(ulong clientId)` for safe player mounting.
+- Added headless shader fallbacks (`Null` graphics device) in `NetworkVehicleController` to support dedicated server and batch mode execution without `ArgumentNullException`.
+
 ## [0.5.0] - 2026-11-13 - Phase 3: Ground Operations Mode & Operator Abilities
 
 ### Added

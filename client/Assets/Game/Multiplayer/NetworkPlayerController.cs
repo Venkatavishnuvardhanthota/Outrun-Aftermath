@@ -311,6 +311,8 @@ namespace OutrunAftermath.Client.Multiplayer
                 _cameraRig.SetAiming(input.Aim);
             }
 
+            bool isInsideVehicle = GetComponentInParent<Runtime.Vehicles.NetworkVehicleController>() != null;
+
             // Revive request while downed or near downed ally
             if (_health.State == PlayerLifeState.Downed || _health.State == PlayerLifeState.BeingRevived)
             {
@@ -319,15 +321,35 @@ namespace OutrunAftermath.Client.Multiplayer
                     RequestReviveRpc(OwnerClientId);
                 }
             }
-            else if (input.Interact && _health.State == PlayerLifeState.Alive)
+            else if (input.Interact && _health.State == PlayerLifeState.Alive && !isInsideVehicle)
             {
-                // Check nearby downed teammates
-                RequestNearbyAllyReviveRpc();
+                // 1. Check nearby vehicles to board
+                var nearbyVehicles = FindObjectsByType<Runtime.Vehicles.NetworkVehicleController>();
+                bool boarded = false;
+                foreach (var v in nearbyVehicles)
+                {
+                    if (v != null && !v.NetIsExploded.Value && Vector3.Distance(transform.position, v.transform.position) <= 4.2f)
+                    {
+                        v.RequestBoardVehicleRpc();
+                        boarded = true;
+                        break;
+                    }
+                }
+
+                if (!boarded)
+                {
+                    // 2. Check nearby downed teammates
+                    RequestNearbyAllyReviveRpc();
+                }
             }
 
-            bool canMove = _health.State == PlayerLifeState.Alive || _health.State == PlayerLifeState.Downed;
+            bool canMove = !isInsideVehicle && (_health.State == PlayerLifeState.Alive || _health.State == PlayerLifeState.Downed);
             _motor.ProcessMovement(input, canMove);
-            _weapons.ProcessWeapons(input);
+
+            if (!isInsideVehicle)
+            {
+                _weapons.ProcessWeapons(input);
+            }
 
             // Trigger Abilities
             if (_abilitySystem != null && _health.State == PlayerLifeState.Alive)
@@ -556,6 +578,12 @@ namespace OutrunAftermath.Client.Multiplayer
         {
             SyncHealthVariablesFromServer();
             NetworkMatchManager.Instance?.ReportDownedServer(OwnerClientId, _lastAttackerClientId);
+
+            var veh = GetComponentInParent<Runtime.Vehicles.NetworkVehicleController>();
+            if (veh != null)
+            {
+                veh.ServerHandleDriverIncapacitated(OwnerClientId);
+            }
         }
 
         private void HandleServerEliminated()
@@ -563,6 +591,12 @@ namespace OutrunAftermath.Client.Multiplayer
             NetDeaths.Value++;
             SyncHealthVariablesFromServer();
             NetworkMatchManager.Instance?.ReportEliminationServer(OwnerClientId, _lastAttackerClientId, _lastHitWasHeadshot);
+
+            var veh = GetComponentInParent<Runtime.Vehicles.NetworkVehicleController>();
+            if (veh != null)
+            {
+                veh.ServerHandleDriverIncapacitated(OwnerClientId);
+            }
         }
 
         private void HandleServerRevived()
