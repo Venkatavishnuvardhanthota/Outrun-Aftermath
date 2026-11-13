@@ -21,6 +21,7 @@ Desktop.ini
 bin/
 obj/
 *.dll
+!client/Assets/Plugins/*.dll
 *.pdb
 TestResults/
 coverage/

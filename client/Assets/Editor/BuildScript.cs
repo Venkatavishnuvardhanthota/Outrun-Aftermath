@@ -10,6 +10,8 @@ using UnityEngine.SceneManagement;
 using OutrunAftermath.Client.Multiplayer;
 using OutrunAftermath.Client.Runtime.Character;
 using OutrunAftermath.Client.Runtime.Combat;
+using OutrunAftermath.Client.Runtime.Abilities;
+using OutrunAftermath.Client.Runtime.Objectives;
 
 namespace OutrunAftermath.Client.Editor
 {
@@ -64,6 +66,12 @@ namespace OutrunAftermath.Client.Editor
             matchManager.SetPlayerPrefab(playerPrefab);
             EditorUtility.SetDirty(matchManager);
 
+            // NetworkObjectiveTerminal (scene-placed NetworkObject for Ground Operations)
+            var terminalGo = new GameObject("NetworkObjectiveTerminal");
+            terminalGo.AddComponent<NetworkObject>();
+            var terminal = terminalGo.AddComponent<NetworkObjectiveTerminal>();
+            EditorUtility.SetDirty(terminal);
+
             // Save Main.unity
             Directory.CreateDirectory("Assets/Scenes");
             EditorSceneManager.SaveScene(scene, MainScenePath);
@@ -99,7 +107,7 @@ namespace OutrunAftermath.Client.Editor
                 throw new System.Exception($"Build failed: {summary.result} ({summary.totalErrors} errors)");
             }
 
-            Debug.Log($"[BuildScript] PHASE 2 BUILD SUCCEEDED! Total size: {summary.totalSize} bytes. Output: {outputPath}");
+            Debug.Log($"[BuildScript] PHASE 3 BUILD SUCCEEDED! Total size: {summary.totalSize} bytes. Output: {outputPath}");
         }
 
         private static GameObject CreateOrUpdateNetworkPlayerPrefab()

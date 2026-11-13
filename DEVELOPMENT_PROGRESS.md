@@ -217,3 +217,74 @@ Phase 2: First Multiplayer Prototype (NGO NetworkManager, NetworkPlayer replicat
 ### Next phase
 
 Phase 3: Ground Operations Mode & Operator Abilities (integrate `shared/OutrunAftermath.Simulation` contract/DLL into Unity, Rogue/Sentinel operator abilities & cooldowns, and Ground Operations match rules/objectives on Dead City).
+
+---
+
+## Phase 3 — 2026-11-13 (Ground Operations Mode & Operator Abilities)
+
+### Completed features
+
+- **Shared Simulation Integration** (`shared/OutrunAftermath.Simulation.Standard/`, `client/Assets/Plugins/OutrunAftermath.Simulation.dll`):
+  Built a `netstandard2.1` multi-target library for `OutrunAftermath.Simulation` with `LangVersion 12` and polyfills, compiling directly into Unity's `Assets/Plugins/`. This enables Unity client and dedicated server scripts to reference `OperatorCatalog`, `AbilityCatalog`, and simulation data models directly without duplication.
+- **Operator Ability System** (`client/Assets/Game/Runtime/Abilities/OperatorAbilitySystem.cs`):
+  Server-authoritative ability framework wired to `OperatorCatalog` (10 launch operators) and `AbilityCatalog` (20 abilities). Manages `PrimaryCooldownRemaining`, `UltimateCooldownRemaining`, and `UltimateCharge` (0–100%) with client prediction and server RPC validation. Implements ability kits for all 10 launch operators:
+  - **REX** (Rogue Assault): Frag Grenade (`rex_frag`) + Overrun Adrenaline (`rex_overrun`)
+  - **NOVA** (Rogue Scout): Recon Ping (`nova_ping`) + EMP Pulse (`nova_emp`)
+  - **MEDIC** (Rogue Support): Stim Heal (`medic_stim`) + Bio-Revive Pulse (`medic_revive_pulse`)
+  - **TITAN** (Sentinel Assault): Suppress Kinetic Shield (`titan_suppress`) + Bastion Fortify (`titan_bastion`)
+  - **VIPER** (Sentinel Specialist): Toxin Gas (`viper_toxin`) + Killbox Turret (`viper_killbox`)
+  - **TRACE** (Sentinel Tracker): Sensor Dart (`trace_dart`) + Hunter's Instinct (`trace_instinct`)
+  - **TORQUE** (Rogue Engineer): Deployable Cover (`torque_cover`) + EMP Burst (`torque_emp`)
+  - **SHADE** (Rogue Ghost): Smoke Screen (`shade_smoke`) + Phase Dash (`shade_dash`)
+  - **CIRCUIT** (Sentinel Engineer): Trip Mine (`circuit_mine`) + Gridlock Hack (`circuit_gridlock`)
+  - **FALCON** (Sentinel Interceptor): Grapple Line (`falcon_grapple`) + Tactical Airstrike (`falcon_airstrike`)
+- **Ground Operations Tactical Objective Terminal** (`client/Assets/Game/Runtime/Objectives/NetworkObjectiveTerminal.cs`):
+  Server-authoritative objective terminal placed in the extraction sector at `(0f, 0.75f, 65f)`. Replicates `Progress` (0–100%), `IsContested`, `IsHacking`, and `ActiveHackerName`. Rogues within 6.5m transmit uplink by holding `[E]`; Sentinels contest and block transmission; holographic ground ring and billboard HUD status; triggers `ReportObjectiveCompleteServer` upon reaching 100%.
+- **Ground Operations Match Flow & Operator Spawning** (`client/Assets/Game/Multiplayer/NetworkMatchManager.cs`):
+  Spawns balanced Rogue vs Sentinel operators from the 10-character roster (`rex`, `nova`, `medic`, `torque`, `shade` vs `titan`, `trace`, `viper`, `circuit`, `falcon`); assigns distinct colors and HUD badges; handles extraction defense timer and objective completion victory paths.
+- **HUD & Input Enhancements** (`client/Assets/Game/Runtime/Input/InputManager.cs`, `client/Assets/Game/Runtime/UI/TacticalHUD.cs`):
+  Added `AbilityPrimary` (`[Q]` / Gamepad LB) and `AbilityUltimate` (`[F]`/`[Z]` / Gamepad RB); added Bottom-Center Abilities Panel with `[Q]` tactical cooldown and `[F]` ultimate charge gauge; added Top-Center Objective Tracker with uplink progress and contest alerts; dynamic operator codename badge.
+- **Multiplayer Replication & Testing** (`client/Assets/Game/Multiplayer/NetworkPlayerController.cs`, `NetworkSessionController.cs`):
+  `NetOperatorId` replication, input routing to abilities system, ability activation validation, and automated multi-process combat & ability verification.
+
+### Files created
+
+- `client/Assets/Game/Runtime/Abilities/OperatorAbilitySystem.cs`
+- `client/Assets/Game/Runtime/Objectives/NetworkObjectiveTerminal.cs`
+- `shared/OutrunAftermath.Simulation.Standard/OutrunAftermath.Simulation.Standard.csproj`
+- `client/Assets/Plugins/OutrunAftermath.Simulation.dll`
+- `run_phase3_test.ps1`
+
+### Files modified
+
+- `client/Assets/Game/Runtime/Character/PlayerHealth.cs` (`FortifyArmor`, `RepairArmor`, `Heal`, `Revive`)
+- `client/Assets/Game/Multiplayer/NetworkPlayerController.cs` (`NetOperatorId`, ability inputs, operator color tints)
+- `client/Assets/Game/Multiplayer/NetworkMatchManager.cs` (balanced 10-operator roster spawns, objective victory rules)
+- `client/Assets/Game/Runtime/Input/InputManager.cs` (`AbilityPrimary`, `AbilityUltimate`)
+- `client/Assets/Game/Runtime/UI/TacticalHUD.cs` (abilities cooldown & ultimate panel, objective tracker)
+- `client/Assets/Game/Core/GameBootstrap.cs` (offline abilities binding)
+- `client/Assets/Editor/BuildScript.cs` (adds `NetworkObjectiveTerminal` to scene authoring)
+- `client/Assets/Game/Multiplayer/LobbyConnectionUI.cs` (10-operator roster banner)
+- `backend/OutrunAftermath.sln` (added `OutrunAftermath.Simulation.Standard.csproj`)
+- `.gitignore` (un-ignored `client/Assets/Plugins/*.dll`)
+
+### Tests executed
+
+1. **Backend Test Suite (`dotnet test backend/OutrunAftermath.sln`)**:
+   - Exit code `0`: 73 tests passed, 0 failed (`67` simulation + `6` API).
+2. **Unified Solution Build (`dotnet build backend/OutrunAftermath.sln`)**:
+   - Exit code `0`: All 5 projects built cleanly, generating updated `client/Assets/Plugins/OutrunAftermath.Simulation.dll`.
+3. **Unity 6 Windows Build (`BuildScript.BuildWindows`)**:
+   - Exit code `0`: Built `client/Builds/Windows/OutrunAftermath.exe` (106,093,845 bytes).
+4. **3-Process Ground Operations Live UDP Test (`run_phase3_test.ps1`)**:
+   - Dedicated Server (`:7777`) + Client 1 (Rogue `REX`) + Client 2 (Sentinel `TITAN`).
+   - Verified team assignment: Client 2 as `OP-03 (REX // ROGUE)` and Client 1 as `OP-02 (TITAN // SENTINEL)`.
+   - Verified ServerRPC hitscan combat: `OP-02` HP reduced from 100/50 to `9.2/0` (Alive); `OP-03` downed to `0/0, LifeState=Downed`.
+   - Verified ability activation & server validation: Server logged `[ServerAbility] Operator titan activated titan_suppress on server`, Client 2 logged `Post-ability Primary CD=10.5s`, and downed player ability lockout verified.
+   - Verified Objective Terminal status: `Objective Terminal Uplink Progress=0.0%, Contested=False`.
+5. **Offline Solo Practice Test (`-offline -autoclose 8`)**:
+   - Exit code `0`; logs confirmed `[OUTRUN: AFTERMATH] Bootstrapping Core Engine...`, `[NetworkSession] Starting Offline Practice Mode.`, and `[OUTRUN: AFTERMATH] Offline Solo Practice Systems Online. Player Ready.` with 0 exceptions.
+
+### Next phase
+
+Phase 4: Convoy Operations Mode & Vehicle Framework (Wasteland Raptor vehicle physics, 4 crew seats: Driver, Attacker, Support, Heavy; manual and automatic takeover seat switching; vehicle component damage; convoy match rules).

@@ -105,6 +105,13 @@ namespace OutrunAftermath.Client.Runtime.Character
             }
         }
 
+        public void FortifyArmor(float amount)
+        {
+            if (_state != PlayerLifeState.Alive) return;
+            currentArmor = Mathf.Min(maxArmor + 50f, currentArmor + Mathf.Max(0f, amount));
+            OnHealthArmorChanged?.Invoke(currentHealth, currentArmor);
+        }
+
         public void TakeDamage(float amount, Vector3 hitPoint = default)
         {
             if (_state == PlayerLifeState.Eliminated) return;
@@ -208,6 +215,8 @@ namespace OutrunAftermath.Client.Runtime.Character
             OnRevived?.Invoke();
         }
 
+        public void Revive() => RevivePlayer();
+
         public void Eliminate()
         {
             if (_state == PlayerLifeState.Eliminated) return;
@@ -252,14 +261,14 @@ namespace OutrunAftermath.Client.Runtime.Character
         public void Heal(float amount)
         {
             if (_state != PlayerLifeState.Alive) return;
-            currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+            currentHealth = Mathf.Min(maxHealth, currentHealth + Mathf.Max(0f, amount));
             OnHealthArmorChanged?.Invoke(currentHealth, currentArmor);
         }
 
         public void RepairArmor(float amount)
         {
             if (_state != PlayerLifeState.Alive) return;
-            currentArmor = Mathf.Min(maxArmor, currentArmor + amount);
+            currentArmor = Mathf.Min(maxArmor, currentArmor + Mathf.Max(0f, amount));
             OnHealthArmorChanged?.Invoke(currentHealth, currentArmor);
         }
     }

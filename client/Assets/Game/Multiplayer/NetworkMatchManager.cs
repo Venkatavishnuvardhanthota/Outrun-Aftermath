@@ -102,9 +102,8 @@ namespace OutrunAftermath.Client.Multiplayer
                 MatchTimer.Value = Mathf.Max(0f, MatchTimer.Value - Time.deltaTime);
                 if (MatchTimer.Value <= 0f)
                 {
-                    // Time expired: higher score wins, or Sentinels defend on tie
-                    int winner = RogueScore.Value > SentinelScore.Value ? 0 : 1;
-                    EndMatchServer(winner);
+                    // Time expired: Sentinels defend extraction successfully
+                    EndMatchServer(1, "EXTRACTION TIME EXPIRED - ROGUES INTERCEPTED");
                 }
             }
             else if (CurrentPhase.Value == (int)MatchPhase.Ended)
@@ -152,20 +151,25 @@ namespace OutrunAftermath.Client.Multiplayer
             int slotIndex = assignedFaction == 0 ? rogues : sentinels;
             (Vector3 spawnPos, Quaternion spawnRot) = GetFactionSpawnPoint(assignedFaction, slotIndex);
 
+            // Assign distinct operator from verified catalog
+            string[] rogueOps = { "rex", "nova", "medic", "torque", "shade" };
+            string[] sentinelOps = { "titan", "trace", "viper", "circuit", "falcon" };
+            string operatorId = assignedFaction == 0 ? rogueOps[slotIndex % rogueOps.Length] : sentinelOps[slotIndex % sentinelOps.Length];
+
             var instance = Instantiate(playerPrefab, spawnPos, spawnRot);
             var netObj = instance.GetComponent<NetworkObject>();
             netObj.SpawnAsPlayerObject(clientId, true);
 
             var controller = instance.GetComponent<NetworkPlayerController>();
             string callsign = $"OP-{clientId + 1:00}";
-            controller.ServerInitializePlayer(assignedFaction, callsign, spawnPos, spawnRot);
+            controller.ServerInitializePlayer(assignedFaction, callsign, operatorId, spawnPos, spawnRot);
             _players[clientId] = controller;
 
             RecountTeamsServer();
 
             string factionName = assignedFaction == 0 ? "ROGUE" : "SENTINEL";
-            Debug.Log($"[NetworkMatchManager] Spawned client {clientId} as {callsign} ({factionName}) at {spawnPos}");
-            BroadcastFeedRpc($"{callsign} deployed to {factionName}");
+            Debug.Log($"[NetworkMatchManager] Spawned client {clientId} as {callsign} ({operatorId.ToUpper()} // {factionName}) at {spawnPos}");
+            BroadcastFeedRpc($"{callsign} deployed as {operatorId.ToUpper()} ({factionName})");
 
             if (_players.Count >= 2 && CurrentPhase.Value == (int)MatchPhase.WaitingForPlayers)
             {
@@ -230,6 +234,13 @@ namespace OutrunAftermath.Client.Multiplayer
             BroadcastFeedRpc($"{attackerName} downed {victimName}");
         }
 
+        public void ReportObjectiveCompleteServer(OutrunAftermath.Simulation.Core.Faction faction, string objectiveName)
+        {
+            if (!IsServer) return;
+            int winningFaction = faction == OutrunAftermath.Simulation.Core.Faction.Rogue ? 0 : 1;
+            EndMatchServer(winningFaction, objectiveName.ToUpper());
+        }
+
         public bool TryGetPlayer(ulong clientId, out NetworkPlayerController controller)
         {
             return _players.TryGetValue(clientId, out controller);
@@ -237,7 +248,7 @@ namespace OutrunAftermath.Client.Multiplayer
 
         public IEnumerable<NetworkPlayerController> AllPlayers => _players.Values;
 
-        private void EndMatchServer(int winningFaction)
+        private void EndMatchServer(int winningFaction, string reason = null)
         {
             if (CurrentPhase.Value == (int)MatchPhase.Ended) return;
 
@@ -246,8 +257,9 @@ namespace OutrunAftermath.Client.Multiplayer
             _roundResetTimer = 6f;
 
             string factionLabel = winningFaction == 0 ? "THE ROGUES" : "THE SENTINELS";
-            Debug.Log($"[NetworkMatchManager] MATCH ENDED — WINNER: {factionLabel} (Rogue {RogueScore.Value} : Sentinel {SentinelScore.Value})");
-            BroadcastFeedRpc($"VICTORY: {factionLabel} ({RogueScore.Value} - {SentinelScore.Value})");
+            string reasonSuffix = string.IsNullOrEmpty(reason) ? "" : $" [{reason}]";
+            Debug.Log($"[NetworkMatchManager] MATCH ENDED — WINNER: {factionLabel} (Rogue {RogueScore.Value} : Sentinel {SentinelScore.Value}){reasonSuffix}");
+            BroadcastFeedRpc($"VICTORY: {factionLabel}{reasonSuffix} ({RogueScore.Value} - {SentinelScore.Value})");
         }
 
         private void RestartMatchServer()

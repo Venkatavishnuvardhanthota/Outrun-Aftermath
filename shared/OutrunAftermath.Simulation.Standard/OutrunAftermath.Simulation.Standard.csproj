@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>12</LangVersion>
+    <RootNamespace>OutrunAftermath.Simulation</RootNamespace>
+    <AssemblyName>OutrunAftermath.Simulation</AssemblyName>
+    <OutputPath>..\..\client\Assets\Plugins\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\OutrunAftermath.Simulation\**\*.cs" Exclude="..\OutrunAftermath.Simulation\obj\**;..\OutrunAftermath.Simulation\bin\**" />
+  </ItemGroup>
+</Project>

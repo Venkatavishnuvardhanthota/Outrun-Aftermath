@@ -64,10 +64,11 @@ namespace OutrunAftermath.Client.Multiplayer
                         Resources.GetBuiltinResource<Font>("Arial.ttf");
 
             // Center dark industrial panel
-            _menuRoot = CreatePanel(canvasGo.transform, "ConnectionPanel", Vector2.zero, new Vector2(560f, 520f), new Color(0.07f, 0.08f, 0.1f, 0.94f));
+            _menuRoot = CreatePanel(canvasGo.transform, "ConnectionPanel", Vector2.zero, new Vector2(580f, 540f), new Color(0.07f, 0.08f, 0.1f, 0.94f));
 
-            CreateText(_menuRoot.transform, "Title", "OUTRUN: AFTERMATH", font, 34, TextAnchor.MiddleCenter, new Vector2(0f, 200f), new Vector2(500f, 50f), new Color(0.95f, 0.55f, 0.18f));
-            CreateText(_menuRoot.transform, "Subtitle", "MULTIPLAYER OPERATIONS // DEAD CITY SECTOR 4", font, 14, TextAnchor.MiddleCenter, new Vector2(0f, 162f), new Vector2(500f, 26f), new Color(0.75f, 0.82f, 0.88f));
+            CreateText(_menuRoot.transform, "Title", "OUTRUN: AFTERMATH", font, 34, TextAnchor.MiddleCenter, new Vector2(0f, 215f), new Vector2(520f, 45f), new Color(0.95f, 0.55f, 0.18f));
+            CreateText(_menuRoot.transform, "Subtitle", "GROUND OPERATIONS // DEAD CITY SECTOR 4 [EXTRACTION]", font, 13, TextAnchor.MiddleCenter, new Vector2(0f, 180f), new Vector2(520f, 24f), new Color(0.75f, 0.85f, 0.92f));
+            CreateText(_menuRoot.transform, "Operators", "ACTIVE ROSTER: REX, NOVA, MEDIC, TORQUE, SHADE | TITAN, TRACE, VIPER, CIRCUIT, FALCON", font, 10, TextAnchor.MiddleCenter, new Vector2(0f, 155f), new Vector2(540f, 20f), new Color(0.6f, 0.7f, 0.75f));
 
             // IP Field
             CreateText(_menuRoot.transform, "IpLabel", "SERVER IP", font, 13, TextAnchor.MiddleLeft, new Vector2(-130f, 110f), new Vector2(200f, 24f), Color.gray);

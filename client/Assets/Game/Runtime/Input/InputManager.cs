@@ -15,6 +15,8 @@ namespace OutrunAftermath.Client.Runtime.Input
         public bool Aim;
         public bool Reload;
         public bool Interact;
+        public bool AbilityPrimary; // Q key or Gamepad LB
+        public bool AbilityUltimate; // F key or Gamepad RB
         public bool TogglePerspective;
         public bool ToggleHelp;
         public int WeaponSlot; // 1, 2, 3 or 0 if none
@@ -74,6 +76,8 @@ namespace OutrunAftermath.Client.Runtime.Input
                 state.Jump = kb.spaceKey.wasPressedThisFrame;
                 state.Reload = kb.rKey.wasPressedThisFrame;
                 state.Interact = kb.eKey.isPressed;
+                state.AbilityPrimary = kb.qKey.wasPressedThisFrame;
+                state.AbilityUltimate = kb.fKey.wasPressedThisFrame || kb.zKey.wasPressedThisFrame;
                 state.TogglePerspective = kb.tKey.wasPressedThisFrame || kb.vKey.wasPressedThisFrame;
                 state.ToggleHelp = kb.f1Key.wasPressedThisFrame || kb.hKey.wasPressedThisFrame;
 
@@ -116,6 +120,8 @@ namespace OutrunAftermath.Client.Runtime.Input
                 if (pad.buttonEast.wasPressedThisFrame) state.Crouch = true;
                 if (pad.buttonWest.wasPressedThisFrame) state.Reload = true;
                 if (pad.buttonNorth.wasPressedThisFrame) state.Interact = true;
+                if (pad.leftShoulder.wasPressedThisFrame) state.AbilityPrimary = true;
+                if (pad.rightShoulder.wasPressedThisFrame) state.AbilityUltimate = true;
                 if (pad.leftStickButton.isPressed) state.Sprint = true;
                 if (pad.rightStickButton.wasPressedThisFrame) state.TogglePerspective = true;
             }

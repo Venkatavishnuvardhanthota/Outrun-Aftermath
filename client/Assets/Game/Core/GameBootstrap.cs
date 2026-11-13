@@ -5,6 +5,7 @@ using OutrunAftermath.Client.Runtime.Character;
 using OutrunAftermath.Client.Runtime.Combat;
 using OutrunAftermath.Client.Runtime.UI;
 using OutrunAftermath.Client.Runtime.Environment;
+using OutrunAftermath.Client.Runtime.Abilities;
 using OutrunAftermath.Client.Multiplayer;
 
 namespace OutrunAftermath.Client
@@ -115,6 +116,10 @@ namespace OutrunAftermath.Client
             _weapons = _playerRoot.AddComponent<WeaponSystem>();
             _weapons.Initialize(_cameraRig, _motor, _health);
 
+            // Setup Operator Abilities
+            var abilitySys = _playerRoot.AddComponent<OperatorAbilitySystem>();
+            abilitySys.SetOperator("rex");
+
             // Wire up health to motor stance
             _health.OnDowned += () =>
             {
@@ -137,6 +142,11 @@ namespace OutrunAftermath.Client
             var hudGo = new GameObject("TacticalHUD");
             _hud = hudGo.AddComponent<TacticalHUD>();
             _hud.Initialize(_health, _weapons, _cameraRig);
+            var abilitySys = _playerRoot.GetComponent<OperatorAbilitySystem>();
+            if (abilitySys != null)
+            {
+                _hud.BindAbilitySystem(abilitySys);
+            }
         }
 
         private void Update()
@@ -183,6 +193,14 @@ namespace OutrunAftermath.Client
             if (_weapons != null)
             {
                 _weapons.ProcessWeapons(input);
+            }
+
+            // Process Operator Abilities in offline practice
+            var ability = _playerRoot.GetComponent<OperatorAbilitySystem>();
+            if (ability != null)
+            {
+                if (input.AbilityPrimary) ability.TryActivatePrimary();
+                if (input.AbilityUltimate) ability.TryActivateUltimate();
             }
 
             // Escape key cursor handling

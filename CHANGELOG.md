@@ -2,6 +2,22 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [0.5.0] - 2026-11-13 - Phase 3: Ground Operations Mode & Operator Abilities
+
+### Added
+- Integrated verified simulation contracts into Unity client via `shared/OutrunAftermath.Simulation.Standard` (`netstandard2.1`), bundling `client/Assets/Plugins/OutrunAftermath.Simulation.dll` without code duplication.
+- Server-authoritative `OperatorAbilitySystem` implementing full kits for all 10 launch operators across Rogues (REX, NOVA, MEDIC, TORQUE, SHADE) and Sentinels (TITAN, VIPER, TRACE, CIRCUIT, FALCON) with cooldown and ultimate charge tracking.
+- Interactive server-authoritative `NetworkObjectiveTerminal` in Dead City extraction sector with progress, contest zones, and holographic visual indicators.
+- Balanced 10-operator faction assignment and spawning in `NetworkMatchManager`.
+- Input actions for Tactical Ability (`[Q]` / LB) and Ultimate Ability (`[F]`/`[Z]` / RB).
+- Tactical HUD update with Bottom-Center abilities display (cooldown timer and ultimate charge bar) and Top-Center objective uplink tracker.
+- Verified 3-process live Ground Operations multiplayer test (Dedicated Server + Client 1 REX vs Client 2 TITAN on `:7777`) with hitscan combat, ability activation, cooldowns, and objective tracking.
+
+### Fixed
+- Fixed duplicate `Heal()` declaration and standardized armor fortify/repair methods in `PlayerHealth.cs`.
+- Resolved `IReadOnlyList<T>` LINQ lookup and missing multiplayer namespace references in `OperatorAbilitySystem.cs`.
+- Updated `.gitignore` to track managed `Assets/Plugins/*.dll` assets while ignoring root binary output folders.
+
 ## [0.4.0] - 2026-11-12 - Phase 2: First Multiplayer Prototype
 
 ### Added

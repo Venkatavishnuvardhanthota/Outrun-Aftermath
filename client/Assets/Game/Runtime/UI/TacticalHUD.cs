@@ -4,19 +4,21 @@ using UnityEngine.UI;
 using OutrunAftermath.Client.Runtime.Character;
 using OutrunAftermath.Client.Runtime.Combat;
 using OutrunAftermath.Client.Runtime.CameraSystem;
+using OutrunAftermath.Client.Runtime.Abilities;
 
 namespace OutrunAftermath.Client.Runtime.UI
 {
     /// <summary>
     /// Tactical in-game HUD for OUTRUN: AFTERMATH.
     /// Provides dynamic crosshair spread, hitmarkers, health/armor gauges, ammo counter,
-    /// compass bearing, downed state alerts, and control hints.
+    /// compass bearing, downed state alerts, operator kits, ability cooldowns, and tactical objectives.
     /// </summary>
     public sealed class TacticalHUD : MonoBehaviour
     {
         private PlayerHealth _health;
         private WeaponSystem _weapons;
         private CameraRig _cameraRig;
+        private OperatorAbilitySystem _abilitySystem;
 
         // UI Canvas and Root Panels
         private Canvas _canvas;
@@ -27,11 +29,27 @@ namespace OutrunAftermath.Client.Runtime.UI
         private Image[] _hitMarkerLines;
         private float _hitMarkerTimer;
 
-        // Health & Armor
+        // Health & Armor & Operator
         private Slider _healthBar;
         private Slider _armorBar;
         private Text _healthText;
         private Text _armorText;
+        private Text _operatorBadgeText;
+
+        // Tactical Abilities (Bottom Center)
+        private Text _primaryKeyText;
+        private Text _primaryNameText;
+        private Text _primaryCdText;
+        private Text _ultimateKeyText;
+        private Text _ultimateNameText;
+        private Text _ultimateCdText;
+        private Slider _ultimateBar;
+
+        // Objective Tracker (Top Center)
+        private GameObject _objectivePanel;
+        private Text _objectiveTitleText;
+        private Text _objectiveStatusText;
+        private Slider _objectiveSlider;
 
         // Weapon & Ammo
         private Text _weaponNameText;
@@ -148,7 +166,10 @@ namespace OutrunAftermath.Client.Runtime.UI
             }
 
             // 2. Health & Armor Gauges (Bottom Left)
-            var healthPanel = CreatePanel(canvasGo.transform, "HealthPanel", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(40f, 40f), new Vector2(320f, 110f), new Color(0.08f, 0.1f, 0.12f, 0.75f));
+            var healthPanel = CreatePanel(canvasGo.transform, "HealthPanel", new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(40f, 40f), new Vector2(320f, 135f), new Color(0.08f, 0.1f, 0.12f, 0.75f));
+
+            // Operator Badge
+            _operatorBadgeText = CreateText(healthPanel.transform, "OperatorBadge", "[REX // ASSAULT]", defaultFont, 14, TextAnchor.MiddleLeft, new Vector2(24f, 110f), new Vector2(270f, 20f), new Color(0.95f, 0.6f, 0.2f));
 
             // Armor Bar
             var armorGo = CreateSlider(healthPanel.transform, "ArmorBar", new Vector2(20f, 65f), new Vector2(280f, 16f), new Color(0.15f, 0.65f, 0.95f));
@@ -159,6 +180,23 @@ namespace OutrunAftermath.Client.Runtime.UI
             var hpGo = CreateSlider(healthPanel.transform, "HealthBar", new Vector2(20f, 25f), new Vector2(280f, 22f), new Color(0.85f, 0.22f, 0.2f));
             _healthBar = hpGo.GetComponent<Slider>();
             _healthText = CreateText(healthPanel.transform, "HealthText", "HEALTH: 100 / 100", defaultFont, 15, TextAnchor.MiddleLeft, new Vector2(24f, 48f), new Vector2(200f, 20f), Color.white);
+
+            // 3. Tactical Abilities Panel (Bottom Center)
+            var abilityPanel = CreatePanel(canvasGo.transform, "AbilityPanel", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(360f, 90f), new Color(0.06f, 0.08f, 0.11f, 0.8f));
+
+            // Primary Ability [Q]
+            var primaryBox = CreatePanel(abilityPanel.transform, "PrimarySlot", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(10f, 0f), new Vector2(165f, 75f), new Color(0.12f, 0.15f, 0.18f, 0.9f));
+            _primaryKeyText = CreateText(primaryBox.transform, "Key", "[Q] TACTICAL", defaultFont, 12, TextAnchor.UpperLeft, new Vector2(10f, -6f), new Vector2(145f, 18f), Color.yellow);
+            _primaryNameText = CreateText(primaryBox.transform, "Name", "FRAG GRENADE", defaultFont, 13, TextAnchor.MiddleLeft, new Vector2(10f, -4f), new Vector2(145f, 22f), Color.white);
+            _primaryCdText = CreateText(primaryBox.transform, "Cooldown", "READY", defaultFont, 14, TextAnchor.LowerRight, new Vector2(-10f, 8f), new Vector2(145f, 22f), Color.green);
+
+            // Ultimate Ability [F]
+            var ultBox = CreatePanel(abilityPanel.transform, "UltimateSlot", new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-10f, 0f), new Vector2(165f, 75f), new Color(0.12f, 0.15f, 0.18f, 0.9f));
+            _ultimateKeyText = CreateText(ultBox.transform, "Key", "[F] ULTIMATE", defaultFont, 12, TextAnchor.UpperLeft, new Vector2(10f, -6f), new Vector2(145f, 18f), new Color(0.95f, 0.65f, 0.2f));
+            _ultimateNameText = CreateText(ultBox.transform, "Name", "OVERRUN", defaultFont, 13, TextAnchor.MiddleLeft, new Vector2(10f, -4f), new Vector2(145f, 22f), Color.white);
+            _ultimateCdText = CreateText(ultBox.transform, "Cooldown", "READY (100%)", defaultFont, 13, TextAnchor.LowerRight, new Vector2(-10f, 8f), new Vector2(145f, 22f), Color.yellow);
+            var uBarGo = CreateSlider(ultBox.transform, "UltBar", new Vector2(10f, 2f), new Vector2(145f, 5f), new Color(1f, 0.75f, 0.15f));
+            _ultimateBar = uBarGo.GetComponent<Slider>();
 
             // 3. Weapon & Ammo Counter (Bottom Right)
             var weaponPanel = CreatePanel(canvasGo.transform, "WeaponPanel", new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-40f, 40f), new Vector2(300f, 110f), new Color(0.08f, 0.1f, 0.12f, 0.75f));
@@ -175,6 +213,14 @@ namespace OutrunAftermath.Client.Runtime.UI
             var topPanel = CreatePanel(canvasGo.transform, "TopHeader", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(500f, 60f), new Color(0.06f, 0.08f, 0.1f, 0.65f));
             _compassText = CreateText(topPanel.transform, "CompassText", "000° N", defaultFont, 18, TextAnchor.MiddleCenter, new Vector2(0f, 15f), new Vector2(300f, 24f), Color.white);
             _missionText = CreateText(topPanel.transform, "MissionText", "SECTOR: DEAD CITY | RECON & COMBAT EXTRACTION", defaultFont, 13, TextAnchor.MiddleCenter, new Vector2(0f, -12f), new Vector2(480f, 20f), new Color(0.7f, 0.85f, 0.9f));
+
+            // 4B. Tactical Objective Tracker (Top Center below Header)
+            _objectivePanel = CreatePanel(canvasGo.transform, "ObjectiveTracker", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -80f), new Vector2(440f, 34f), new Color(0.08f, 0.1f, 0.14f, 0.85f));
+            _objectiveTitleText = CreateText(_objectivePanel.transform, "ObjTitle", "DATA UPLINK", defaultFont, 12, TextAnchor.MiddleLeft, new Vector2(14f, 0f), new Vector2(120f, 24f), Color.cyan);
+            _objectiveStatusText = CreateText(_objectivePanel.transform, "ObjStatus", "0% (INACTIVE)", defaultFont, 12, TextAnchor.MiddleRight, new Vector2(-14f, 0f), new Vector2(150f, 24f), Color.white);
+            var objBarGo = CreateSlider(_objectivePanel.transform, "ObjSlider", new Vector2(130f, 11f), new Vector2(140f, 12f), new Color(0.15f, 0.85f, 0.95f));
+            _objectiveSlider = objBarGo.GetComponent<Slider>();
+            _objectiveSlider.value = 0f;
 
             // Perspective badge (Top Left)
             _perspectiveBadge = CreateText(canvasGo.transform, "PerspectiveBadge", "[FIRST PERSON : T TO TOGGLE]", defaultFont, 14, TextAnchor.MiddleLeft, new Vector2(180f, -30f), new Vector2(300f, 25f), Color.yellow);
@@ -195,10 +241,10 @@ namespace OutrunAftermath.Client.Runtime.UI
             kfRect.anchorMax = new Vector2(0f, 1f);
 
             // 5. Controls Helper (Top Right)
-            _controlsPanel = CreatePanel(canvasGo.transform, "ControlsPanel", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-30f, -30f), new Vector2(280f, 210f), new Color(0.05f, 0.06f, 0.08f, 0.85f));
+            _controlsPanel = CreatePanel(canvasGo.transform, "ControlsPanel", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-30f, -30f), new Vector2(280f, 230f), new Color(0.05f, 0.06f, 0.08f, 0.85f));
             CreateText(_controlsPanel.transform, "ControlsTitle", "TACTICAL CONTROLS (F1/H)", defaultFont, 14, TextAnchor.UpperCenter, new Vector2(0f, -10f), new Vector2(260f, 20f), Color.cyan);
-            string controls = "WASD - Tactical Locomotion\nSHIFT - Sprint | C - Crouch/Slide\nSPACE - Jump\nLEFT CLICK - Fire\nRIGHT CLICK - Aim Down Sights (ADS)\nT - Toggle Camera (FPS / TPS)\nR - Reload | 1, 2, 3 - Switch Weapon\nE - Interact / Revive\nESC - Free Cursor";
-            CreateText(_controlsPanel.transform, "ControlsBody", controls, defaultFont, 12, TextAnchor.UpperLeft, new Vector2(15f, -35f), new Vector2(250f, 160f), Color.white);
+            string controls = "WASD - Tactical Locomotion\nSHIFT - Sprint | C - Crouch/Slide\nSPACE - Jump\nLEFT CLICK - Fire | RIGHT CLICK - ADS\nQ - Tactical Ability | F - Ultimate Ability\nT - Toggle Camera (FPS / TPS)\nR - Reload | 1, 2, 3 - Switch Weapon\nE - Interact / Revive / Hack\nESC - Free Cursor";
+            CreateText(_controlsPanel.transform, "ControlsBody", controls, defaultFont, 12, TextAnchor.UpperLeft, new Vector2(15f, -35f), new Vector2(250f, 185f), Color.white);
 
             // 6. Downed / Bleed-Out Overlay
             _downedOverlay = CreatePanel(canvasGo.transform, "DownedOverlay", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(500f, 180f), new Color(0.4f, 0.05f, 0.05f, 0.85f));
@@ -276,6 +322,55 @@ namespace OutrunAftermath.Client.Runtime.UI
                 }
             }
 
+            // Update Tactical Abilities HUD
+            if (_abilitySystem != null && _abilitySystem.Definition != null)
+            {
+                if (_operatorBadgeText != null)
+                {
+                    _operatorBadgeText.text = $"[{_abilitySystem.Definition.Codename} // {_abilitySystem.Definition.Role.ToUpper()}]";
+                }
+
+                if (_primaryNameText != null && _abilitySystem.PrimaryAbility != null)
+                {
+                    _primaryNameText.text = _abilitySystem.PrimaryAbility.Id.ToUpper();
+                    float cd = _abilitySystem.ClientPrimaryCd;
+                    if (cd > 0.05f)
+                    {
+                        _primaryCdText.text = $"{cd:F1}s";
+                        _primaryCdText.color = Color.red;
+                    }
+                    else
+                    {
+                        _primaryCdText.text = "READY";
+                        _primaryCdText.color = Color.green;
+                    }
+                }
+
+                if (_ultimateNameText != null && _abilitySystem.UltimateAbility != null)
+                {
+                    _ultimateNameText.text = _abilitySystem.UltimateAbility.Id.ToUpper();
+                    float ultCd = _abilitySystem.ClientUltimateCd;
+                    float charge = _abilitySystem.ClientUltimateCharge;
+                    if (_ultimateBar != null) _ultimateBar.value = charge / 100f;
+
+                    if (ultCd > 0.05f)
+                    {
+                        _ultimateCdText.text = $"{ultCd:F0}s";
+                        _ultimateCdText.color = Color.red;
+                    }
+                    else if (charge >= 100f)
+                    {
+                        _ultimateCdText.text = "READY (100%)";
+                        _ultimateCdText.color = Color.yellow;
+                    }
+                    else
+                    {
+                        _ultimateCdText.text = $"{Mathf.FloorToInt(charge)}%";
+                        _ultimateCdText.color = Color.cyan;
+                    }
+                }
+            }
+
             // Toggle help panel
             if (UnityEngine.InputSystem.Keyboard.current != null &&
                 (UnityEngine.InputSystem.Keyboard.current.f1Key.wasPressedThisFrame ||
@@ -325,6 +420,53 @@ namespace OutrunAftermath.Client.Runtime.UI
         public void SetNetworkStatus(string badgeText)
         {
             if (_networkBadge != null) _networkBadge.text = badgeText;
+        }
+
+        public void BindAbilitySystem(OperatorAbilitySystem abilitySystem)
+        {
+            _abilitySystem = abilitySystem;
+        }
+
+        public void SetOperatorInfo(string codename, string role)
+        {
+            if (_operatorBadgeText != null)
+            {
+                _operatorBadgeText.text = $"[{codename.ToUpper()} // {role.ToUpper()}]";
+            }
+        }
+
+        public void UpdateObjectiveStatus(float progress, bool isContested, bool isHacking, Vector3 terminalPos)
+        {
+            if (_objectiveSlider != null) _objectiveSlider.value = progress / 100f;
+            if (_objectiveStatusText != null)
+            {
+                if (progress >= 100f)
+                {
+                    _objectiveStatusText.text = "UPLINK SECURED";
+                    _objectiveStatusText.color = Color.green;
+                }
+                else if (isContested)
+                {
+                    _objectiveStatusText.text = $"CONTESTED! [{Mathf.FloorToInt(progress)}%]";
+                    _objectiveStatusText.color = new Color(1f, 0.4f, 0.1f);
+                }
+                else if (isHacking)
+                {
+                    _objectiveStatusText.text = $"TRANSMITTING: {Mathf.FloorToInt(progress)}%";
+                    _objectiveStatusText.color = Color.cyan;
+                }
+                else
+                {
+                    float dist = Camera.main != null ? Vector3.Distance(Camera.main.transform.position, terminalPos) : 0f;
+                    _objectiveStatusText.text = $"{Mathf.FloorToInt(progress)}% ({Mathf.CeilToInt(dist)}m)";
+                    _objectiveStatusText.color = Color.white;
+                }
+            }
+        }
+
+        public void TriggerAbilityVisual(string abilityId)
+        {
+            AddKillFeedMessage($"[ABILITY] {abilityId.ToUpper()} DEPLOYED");
         }
 
         public void AddKillFeedMessage(string message)

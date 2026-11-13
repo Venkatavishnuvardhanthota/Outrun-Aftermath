@@ -7,6 +7,7 @@ using UnityEngine.Rendering;
 using OutrunAftermath.Client.Runtime.CameraSystem;
 using OutrunAftermath.Client.Runtime.Character;
 using OutrunAftermath.Client.Runtime.Combat;
+using OutrunAftermath.Client.Runtime.Abilities;
 using OutrunAftermath.Client.Runtime.Input;
 using OutrunAftermath.Client.Runtime.UI;
 
@@ -23,10 +24,12 @@ namespace OutrunAftermath.Client.Multiplayer
     [RequireComponent(typeof(CharacterMotor))]
     [RequireComponent(typeof(PlayerHealth))]
     [RequireComponent(typeof(WeaponSystem))]
+    [RequireComponent(typeof(OperatorAbilitySystem))]
     public sealed class NetworkPlayerController : NetworkBehaviour
     {
         public NetworkVariable<int> NetFaction = new NetworkVariable<int>(0);
         public NetworkVariable<FixedString64Bytes> NetCallsign = new NetworkVariable<FixedString64Bytes>("OPERATOR");
+        public NetworkVariable<FixedString32Bytes> NetOperatorId = new NetworkVariable<FixedString32Bytes>("rex");
         public NetworkVariable<float> NetHealth = new NetworkVariable<float>(100f);
         public NetworkVariable<float> NetArmor = new NetworkVariable<float>(50f);
         public NetworkVariable<int> NetLifeState = new NetworkVariable<int>((int)PlayerLifeState.Alive);
@@ -38,6 +41,7 @@ namespace OutrunAftermath.Client.Multiplayer
         private CharacterMotor _motor;
         private PlayerHealth _health;
         private WeaponSystem _weapons;
+        private OperatorAbilitySystem _abilitySystem;
         private CameraRig _cameraRig;
         private TacticalHUD _hud;
 
@@ -62,6 +66,7 @@ namespace OutrunAftermath.Client.Multiplayer
             _motor = GetComponent<CharacterMotor>();
             _health = GetComponent<PlayerHealth>();
             _weapons = GetComponent<WeaponSystem>();
+            _abilitySystem = GetComponent<OperatorAbilitySystem>();
             EnsureVisualRig();
         }
 
@@ -132,17 +137,23 @@ namespace OutrunAftermath.Client.Multiplayer
             _overheadLabel.text = "OPERATOR";
         }
 
-        public void ServerInitializePlayer(int faction, string callsign, Vector3 spawnPos, Quaternion spawnRot)
+        public void ServerInitializePlayer(int faction, string callsign, string operatorId, Vector3 spawnPos, Quaternion spawnRot)
         {
             if (!IsServer) return;
 
             NetFaction.Value = faction;
             NetCallsign.Value = new FixedString64Bytes(callsign);
+            NetOperatorId.Value = new FixedString32Bytes(operatorId);
             NetHealth.Value = _health.MaxHealth;
             NetArmor.Value = _health.MaxArmor;
             NetLifeState.Value = (int)PlayerLifeState.Alive;
             NetBleedOutRemaining.Value = 30f;
             NetReviveProgress.Value = 0f;
+
+            if (_abilitySystem != null)
+            {
+                _abilitySystem.SetOperator(operatorId);
+            }
 
             _health.SetSpawnPoint(spawnPos, spawnRot);
             _lastServerValidatedPos = spawnPos;
@@ -170,6 +181,12 @@ namespace OutrunAftermath.Client.Multiplayer
             // Subscribe to state replication
             NetFaction.OnValueChanged += (_, _) => UpdateFactionVisuals();
             NetCallsign.OnValueChanged += (_, _) => UpdateOverheadLabel();
+            NetOperatorId.OnValueChanged += (_, newId) =>
+            {
+                if (_abilitySystem != null) _abilitySystem.SetOperator(newId.ToString());
+                UpdateFactionVisuals();
+                UpdateOverheadLabel();
+            };
             NetHealth.OnValueChanged += (_, _) => OnReplicatedHealthChanged();
             NetArmor.OnValueChanged += (_, _) => OnReplicatedHealthChanged();
             NetLifeState.OnValueChanged += (_, _) => OnReplicatedHealthChanged();
@@ -232,6 +249,10 @@ namespace OutrunAftermath.Client.Multiplayer
             var hudGo = new GameObject("TacticalHUD");
             _hud = hudGo.AddComponent<TacticalHUD>();
             _hud.Initialize(_health, _weapons, _cameraRig);
+            if (_abilitySystem != null)
+            {
+                _hud.BindAbilitySystem(_abilitySystem);
+            }
 
             string role = IsHost ? "HOST" : "CLIENT";
             string faction = NetFaction.Value == 0 ? "ROGUE" : "SENTINEL";
@@ -307,6 +328,19 @@ namespace OutrunAftermath.Client.Multiplayer
             bool canMove = _health.State == PlayerLifeState.Alive || _health.State == PlayerLifeState.Downed;
             _motor.ProcessMovement(input, canMove);
             _weapons.ProcessWeapons(input);
+
+            // Trigger Abilities
+            if (_abilitySystem != null && _health.State == PlayerLifeState.Alive)
+            {
+                if (input.AbilityPrimary)
+                {
+                    _abilitySystem.TryActivatePrimary();
+                }
+                if (input.AbilityUltimate)
+                {
+                    _abilitySystem.TryActivateUltimate();
+                }
+            }
 
             if (UnityEngine.InputSystem.Keyboard.current != null &&
                 UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame)
@@ -579,13 +613,53 @@ namespace OutrunAftermath.Client.Multiplayer
 
         private void UpdateFactionVisuals()
         {
-            Color factionColor = NetFaction.Value == 0
-                ? new Color(0.85f, 0.42f, 0.15f)  // Rogues: Rust Amber
-                : new Color(0.18f, 0.45f, 0.78f); // Sentinels: Cobalt Steel
+            string op = NetOperatorId.Value.ToString().ToLower();
+            Color factionColor;
+            Color headColor;
 
-            Color headColor = NetFaction.Value == 0
-                ? new Color(0.95f, 0.65f, 0.25f)
-                : new Color(0.45f, 0.78f, 0.98f);
+            switch (op)
+            {
+                case "nova":
+                    factionColor = new Color(0.95f, 0.65f, 0.18f); // Bright Gold
+                    headColor = new Color(0.25f, 0.85f, 0.95f);
+                    break;
+                case "medic":
+                    factionColor = new Color(0.28f, 0.75f, 0.48f); // Field Medic Emerald
+                    headColor = new Color(0.92f, 0.95f, 0.92f);
+                    break;
+                case "torque":
+                    factionColor = new Color(0.72f, 0.52f, 0.18f); // Industrial Ochre
+                    headColor = new Color(0.45f, 0.48f, 0.52f);
+                    break;
+                case "shade":
+                    factionColor = new Color(0.18f, 0.18f, 0.22f); // Midnight Smoke
+                    headColor = new Color(0.45f, 0.25f, 0.65f);
+                    break;
+                case "titan":
+                    factionColor = new Color(0.18f, 0.45f, 0.78f); // Heavy Cobalt
+                    headColor = new Color(0.45f, 0.75f, 0.98f);
+                    break;
+                case "trace":
+                    factionColor = new Color(0.22f, 0.55f, 0.85f); // Cerulean Recon
+                    headColor = new Color(0.95f, 0.8f, 0.25f);
+                    break;
+                case "viper":
+                    factionColor = new Color(0.12f, 0.28f, 0.42f); // Dark Teal
+                    headColor = new Color(0.35f, 0.85f, 0.35f);
+                    break;
+                case "circuit":
+                    factionColor = new Color(0.35f, 0.42f, 0.5f);  // Gunmetal Copper
+                    headColor = new Color(0.85f, 0.55f, 0.25f);
+                    break;
+                case "falcon":
+                    factionColor = new Color(0.32f, 0.65f, 0.92f); // Sky Cyan
+                    headColor = new Color(0.85f, 0.95f, 1f);
+                    break;
+                default: // REX
+                    factionColor = new Color(0.85f, 0.42f, 0.15f); // Rust Amber
+                    headColor = new Color(0.95f, 0.65f, 0.25f);
+                    break;
+            }
 
             if (_torsoRenderer != null && _torsoRenderer.material != null)
             {
@@ -601,15 +675,17 @@ namespace OutrunAftermath.Client.Multiplayer
             {
                 string role = IsHost ? "HOST" : "CLIENT";
                 string faction = NetFaction.Value == 0 ? "ROGUE" : "SENTINEL";
-                _hud.SetNetworkStatus($"[{role} | {NetCallsign.Value} | {faction}]");
+                string opName = NetOperatorId.Value.ToString().ToUpper();
+                _hud.SetNetworkStatus($"[{role} | {NetCallsign.Value} ({opName}) | {faction}]");
             }
         }
 
         private void UpdateOverheadLabel()
         {
             if (_overheadLabel == null) return;
+            string opName = NetOperatorId.Value.ToString().ToUpper();
             string factionTag = NetFaction.Value == 0 ? "ROGUE" : "SENTINEL";
-            _overheadLabel.text = $"[{factionTag}] {NetCallsign.Value}\nHP: {Mathf.CeilToInt(NetHealth.Value)}";
+            _overheadLabel.text = $"[{opName}] {NetCallsign.Value}\nHP: {Mathf.CeilToInt(NetHealth.Value)}";
             _overheadLabel.color = NetFaction.Value == 0 ? new Color(1f, 0.6f, 0.25f) : new Color(0.4f, 0.75f, 1f);
         }
 

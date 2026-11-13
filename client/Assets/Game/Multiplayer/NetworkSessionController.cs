@@ -4,6 +4,8 @@ using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using OutrunAftermath.Client.Runtime.Abilities;
+using OutrunAftermath.Client.Runtime.Objectives;
 
 namespace OutrunAftermath.Client.Multiplayer
 {
@@ -300,6 +302,22 @@ namespace OutrunAftermath.Client.Multiplayer
             yield return new WaitForSeconds(0.6f);
 
             Debug.Log($"[NET_TEST] Post-fire Enemy HP={enemyPlayer.NetHealth.Value}, Armor={enemyPlayer.NetArmor.Value}, LifeState={(Runtime.Character.PlayerLifeState)enemyPlayer.NetLifeState.Value}");
+
+            // Test Operator Ability activation
+            var abilitySys = localPlayer.GetComponent<OperatorAbilitySystem>();
+            if (abilitySys != null && abilitySys.Definition != null)
+            {
+                Debug.Log($"[NET_TEST] Testing Operator {abilitySys.Definition.Codename} Primary Ability: {abilitySys.PrimaryAbility.Id}...");
+                abilitySys.TryActivatePrimary();
+                yield return new WaitForSeconds(0.5f);
+                Debug.Log($"[NET_TEST] Post-ability Primary CD={abilitySys.ClientPrimaryCd:F1}s");
+            }
+
+            // Test Objective Terminal
+            if (NetworkObjectiveTerminal.Instance != null)
+            {
+                Debug.Log($"[NET_TEST] Objective Terminal Uplink Progress={NetworkObjectiveTerminal.Instance.Progress.Value:F1}%, Contested={NetworkObjectiveTerminal.Instance.IsContested.Value}");
+            }
         }
 
         private static void EnsureEventSystem()
