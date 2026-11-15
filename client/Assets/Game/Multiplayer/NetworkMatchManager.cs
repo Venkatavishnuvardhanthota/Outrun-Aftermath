@@ -40,6 +40,7 @@ namespace OutrunAftermath.Client.Multiplayer
         private Runtime.Vehicles.NetworkVehicleController _rogueVehicle;
         private Runtime.Vehicles.NetworkVehicleController _sentinelVehicle;
         private float _roundResetTimer;
+        private System.DateTime _matchStartTimeUtc = System.DateTime.UtcNow;
 
         public Runtime.Vehicles.NetworkVehicleController RogueVehicle => _rogueVehicle;
         public Runtime.Vehicles.NetworkVehicleController SentinelVehicle => _sentinelVehicle;
@@ -52,6 +53,32 @@ namespace OutrunAftermath.Client.Multiplayer
                 return;
             }
             Instance = this;
+
+            ParseCommandLineArgs();
+        }
+
+        private void ParseCommandLineArgs()
+        {
+            string[] args = System.Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i].Equals("-target-score", System.StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    if (int.TryParse(args[i + 1], out int score))
+                    {
+                        targetScoreToWin = score;
+                        Debug.Log($"[NetworkMatchManager] CLI targetScoreToWin set to {targetScoreToWin}");
+                    }
+                }
+                else if (args[i].Equals("-match-duration", System.StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    if (float.TryParse(args[i + 1], out float dur))
+                    {
+                        matchDurationSeconds = dur;
+                        Debug.Log($"[NetworkMatchManager] CLI matchDurationSeconds set to {matchDurationSeconds}s");
+                    }
+                }
+            }
         }
 
         public void SetPlayerPrefab(GameObject prefab)
@@ -213,6 +240,7 @@ namespace OutrunAftermath.Client.Multiplayer
             if (_players.Count >= 2 && CurrentPhase.Value == (int)MatchPhase.WaitingForPlayers)
             {
                 CurrentPhase.Value = (int)MatchPhase.InProgress;
+                _matchStartTimeUtc = System.DateTime.UtcNow;
                 string modeMsg = ActiveGameMode.Value == 1 ? "CONVOY PURSUIT LIVE — PROTECT THE TRANSPORT // INTERCEPT HOSTILES" : "MATCH LIVE — ELIMINATE HOSTILE OPERATORS";
                 BroadcastFeedRpc(modeMsg);
             }
@@ -362,6 +390,51 @@ namespace OutrunAftermath.Client.Multiplayer
             string reasonSuffix = string.IsNullOrEmpty(reason) ? "" : $" [{reason}]";
             Debug.Log($"[NetworkMatchManager] MATCH ENDED — WINNER: {factionLabel} (Rogue {RogueScore.Value} : Sentinel {SentinelScore.Value}){reasonSuffix}");
             BroadcastFeedRpc($"VICTORY: {factionLabel}{reasonSuffix} ({RogueScore.Value} - {SentinelScore.Value})");
+
+            ReportMatchToBackendServer(winningFaction);
+        }
+
+        private void ReportMatchToBackendServer(int winningFaction)
+        {
+            if (Runtime.Backend.GameApiClient.Instance == null) return;
+
+            var payload = new Runtime.Backend.CompleteMatchRequestDto
+            {
+                matchId = System.Guid.NewGuid().ToString(),
+                mode = ActiveGameMode.Value == 1 ? "ConvoyOperations" : "GroundOperations",
+                matchType = "StandardPursuit",
+                mapId = "deadcity",
+                startedAtUtc = _matchStartTimeUtc.ToString("o"),
+                winnerFaction = winningFaction == 0 ? "Rogue" : (winningFaction == 1 ? "Sentinel" : "Draw"),
+                seed = UnityEngine.Random.Range(1, 999999),
+                players = new List<Runtime.Backend.CompleteMatchPlayerDto>()
+            };
+
+            foreach (var kvp in _players)
+            {
+                var p = kvp.Value;
+                if (p == null) continue;
+
+                string userIdStr = p.NetUserId.Value.ToString();
+                if (string.IsNullOrEmpty(userIdStr) || !System.Guid.TryParse(userIdStr, out _))
+                {
+                    userIdStr = System.Guid.NewGuid().ToString();
+                }
+
+                payload.players.Add(new Runtime.Backend.CompleteMatchPlayerDto
+                {
+                    userId = userIdStr,
+                    faction = p.NetFaction.Value == 0 ? "Rogue" : "Sentinel",
+                    operatorId = p.NetOperatorId.Value.ToString(),
+                    kills = p.NetKills.Value,
+                    revives = 0,
+                    objectiveProgress = p.NetFaction.Value == 0 ? (int)(Runtime.Objectives.NetworkObjectiveTerminal.Instance != null ? Runtime.Objectives.NetworkObjectiveTerminal.Instance.Progress.Value : 0) : 0,
+                    sideComplete = (p.NetFaction.Value == winningFaction)
+                });
+            }
+
+            _ = Runtime.Backend.GameApiClient.Instance.CompleteMatchServerAsync(payload);
+            BroadcastFeedRpc("MATCH XP & STATS PERSISTED VIA BACKEND");
         }
 
         private void RestartMatchServer()
@@ -398,16 +471,16 @@ namespace OutrunAftermath.Client.Multiplayer
 
         public static (Vector3 pos, Quaternion rot) GetFactionSpawnPoint(int faction, int slotOffset)
         {
-            float xOffset = ((slotOffset % 4) - 1.5f) * 3.5f;
+            float xOffset = slotOffset == 0 ? 0f : (((slotOffset % 4) - 1.5f) * 3.5f);
             if (faction == 0)
             {
                 // Rogues spawn South Avenue facing North
-                return (new Vector3(xOffset, 0.06f, -20f), Quaternion.identity);
+                return (new Vector3(xOffset, 0.06f, 0f), Quaternion.identity);
             }
             else
             {
                 // Sentinels spawn North Avenue facing South
-                return (new Vector3(xOffset, 0.06f, 44f), Quaternion.Euler(0f, 180f, 0f));
+                return (new Vector3(xOffset, 0.06f, 26f), Quaternion.Euler(0f, 180f, 0f));
             }
         }
 

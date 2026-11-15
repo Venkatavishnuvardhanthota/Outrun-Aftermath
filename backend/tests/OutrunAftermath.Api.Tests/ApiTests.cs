@@ -151,6 +151,67 @@ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Contains("3v3", room.Summary);
     }
 
+    [Fact]
+    public async Task Match_history_and_operator_update()
+    {
+        var email = $"p{Guid.NewGuid():N}@outrun.test";
+        var name = "Pilot" + Guid.NewGuid().ToString("N")[..6];
+        var reg = await _client.PostAsJsonAsync("/api/auth/register", new { email, password = "correcthorse1", displayName = name });
+        var auth = await reg.Content.ReadFromJsonAsync<AuthDto>();
+
+        using var authed = _factory.CreateClient();
+        authed.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
+
+        // Update operator
+        var badOp = await authed.PutAsJsonAsync("/api/me/operator", new { operatorId = "unknown_superhero" });
+        Assert.Equal(HttpStatusCode.BadRequest, badOp.StatusCode);
+
+        var goodOp = await authed.PutAsJsonAsync("/api/me/operator", new { operatorId = "titan" });
+        Assert.Equal(HttpStatusCode.OK, goodOp.StatusCode);
+
+        // Record a match
+        var matchId = Guid.NewGuid();
+        var body = new
+        {
+            matchId,
+            mode = "GroundOperations",
+            matchType = "StandardPursuit",
+            mapId = "deadcity",
+            startedAtUtc = DateTime.UtcNow.AddMinutes(-6),
+            winnerFaction = "Rogue",
+            seed = 99,
+            players = new[]
+            {
+                new { userId = auth.UserId, faction = "Rogue", operatorId = "titan", kills = 3, revives = 2, objectiveProgress = 100, sideComplete = true }
+            }
+        };
+
+        using var matchReq = new HttpRequestMessage(HttpMethod.Post, "/internal/matches/complete") { Content = JsonContent.Create(body) };
+        matchReq.Headers.Add("X-Match-Server-Key", "DEV_MATCH_SERVER_KEY_CHANGE");
+        var completeRes = await _client.SendAsync(matchReq);
+        Assert.Equal(HttpStatusCode.OK, completeRes.StatusCode);
+
+        // Fetch recent match history
+        var historyRes = await authed.GetAsync("/api/me/matches");
+        Assert.Equal(HttpStatusCode.OK, historyRes.StatusCode);
+        var matches = await historyRes.Content.ReadFromJsonAsync<List<MatchHistoryDto>>();
+        Assert.NotNull(matches);
+        Assert.Single(matches);
+        Assert.Equal(matchId, matches[0].Id);
+        Assert.Equal("GroundOperations", matches[0].Mode);
+        Assert.Equal("titan", matches[0].OperatorId);
+        Assert.True(matches[0].XpAwarded > 0);
+    }
+
+    [Fact]
+    public async Task Leaderboards_endpoint_returns_ranked_survivors()
+    {
+        var res = await _client.GetAsync("/api/leaderboards");
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        var list = await res.Content.ReadFromJsonAsync<List<LeaderboardDto>>();
+        Assert.NotNull(list);
+    }
+
     private async Task<HttpClient> AuthedClientAsync()
     {
         var email = $"p{Guid.NewGuid():N}@outrun.test";
@@ -171,4 +232,6 @@ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
     private sealed record AuthDto(string AccessToken, string RefreshToken, Guid UserId, string DisplayName);
     private sealed record RoomDto(Guid Id, string Code, string Mode, string MatchType, string MapId, string? Summary);
     private sealed record DuplicateDto(bool Duplicate, Guid MatchId);
+    private sealed record MatchHistoryDto(Guid Id, string Mode, string MatchType, string MapId, string Faction, string OperatorId, int XpAwarded, string Result);
+    private sealed record LeaderboardDto(Guid UserId, string DisplayName, int SurvivorRank, long Xp, int Wins, int Losses);
 }

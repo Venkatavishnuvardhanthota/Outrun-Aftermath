@@ -13,6 +13,7 @@ using OutrunAftermath.Client.Runtime.Combat;
 using OutrunAftermath.Client.Runtime.Abilities;
 using OutrunAftermath.Client.Runtime.Objectives;
 using OutrunAftermath.Client.Runtime.Vehicles;
+using OutrunAftermath.Client.Runtime.Backend;
 
 namespace OutrunAftermath.Client.Editor
 {
@@ -26,7 +27,7 @@ namespace OutrunAftermath.Client.Editor
 
         public static void BuildWindows()
         {
-            Debug.Log("[BuildScript] Building Phase 4 Convoy & Ground Operations Prefabs & Scene...");
+            Debug.Log("[BuildScript] Building Phase 5 Accounts & Backend Integration Prefabs & Scene...");
 
             // 1. Create / update NetworkPlayer and WastelandRaptor prefabs
             GameObject playerPrefab = CreateOrUpdateNetworkPlayerPrefab();
@@ -41,6 +42,10 @@ namespace OutrunAftermath.Client.Editor
             // GameBootstrap
             var bootstrapGo = new GameObject("GameBootstrap");
             bootstrapGo.AddComponent<GameBootstrap>();
+
+            // GameApiClient (Persistent backend API service)
+            var apiGo = new GameObject("GameApiClient");
+            apiGo.AddComponent<GameApiClient>();
 
             // NetworkManager + UnityTransport + NetworkSessionController
             var netManagerGo = new GameObject("NetworkManager");
@@ -111,7 +116,7 @@ namespace OutrunAftermath.Client.Editor
                 throw new System.Exception($"Build failed: {summary.result} ({summary.totalErrors} errors)");
             }
 
-            Debug.Log($"[BuildScript] PHASE 4 BUILD SUCCEEDED! Total size: {summary.totalSize} bytes. Output: {outputPath}");
+            Debug.Log($"[BuildScript] PHASE 5 BUILD SUCCEEDED! Total size: {summary.totalSize} bytes. Output: {outputPath}");
         }
 
         private static GameObject CreateOrUpdateNetworkPlayerPrefab()

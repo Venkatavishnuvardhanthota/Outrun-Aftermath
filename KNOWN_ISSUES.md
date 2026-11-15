@@ -3,13 +3,19 @@
 ## Critical
 
 1. **Docker daemon was not running**, so PostgreSQL and Redis were never live-tested. The API
-   runs on SQLite for local development only, and the Unity client does not yet authenticate
-   against the backend API (scheduled for Phase 5).
+   runs on SQLite for local development and persistence.
 2. **iOS builds require macOS.** This machine is Windows.
 
 ## Corrected / Resolved
 
-3. **Phase 4 Complete:** Convoy Operations mode, vehicle physics, 4-crew seat occupancy, and
+3. **Phase 5 Complete:** Account and backend integration implemented and verified end-to-end.
+   The Unity client communicates with the ASP.NET Core API via `GameApiClient`, supporting JWT
+   registration, login, profile queries, room creation, and room joining. Connected clients replicate
+   account identities to the server via `RegisterAccountRpc` and display real player tags on overhead
+   billboards. On match victory, the dedicated server reports the authoritative match result with
+   `X-Match-Server-Key` to `/internal/matches/complete`, persisting XP, survivor rank, match records,
+   and win/loss statistics to SQLite. Verified in live multi-process test with database verification.
+4. **Phase 4 Complete:** Convoy Operations mode, vehicle physics, 4-crew seat occupancy, and
    automatic takeover implemented and verified in Unity 6. `NetworkVehicleController` implements
    arcade driving physics (115 km/h top speed, nitro boost, handbrake drift) with component health
    tracking (Hull, Engine, Tires, Turret) and catastrophic explosion. 4 seats supported: Driver,

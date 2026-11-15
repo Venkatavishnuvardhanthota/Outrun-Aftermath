@@ -61,6 +61,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 builder.Services.AddAuthorization();
+builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
@@ -69,6 +70,7 @@ using (var scope = app.Services.CreateScope())
     db.Database.EnsureCreated();
 }
 
+app.UseCors();
 app.UseRateLimiter();
 app.UseSwagger();
 app.UseSwaggerUI();
@@ -126,6 +128,61 @@ app.MapGet("/api/me", async (HttpContext http, AppDbContext db, CancellationToke
 
     var profile = await db.Profiles.FindAsync(new object[] { id.Value }, ct);
     return profile is null ? Results.NotFound() : Results.Ok(profile);
+}).RequireAuthorization();
+
+app.MapGet("/api/me/matches", async (HttpContext http, AppDbContext db, CancellationToken ct) =>
+{
+    var id = UserId(http);
+    if (id is null)
+    {
+        return Results.Unauthorized();
+    }
+
+    var history = await db.MatchPlayers
+        .Where(mp => mp.UserId == id.Value)
+        .OrderByDescending(mp => mp.Id)
+        .Take(20)
+        .Join(db.Matches, mp => mp.MatchId, m => m.Id, (mp, m) => new
+        {
+            m.Id,
+            m.Mode,
+            m.MatchType,
+            m.MapId,
+            m.StartedAtUtc,
+            m.EndedAtUtc,
+            m.WinnerFaction,
+            mp.Faction,
+            mp.OperatorId,
+            mp.XpAwarded,
+            mp.Result
+        })
+        .ToListAsync(ct);
+
+    return Results.Ok(history);
+}).RequireAuthorization();
+
+app.MapPut("/api/me/operator", async (UpdateOperatorRequest req, HttpContext http, AppDbContext db, CancellationToken ct) =>
+{
+    var id = UserId(http);
+    if (id is null)
+    {
+        return Results.Unauthorized();
+    }
+
+    var profile = await db.Profiles.FindAsync(new object[] { id.Value }, ct);
+    if (profile is null)
+    {
+        return Results.NotFound();
+    }
+
+    if (!OperatorCatalog.All.Any(o => o.Id.Equals(req.OperatorId, StringComparison.OrdinalIgnoreCase)))
+    {
+        return Results.BadRequest(new { error = "Unknown operator id." });
+    }
+
+    profile.SelectedOperatorId = req.OperatorId.ToLowerInvariant();
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(profile);
 }).RequireAuthorization();
 
 app.MapPost("/api/rooms", async (CreateRoomRequest req, HttpContext http, AppDbContext db, CancellationToken ct) =>
@@ -338,6 +395,7 @@ static async Task<string> UniqueCode(AppDbContext db, CancellationToken ct)
 public sealed record RegisterRequest(string Email, string Password, string DisplayName);
 public sealed record LoginRequest(string Email, string Password);
 public sealed record RefreshRequest(string RefreshToken);
+public sealed record UpdateOperatorRequest(string OperatorId);
 public sealed record AuthResponse(string AccessToken, string RefreshToken, Guid UserId, string DisplayName);
 public sealed record CreateRoomRequest(
     string? Mode,

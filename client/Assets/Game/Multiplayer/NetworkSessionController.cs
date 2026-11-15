@@ -99,6 +99,14 @@ namespace OutrunAftermath.Client.Multiplayer
                 {
                     ActiveGameMode = 1; // Convoy Operations Mode
                 }
+                else if (arg.Equals("-api-url", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    string apiUrl = args[++i];
+                    if (Runtime.Backend.GameApiClient.Instance != null)
+                    {
+                        Runtime.Backend.GameApiClient.Instance.BaseUrl = apiUrl;
+                    }
+                }
             }
 
             if (_autoQuitSeconds > 0f)
@@ -302,14 +310,20 @@ namespace OutrunAftermath.Client.Multiplayer
             float initialEnemyArmor = enemyPlayer.NetArmor.Value;
             Debug.Log($"[NET_TEST] Enemy initial HP={initialEnemyHp}, Armor={initialEnemyArmor}. Firing real ServerRPC shots...");
 
-            for (int shot = 0; shot < 8; shot++)
+            for (int shot = 0; shot < 15; shot++)
             {
+                if (enemyPlayer.NetLifeState.Value == (int)Runtime.Character.PlayerLifeState.Eliminated)
+                {
+                    break;
+                }
+
+                float aimHeight = enemyPlayer.NetLifeState.Value == 0 ? 1.4f : 0.85f;
                 Vector3 origin = localPlayer.transform.position + Vector3.up * 1.65f;
-                Vector3 targetPos = enemyPlayer.transform.position + Vector3.up * 1.55f;
+                Vector3 targetPos = enemyPlayer.transform.position + Vector3.up * aimHeight;
                 Vector3 dir = (targetPos - origin).normalized;
 
                 localPlayer.FireWeaponRpc(origin, dir, 0f, 0);
-                yield return new WaitForSeconds(0.2f);
+                yield return new WaitForSeconds(0.22f);
             }
 
             yield return new WaitForSeconds(0.6f);
@@ -363,6 +377,14 @@ namespace OutrunAftermath.Client.Multiplayer
                     myVehicle.FireVehicleWeaponRpc(0, turretPos, turretFwd);
                     yield return new WaitForSeconds(0.3f);
                 }
+            }
+
+            // Test Backend Account integration
+            if (Runtime.Backend.GameApiClient.Instance != null && Runtime.Backend.GameApiClient.Instance.IsAuthenticated)
+            {
+                var prof = Runtime.Backend.GameApiClient.Instance.CurrentProfile;
+                string rankInfo = prof != null ? $"Rank={prof.survivorRank}, XP={prof.xp}, Matches={prof.matchesPlayed}" : "Profile loading";
+                Debug.Log($"[NET_TEST] Backend Session Active: User={Runtime.Backend.GameApiClient.Instance.CurrentDisplayName} (ID={Runtime.Backend.GameApiClient.Instance.CurrentUserId}) [{rankInfo}]");
             }
         }
 

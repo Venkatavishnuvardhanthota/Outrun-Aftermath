@@ -360,3 +360,82 @@ Phase 4: Convoy Operations Mode & Vehicle Framework (Wasteland Raptor vehicle ph
 ### Next phase
 
 Phase 5: Account & Backend Integration (connecting Unity client to ASP.NET Core API, authentication tokens, lobby/matchmaking endpoints, and match result persistence).
+
+---
+
+## Phase 5 — 2026-11-14 (Account & Backend Integration & Persistence)
+
+### Completed features
+
+- **Backend API Expansions** (`backend/src/OutrunAftermath.Api/Program.cs`):
+  - Added Cross-Origin Resource Sharing (`CORS`) with `AllowAnyOrigin`, `AllowAnyHeader`, and `AllowAnyMethod` for client communication.
+  - Added `GET /api/me/matches`: Returns authenticated player's recent match history (match ID, mode, map, result, faction, operator, XP awarded, and timestamp).
+  - Added `PUT /api/me/operator`: Allows players to update their selected default operator with validation against `OperatorCatalog`.
+  - Added 2 new integration tests in `backend/tests/OutrunAftermath.Api.Tests/ApiTests.cs` (`Match_history_and_operator_update` and `Leaderboards_endpoint_returns_ranked_survivors`). Total test suite: 75 passed (67 simulation + 8 API).
+- **Unity HTTP Backend API Client** (`client/Assets/Game/Runtime/Backend/GameApiClient.cs`):
+  - Persistent singleton service (`DontDestroyOnLoad`) managing JWT authentication lifecycle, session caching via `PlayerPrefs`, and automatic `Authorization: Bearer <token>` attachment.
+  - Asynchronous API endpoints: `RegisterAsync`, `LoginAsync`, `QuickDevLoginAsync`, `Logout`, `RefreshProfileAsync`, `FetchRecentMatchesAsync`, `FetchLeaderboardAsync`, `CreateRoomAsync`, `JoinRoomAsync`, `FetchRoomDetailsAsync`, and `CompleteMatchServerAsync`.
+  - CLI arguments support: `-api-url <url>` (custom backend endpoint), `-dev-guest` (automated guest login), `-auth-name <name>` (specific test identity login).
+- **Network Player & Account Integration** (`client/Assets/Game/Multiplayer/NetworkPlayerController.cs`):
+  - Replicated `NetUserId` and `NetDisplayName` network variables.
+  - Synchronizes persistent user identity to server via `RegisterAccountRpc(userId, displayName)` on spawn and upon auth state changes.
+  - Displays authenticated player display name and survivor rank on remote overhead nameplates.
+- **Dedicated Match Server Persistence** (`client/Assets/Game/Multiplayer/NetworkMatchManager.cs`):
+  - Tracks match start time (`_matchStartTimeUtc`).
+  - Added CLI argument overrides: `-target-score <n>` and `-match-duration <seconds>`.
+  - On match victory/conclusion (`EndMatchServer`), automatically compiles `CompleteMatchRequestDto` containing all connected players, kills, objectives, and faction outcomes.
+  - Reports match completion to ASP.NET Core `/internal/matches/complete` using the authoritative `X-Match-Server-Key`.
+  - Backend awards XP, recalculates survivor ranks, increments win/loss tallies, registers reward claims, and writes persistent match history to SQLite.
+- **Tactical Lobby UI Overhaul** (`client/Assets/Game/Multiplayer/LobbyConnectionUI.cs`):
+  - Added top account status bar displaying authentication state (`[DisplayName] | RANK {r} | {xp} XP | {wins}W - {losses}L`) with "DEV LOGIN" and "LOGOUT" buttons.
+  - Added Room Code section for online rooms: "CREATE ROOM" (creates room on backend and returns 6-character code) and "JOIN CODE" (joins room and queries room details).
+  - Added togglable Top Survivors Leaderboard panel rendering live rank, XP, and win/loss records directly from `GET /api/leaderboards`.
+- **Prefab & Build Automation** (`client/Assets/Editor/BuildScript.cs`, `run_build.ps1`):
+  - Authors `GameApiClient` into `Main.unity`.
+  - Centers team spawn points (`(0, 0.06, 0)` and `(0, 0.06, 26)`) down the main avenue for clear tactical sightlines.
+  - Standalone player rebuilt cleanly: `client/Builds/Windows/OutrunAftermath.exe` (104,409,033 bytes).
+
+### Files created
+
+- `client/Assets/Game/Runtime/Backend/GameApiClient.cs`
+- `client/Assets/Game/Runtime/Backend.meta`
+- `run_build.ps1`
+- `run_phase5_test.ps1`
+
+### Files modified
+
+- `backend/src/OutrunAftermath.Api/Program.cs` (`CORS`, `GET /api/me/matches`, `PUT /api/me/operator`)
+- `backend/tests/OutrunAftermath.Api.Tests/ApiTests.cs` (added 2 new integration tests)
+- `client/Assets/Editor/BuildScript.cs` (authors `GameApiClient` into scene)
+- `client/Assets/Game/Core/GameBootstrap.cs` (ensures `GameApiClient` on startup)
+- `client/Assets/Game/Multiplayer/LobbyConnectionUI.cs` (account bar, room code controls, leaderboard UI)
+- `client/Assets/Game/Multiplayer/NetworkMatchManager.cs` (CLI target score/duration, reports match completion to backend, centered spawn points)
+- `client/Assets/Game/Multiplayer/NetworkPlayerController.cs` (`NetUserId`, `NetDisplayName`, `RegisterAccountRpc`, dynamic aim height targeting)
+- `client/Assets/Game/Multiplayer/NetworkSessionController.cs` (backend session logging, combat downing and elimination targeting)
+- `client/Assets/Game/Multiplayer/Prefabs/NetworkPlayer.prefab`
+- `client/Assets/Scenes/Main.unity`
+
+### Tests executed
+
+1. **Backend Integration & Unit Test Suite (`dotnet test backend/OutrunAftermath.sln`)**:
+   - Exit code `0`: All 75 tests passed (67 simulation tests + 8 API tests).
+2. **Unity 6 Standalone Windows Build (`run_build.ps1`)**:
+   - Exit code `0`: Output `client/Builds/Windows/OutrunAftermath.exe` (104,409,033 bytes) with newly compiled `OutrunAftermath.Client.dll`.
+3. **End-to-End Multi-Process Verification (`run_phase5_test.ps1`)**:
+   - Backend API initialized and validated healthy on `http://127.0.0.1:5000`.
+   - Accounts registered and authenticated via REST: `Rogue_7868` and `Sentinel_1001`.
+   - Online room created via API with code `66TDHG`; Client 2 joined room as Sentinel.
+   - Dedicated Server started on UDP `:7777` with `-target-score 1`.
+   - Client 1 (`Rogue_7868`) and Client 2 (`Sentinel_1001`) connected over UDP; accounts synchronized to server via `RegisterAccountRpc`.
+   - Server-authoritative combat executed down the central avenue: Client 1 reduced Client 2 HP to 0 (Downed), continued fire to deplete downed armor, and triggered `Eliminated`.
+   - Server detected victory: `MATCH ENDED — WINNER: THE ROGUES (Rogue 1 : Sentinel 0)`.
+   - Server transmitted match payload with `X-Match-Server-Key` to `/internal/matches/complete`.
+   - Backend persisted match to SQLite: awarded XP, updated survivor rank, incremented wins/losses.
+   - Verified persistence via API:
+     - `Rogue_7868`: Rank 1, XP: 235, Matches: 1, Wins: 1, Losses: 0.
+     - Match history: 1 record (`Mode=GroundOperations, Map=deadcity, Faction=Rogue, XP=+235, Result=Rogue`).
+     - Global leaderboard query returned ranked players including `Rogue_7868` (#2, 235 XP) and `Sentinel_1001` (#3, 180 XP).
+
+### Next phase
+
+Phase 6: Matchmaking & Social Systems (room code invite flow, party management, matchmaking queues, and friend requests).

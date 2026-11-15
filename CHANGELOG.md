@@ -2,6 +2,25 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [0.7.0] - 2026-11-14 - Phase 5: Account & Backend Integration & Persistence
+
+### Added
+- Integrated Unity HTTP runtime backend client (`GameApiClient.cs`) managing JWT token authentication, session caching in `PlayerPrefs`, and automatic `Authorization: Bearer` attachment.
+- Client API methods for `RegisterAsync`, `LoginAsync`, `QuickDevLoginAsync`, `Logout`, `RefreshProfileAsync`, `FetchRecentMatchesAsync`, `FetchLeaderboardAsync`, `CreateRoomAsync`, `JoinRoomAsync`, and `CompleteMatchServerAsync`.
+- Added `GET /api/me/matches` and `PUT /api/me/operator` endpoints with catalog validation to `OutrunAftermath.Api`.
+- Added CORS support in ASP.NET Core API for client HTTP communication.
+- Synchronized player accounts across UDP networking: `NetUserId` and `NetDisplayName` replicated in `NetworkPlayerController`, synced to server via `RegisterAccountRpc` and displayed on remote overhead nameplates.
+- Authoritative match completion reporting: `NetworkMatchManager` compiles match telemetry on victory and calls `/internal/matches/complete` using `X-Match-Server-Key`, awarding XP, updating survivor rank, incrementing wins/losses, and writing match history to SQLite.
+- Tactical Lobby UI enhancements (`LobbyConnectionUI.cs`): top account bar (displaying authenticated username, rank, XP, and win/loss record), room code creation and join input fields, and togglable live global leaderboard.
+- Added 2 new integration tests in `ApiTests.cs` (75 total tests passing).
+- Comprehensive end-to-end verification script `run_phase5_test.ps1` testing REST registration, room creation, UDP dedicated server combat, server-side match reporting, and SQLite database persistence.
+
+### Fixed
+- Fixed command-line credential parsing in `GameApiClient` to bypass cached `PlayerPrefs` when launching multi-client test instances.
+- Added dynamic aim height targeting in `NetworkSessionController` to ensure downed opponents can be eliminated through tactical cover.
+- Added CLI `-target-score` and `-match-duration` overrides in `NetworkMatchManager`.
+- Centered default team spawn points down the central avenue for clear tactical sightlines.
+
 ## [0.6.0] - 2026-11-13 - Phase 4: Convoy Operations Mode & Vehicle Framework
 
 ### Added

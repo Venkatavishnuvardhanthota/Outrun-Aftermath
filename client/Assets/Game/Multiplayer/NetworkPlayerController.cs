@@ -29,6 +29,8 @@ namespace OutrunAftermath.Client.Multiplayer
     {
         public NetworkVariable<int> NetFaction = new NetworkVariable<int>(0);
         public NetworkVariable<FixedString64Bytes> NetCallsign = new NetworkVariable<FixedString64Bytes>("OPERATOR");
+        public NetworkVariable<FixedString64Bytes> NetUserId = new NetworkVariable<FixedString64Bytes>("");
+        public NetworkVariable<FixedString32Bytes> NetDisplayName = new NetworkVariable<FixedString32Bytes>("");
         public NetworkVariable<FixedString32Bytes> NetOperatorId = new NetworkVariable<FixedString32Bytes>("rex");
         public NetworkVariable<float> NetHealth = new NetworkVariable<float>(100f);
         public NetworkVariable<float> NetArmor = new NetworkVariable<float>(50f);
@@ -268,7 +270,55 @@ namespace OutrunAftermath.Client.Multiplayer
                 NetworkMatchManager.Instance.RefreshHudStatus();
             }
 
+            // Sync persistent player identity from GameApiClient
+            if (Runtime.Backend.GameApiClient.Instance != null)
+            {
+                if (Runtime.Backend.GameApiClient.Instance.IsAuthenticated)
+                {
+                    RegisterAccountRpc(Runtime.Backend.GameApiClient.Instance.CurrentUserId, Runtime.Backend.GameApiClient.Instance.CurrentDisplayName);
+                }
+                else
+                {
+                    RegisterAccountRpc(System.Guid.NewGuid().ToString(), NetCallsign.Value.ToString());
+                    Runtime.Backend.GameApiClient.Instance.OnAuthStatusChanged += HandleAuthStatusChanged;
+                }
+            }
+            else
+            {
+                RegisterAccountRpc(System.Guid.NewGuid().ToString(), NetCallsign.Value.ToString());
+            }
+
             UpdateLocalBodyVisibility();
+        }
+
+        private void HandleAuthStatusChanged(bool isAuthenticated, string message)
+        {
+            if (isAuthenticated && IsOwner && Runtime.Backend.GameApiClient.Instance != null)
+            {
+                RegisterAccountRpc(Runtime.Backend.GameApiClient.Instance.CurrentUserId, Runtime.Backend.GameApiClient.Instance.CurrentDisplayName);
+            }
+        }
+
+        public override void OnDestroy()
+        {
+            if (Runtime.Backend.GameApiClient.Instance != null)
+            {
+                Runtime.Backend.GameApiClient.Instance.OnAuthStatusChanged -= HandleAuthStatusChanged;
+            }
+            base.OnDestroy();
+        }
+
+        [Rpc(SendTo.Server)]
+        public void RegisterAccountRpc(string userId, string displayName)
+        {
+            if (!IsServer) return;
+            NetUserId.Value = userId;
+            if (!string.IsNullOrWhiteSpace(displayName))
+            {
+                NetDisplayName.Value = displayName;
+                NetCallsign.Value = displayName;
+            }
+            Debug.Log($"[NetworkPlayer] Registered account for client {OwnerClientId}: {displayName} ({userId})");
         }
 
         private void Update()

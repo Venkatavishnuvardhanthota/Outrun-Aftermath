@@ -50,6 +50,13 @@ namespace OutrunAftermath.Client
         {
             Debug.Log("[OUTRUN: AFTERMATH] Bootstrapping Core Engine...");
 
+            // 0. Ensure GameApiClient is initialized
+            if (FindAnyObjectByType<Runtime.Backend.GameApiClient>() == null)
+            {
+                var apiGo = new GameObject("GameApiClient");
+                apiGo.AddComponent<Runtime.Backend.GameApiClient>();
+            }
+
             // 1. Build greybox environment if needed
             if (buildEnvironmentOnStart && GameObject.Find("DeadCity_Sector4") == null)
             {
