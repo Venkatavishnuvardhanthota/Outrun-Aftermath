@@ -18,5 +18,5 @@ $proc.WaitForExit()
 Write-Host "Unity Exited with Code: $($proc.ExitCode)"
 
 if (Test-Path $buildLog) {
-    Get-Content $buildLog | Select-String -Pattern "PHASE 5|BuildResult|error CS|Exception" | Select-Object -Last 10
+    Get-Content $buildLog | Select-String -Pattern "PHASE 6|PHASE 5|BuildResult|error CS|Exception" | Select-Object -Last 10
 }

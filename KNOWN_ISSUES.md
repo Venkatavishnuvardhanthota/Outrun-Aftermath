@@ -8,7 +8,17 @@
 
 ## Corrected / Resolved
 
-3. **Phase 5 Complete:** Account and backend integration implemented and verified end-to-end.
+3. **Phase 6 Complete:** Matchmaking, Parties, and Social systems implemented and verified end-to-end.
+   The ASP.NET Core API supports online presence tracking, friendship lifecycles (send, accept, decline,
+   list friends with status), and squad/party management (create with 6-char code, join by code, ready checks,
+   leader queue). The `MatchmakingCoordinator` manages solo and party tickets with snake-draft team placement
+   that preserves squad integrity (squads are never split across opposing teams), dynamic skill band expansion,
+   and automated dedicated server assignment (`127.0.0.1:7777`). The Unity client `GameApiClient` and
+   tactical `LobbyConnectionUI` provide mode/region selection, matchmaking search status with cancel,
+   auto-dispatch on match proposal, squad management hub, and squad network drawer. Verified in 78 automated
+   unit/integration tests and an end-to-end 4-account multi-process live verification script with dedicated
+   server combat and SQLite persistence.
+4. **Phase 5 Complete:** Account and backend integration implemented and verified end-to-end.
    The Unity client communicates with the ASP.NET Core API via `GameApiClient`, supporting JWT
    registration, login, profile queries, room creation, and room joining. Connected clients replicate
    account identities to the server via `RegisterAccountRpc` and display real player tags on overhead

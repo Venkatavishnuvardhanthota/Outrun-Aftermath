@@ -144,6 +144,76 @@ namespace OutrunAftermath.Client.Runtime.Backend
         public List<CompleteMatchPlayerDto> players = new List<CompleteMatchPlayerDto>();
     }
 
+    [Serializable]
+    public sealed class FriendDto
+    {
+        public string userId;
+        public string displayName;
+        public int survivorRank;
+        public long xp;
+        public string presenceStatus;
+        public string lastSeenUtc;
+        public int wins;
+        public int losses;
+    }
+
+    [Serializable]
+    public sealed class FriendRequestItemDto
+    {
+        public string id;
+        public string requesterId;
+        public string requesterName;
+        public int requesterRank;
+        public string createdAtUtc;
+    }
+
+    [Serializable]
+    public sealed class FriendRequestsContainerDto
+    {
+        public List<FriendRequestItemDto> incoming = new List<FriendRequestItemDto>();
+    }
+
+    [Serializable]
+    public sealed class PartyMemberItemDto
+    {
+        public string userId;
+        public string displayName;
+        public int rank;
+        public bool isLeader;
+        public bool isReady;
+        public string joinedAtUtc;
+    }
+
+    [Serializable]
+    public sealed class PartyDetailsDto
+    {
+        public bool inParty;
+        public string partyId;
+        public string code;
+        public string leaderUserId;
+        public List<PartyMemberItemDto> members = new List<PartyMemberItemDto>();
+    }
+
+    [Serializable]
+    public sealed class MatchedAssignmentDto
+    {
+        public string matchId;
+        public string serverIp;
+        public int serverPort;
+        public string mode;
+        public string mapId;
+        public string team;
+    }
+
+    [Serializable]
+    public sealed class MatchmakingTicketDto
+    {
+        public string ticketId;
+        public string status; // "queued", "matched", "cancelled"
+        public string enqueuedUtc;
+        public MatchedAssignmentDto assignment;
+    }
+
     /// <summary>
     /// Master client runtime bridge to the ASP.NET Core backend API.
     /// Handles JWT authentication, token caching, player profile, rooms, and match reporting.
@@ -166,11 +236,19 @@ namespace OutrunAftermath.Client.Runtime.Backend
         public string CurrentUserId { get; private set; } = "";
         public string CurrentDisplayName { get; private set; } = "";
         public PlayerProfileDto CurrentProfile { get; private set; }
+        public PartyDetailsDto CurrentParty { get; private set; }
+        public MatchmakingTicketDto CurrentTicket { get; private set; }
+        public List<FriendDto> CachedFriends { get; private set; } = new List<FriendDto>();
+        public bool IsSearchingMatch => CurrentTicket != null && CurrentTicket.status == "queued";
 
         public bool IsAuthenticated => !string.IsNullOrEmpty(AccessToken) && !string.IsNullOrEmpty(CurrentUserId);
 
         public event Action<bool, string> OnAuthStatusChanged;
         public event Action<PlayerProfileDto> OnProfileUpdated;
+        public event Action<PartyDetailsDto> OnPartyChanged;
+        public event Action<MatchmakingTicketDto> OnMatchmakingTicketUpdated;
+        public event Action<MatchedAssignmentDto> OnMatchFound;
+        public event Action<List<FriendDto>> OnFriendsListUpdated;
 
         private void Awake()
         {
@@ -465,6 +543,305 @@ namespace OutrunAftermath.Client.Runtime.Backend
 
         #endregion
 
+        #region Presence & Social Operations
+
+        public async Task<bool> UpdatePresenceAsync(string status)
+        {
+            if (!IsAuthenticated) return false;
+            string url = $"{BaseUrl}/api/me/presence";
+            string payload = JsonUtility.ToJson(new UpdatePresencePayload { presenceStatus = status });
+
+            using var req = CreateJsonRequest(url, "POST", payload, authRequired: true);
+            var op = req.SendWebRequest();
+            while (!op.isDone) await Task.Yield();
+            return req.result == UnityWebRequest.Result.Success;
+        }
+
+        public async Task<List<FriendDto>> FetchFriendsAsync()
+        {
+            if (!IsAuthenticated) return new List<FriendDto>();
+            string url = $"{BaseUrl}/api/friends";
+            using var req = CreateJsonRequest(url, "GET", null, authRequired: true);
+            var op = req.SendWebRequest();
+            while (!op.isDone) await Task.Yield();
+
+            if (req.result == UnityWebRequest.Result.Success)
+            {
+                var list = JsonHelper.FromJsonList<FriendDto>(req.downloadHandler.text);
+                CachedFriends = list != null ? new List<FriendDto>(list) : new List<FriendDto>();
+                OnFriendsListUpdated?.Invoke(CachedFriends);
+                return CachedFriends;
+            }
+            return CachedFriends;
+        }
+
+        public async Task<FriendRequestsContainerDto> FetchFriendRequestsAsync()
+        {
+            if (!IsAuthenticated) return new FriendRequestsContainerDto();
+            string url = $"{BaseUrl}/api/friends/requests";
+            using var req = CreateJsonRequest(url, "GET", null, authRequired: true);
+            var op = req.SendWebRequest();
+            while (!op.isDone) await Task.Yield();
+
+            if (req.result == UnityWebRequest.Result.Success)
+            {
+                return JsonUtility.FromJson<FriendRequestsContainerDto>(req.downloadHandler.text);
+            }
+            return new FriendRequestsContainerDto();
+        }
+
+        public async Task<(bool ok, string message)> SendFriendRequestAsync(string targetDisplayName)
+        {
+            if (!IsAuthenticated || string.IsNullOrWhiteSpace(targetDisplayName)) return (false, "Invalid username.");
+            string url = $"{BaseUrl}/api/friends/request";
+            string payload = JsonUtility.ToJson(new SendFriendRequestPayload { addresseeUsernameOrId = targetDisplayName.Trim() });
+
+            using var req = CreateJsonRequest(url, "POST", payload, authRequired: true);
+            var op = req.SendWebRequest();
+            while (!op.isDone) await Task.Yield();
+
+            if (req.result == UnityWebRequest.Result.Success)
+            {
+                return (true, "Friend request sent!");
+            }
+            string err = req.downloadHandler != null ? req.downloadHandler.text : req.error;
+            return (false, err);
+        }
+
+        public async Task<(bool ok, string message)> RespondFriendRequestAsync(string requestId, bool accept)
+        {
+            if (!IsAuthenticated || string.IsNullOrEmpty(requestId)) return (false, "Not authenticated or invalid request.");
+            string url = $"{BaseUrl}/api/friends/respond";
+            string payload = JsonUtility.ToJson(new RespondFriendRequestPayload { requestId = requestId, accept = accept });
+
+            using var req = CreateJsonRequest(url, "POST", payload, authRequired: true);
+            var op = req.SendWebRequest();
+            while (!op.isDone) await Task.Yield();
+
+            if (req.result == UnityWebRequest.Result.Success)
+            {
+                _ = FetchFriendsAsync();
+                return (true, accept ? "Request accepted." : "Request declined.");
+            }
+            return (false, req.downloadHandler != null ? req.downloadHandler.text : req.error);
+        }
+
+        public async Task<bool> RemoveFriendAsync(string friendUserId)
+        {
+            if (!IsAuthenticated || string.IsNullOrEmpty(friendUserId)) return false;
+            string url = $"{BaseUrl}/api/friends/{friendUserId}";
+            using var req = CreateJsonRequest(url, "DELETE", null, authRequired: true);
+            var op = req.SendWebRequest();
+            while (!op.isDone) await Task.Yield();
+
+            if (req.result == UnityWebRequest.Result.Success)
+            {
+                _ = FetchFriendsAsync();
+                return true;
+            }
+            return false;
+        }
+
+        #endregion
+
+        #region Party Operations
+
+        public async Task<(bool ok, PartyDetailsDto party, string error)> CreatePartyAsync()
+        {
+            if (!IsAuthenticated) return (false, null, "Not authenticated");
+            string url = $"{BaseUrl}/api/parties";
+            using var req = CreateJsonRequest(url, "POST", null, authRequired: true);
+            var op = req.SendWebRequest();
+            while (!op.isDone) await Task.Yield();
+
+            if (req.result == UnityWebRequest.Result.Success)
+            {
+                return await FetchMyPartyAsync();
+            }
+            return (false, null, req.downloadHandler != null ? req.downloadHandler.text : req.error);
+        }
+
+        public async Task<(bool ok, PartyDetailsDto party, string error)> FetchMyPartyAsync()
+        {
+            if (!IsAuthenticated) return (false, null, "Not authenticated");
+            string url = $"{BaseUrl}/api/parties/me";
+            using var req = CreateJsonRequest(url, "GET", null, authRequired: true);
+            var op = req.SendWebRequest();
+            while (!op.isDone) await Task.Yield();
+
+            if (req.result == UnityWebRequest.Result.Success)
+            {
+                var party = JsonUtility.FromJson<PartyDetailsDto>(req.downloadHandler.text);
+                CurrentParty = party;
+                OnPartyChanged?.Invoke(CurrentParty);
+                return (true, CurrentParty, null);
+            }
+            return (false, null, req.error);
+        }
+
+        public async Task<(bool ok, PartyDetailsDto party, string error)> JoinPartyByCodeAsync(string code)
+        {
+            if (!IsAuthenticated || string.IsNullOrWhiteSpace(code)) return (false, null, "Invalid party code.");
+            string url = $"{BaseUrl}/api/parties/join";
+            string payload = JsonUtility.ToJson(new JoinPartyPayload { code = code.Trim().ToUpperInvariant() });
+
+            using var req = CreateJsonRequest(url, "POST", payload, authRequired: true);
+            var op = req.SendWebRequest();
+            while (!op.isDone) await Task.Yield();
+
+            if (req.result == UnityWebRequest.Result.Success)
+            {
+                var (pOk, pDetails, pErr) = await FetchMyPartyAsync();
+                return (true, pDetails ?? CurrentParty, null);
+            }
+            return (false, null, req.downloadHandler != null ? req.downloadHandler.text : req.error);
+        }
+
+        public async Task<(bool ok, string error)> LeavePartyAsync()
+        {
+            if (!IsAuthenticated) return (false, "Not authenticated");
+            string url = $"{BaseUrl}/api/parties/leave";
+            using var req = CreateJsonRequest(url, "POST", null, authRequired: true);
+            var op = req.SendWebRequest();
+            while (!op.isDone) await Task.Yield();
+
+            CurrentParty = null;
+            OnPartyChanged?.Invoke(null);
+            if (req.result == UnityWebRequest.Result.Success)
+            {
+                return (true, null);
+            }
+            return (false, req.downloadHandler != null ? req.downloadHandler.text : req.error);
+        }
+
+        public async Task<(bool ok, string error)> SetPartyReadyAsync(bool isReady)
+        {
+            if (!IsAuthenticated) return (false, "Not authenticated");
+            string url = $"{BaseUrl}/api/parties/ready";
+            string payload = JsonUtility.ToJson(new SetReadyPayload { isReady = isReady });
+
+            using var req = CreateJsonRequest(url, "POST", payload, authRequired: true);
+            var op = req.SendWebRequest();
+            while (!op.isDone) await Task.Yield();
+
+            if (req.result == UnityWebRequest.Result.Success)
+            {
+                await FetchMyPartyAsync();
+                return (true, null);
+            }
+            return (false, req.downloadHandler != null ? req.downloadHandler.text : req.error);
+        }
+
+        #endregion
+
+        #region Matchmaking Operations
+
+        private Coroutine _pollMatchmakingCoroutine;
+
+        public async Task<(bool ok, MatchmakingTicketDto ticket, string error)> EnqueueMatchmakingAsync(
+            string mode = "GroundOperations",
+            string region = "na-east",
+            bool isParty = false,
+            string matchType = "StandardPursuit",
+            bool crossplay = true)
+        {
+            if (!IsAuthenticated) return (false, null, "Not authenticated");
+
+            bool usePartyUrl = isParty || (CurrentParty != null && CurrentParty.inParty);
+            string url = usePartyUrl
+                ? $"{BaseUrl}/api/parties/queue"
+                : $"{BaseUrl}/api/matchmaking/ticket";
+
+            string payload = JsonUtility.ToJson(new QueueMatchmakingPayload
+            {
+                mode = mode,
+                matchType = matchType,
+                region = region,
+                isParty = usePartyUrl,
+                crossplay = crossplay
+            });
+
+            using var req = CreateJsonRequest(url, "POST", payload, authRequired: true);
+            var op = req.SendWebRequest();
+            while (!op.isDone) await Task.Yield();
+
+            if (req.result == UnityWebRequest.Result.Success)
+            {
+                var ticket = JsonUtility.FromJson<MatchmakingTicketDto>(req.downloadHandler.text);
+                CurrentTicket = ticket;
+                OnMatchmakingTicketUpdated?.Invoke(CurrentTicket);
+
+                if (ticket.status == "matched" && ticket.assignment != null)
+                {
+                    OnMatchFound?.Invoke(ticket.assignment);
+                }
+                else
+                {
+                    if (_pollMatchmakingCoroutine != null) StopCoroutine(_pollMatchmakingCoroutine);
+                    _pollMatchmakingCoroutine = StartCoroutine(PollMatchmakingRoutine(ticket.ticketId));
+                }
+
+                return (true, ticket, null);
+            }
+
+            return (false, null, req.downloadHandler != null ? req.downloadHandler.text : req.error);
+        }
+
+        private IEnumerator PollMatchmakingRoutine(string ticketId)
+        {
+            float elapsed = 0f;
+            while (CurrentTicket != null && CurrentTicket.status == "queued" && elapsed < 120f)
+            {
+                yield return new WaitForSeconds(1.0f);
+                elapsed += 1.0f;
+
+                string url = $"{BaseUrl}/api/matchmaking/ticket/{ticketId}";
+                using var req = CreateJsonRequest(url, "GET", null, authRequired: true);
+                yield return req.SendWebRequest();
+
+                if (req.result == UnityWebRequest.Result.Success)
+                {
+                    var updated = JsonUtility.FromJson<MatchmakingTicketDto>(req.downloadHandler.text);
+                    if (updated != null)
+                    {
+                        CurrentTicket = updated;
+                        OnMatchmakingTicketUpdated?.Invoke(CurrentTicket);
+
+                        if (updated.status == "matched" && updated.assignment != null)
+                        {
+                            Debug.Log($"[ApiClient] Match found! Connecting to {updated.assignment.serverIp}:{updated.assignment.serverPort} ({updated.assignment.team})");
+                            OnMatchFound?.Invoke(updated.assignment);
+                            yield break;
+                        }
+                    }
+                }
+            }
+        }
+
+        public async Task<bool> CancelMatchmakingAsync()
+        {
+            if (!IsAuthenticated || CurrentTicket == null || string.IsNullOrEmpty(CurrentTicket.ticketId)) return false;
+
+            if (_pollMatchmakingCoroutine != null)
+            {
+                StopCoroutine(_pollMatchmakingCoroutine);
+                _pollMatchmakingCoroutine = null;
+            }
+
+            string ticketId = CurrentTicket.ticketId;
+            string url = $"{BaseUrl}/api/matchmaking/ticket/{ticketId}";
+
+            using var req = CreateJsonRequest(url, "DELETE", null, authRequired: true);
+            var op = req.SendWebRequest();
+            while (!op.isDone) await Task.Yield();
+
+            CurrentTicket = null;
+            OnMatchmakingTicketUpdated?.Invoke(null);
+            return req.result == UnityWebRequest.Result.Success;
+        }
+
+        #endregion
+
         #region Match Completion Reporting (Server-Side)
 
         public async Task<(bool ok, string message)> CompleteMatchServerAsync(CompleteMatchRequestDto matchData, string serverKey = "DEV_MATCH_SERVER_KEY_CHANGE")
@@ -536,6 +913,47 @@ namespace OutrunAftermath.Client.Runtime.Backend
         private struct JoinRoomPayload
         {
             public string password;
+        }
+
+        [Serializable]
+        private struct UpdatePresencePayload
+        {
+            public string presenceStatus;
+        }
+
+        [Serializable]
+        private struct SendFriendRequestPayload
+        {
+            public string addresseeUsernameOrId;
+        }
+
+        [Serializable]
+        private struct RespondFriendRequestPayload
+        {
+            public string requestId;
+            public bool accept;
+        }
+
+        [Serializable]
+        private struct JoinPartyPayload
+        {
+            public string code;
+        }
+
+        [Serializable]
+        private struct SetReadyPayload
+        {
+            public bool isReady;
+        }
+
+        [Serializable]
+        private struct QueueMatchmakingPayload
+        {
+            public string mode;
+            public string matchType;
+            public string region;
+            public bool isParty;
+            public bool crossplay;
         }
 
         #endregion

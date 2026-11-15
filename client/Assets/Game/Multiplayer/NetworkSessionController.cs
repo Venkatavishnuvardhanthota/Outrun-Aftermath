@@ -59,6 +59,13 @@ namespace OutrunAftermath.Client.Multiplayer
             SessionStartMode mode = SessionStartMode.InteractiveMenu;
             string ip = defaultIp;
             ushort port = defaultPort;
+            string mmDevName = null;
+            string mmMode = "GroundOperations";
+            string mmRegion = "na-east";
+            bool mmPartyCreate = false;
+            string mmPartyJoinCode = null;
+            bool mmPartyReady = false;
+            bool mmQueue = false;
 
             for (int i = 0; i < args.Length; i++)
             {
@@ -107,6 +114,39 @@ namespace OutrunAftermath.Client.Multiplayer
                         Runtime.Backend.GameApiClient.Instance.BaseUrl = apiUrl;
                     }
                 }
+                else if (arg.Equals("-matchmake-dev", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    mmDevName = args[++i];
+                }
+                else if (arg.Equals("-matchmake-mode", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    mmMode = args[++i];
+                }
+                else if (arg.Equals("-matchmake-region", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    mmRegion = args[++i];
+                }
+                else if (arg.Equals("-party-create", StringComparison.OrdinalIgnoreCase))
+                {
+                    mmPartyCreate = true;
+                }
+                else if (arg.Equals("-party-join", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    mmPartyJoinCode = args[++i];
+                }
+                else if (arg.Equals("-party-ready", StringComparison.OrdinalIgnoreCase))
+                {
+                    mmPartyReady = true;
+                }
+                else if (arg.Equals("-matchmake-queue", StringComparison.OrdinalIgnoreCase))
+                {
+                    mmQueue = true;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(mmDevName))
+            {
+                StartCoroutine(AutoMatchmakingCliRoutine(mmDevName, mmMode, mmRegion, mmPartyCreate, mmPartyJoinCode, mmPartyReady, mmQueue));
             }
 
             if (_autoQuitSeconds > 0f)
@@ -385,6 +425,89 @@ namespace OutrunAftermath.Client.Multiplayer
                 var prof = Runtime.Backend.GameApiClient.Instance.CurrentProfile;
                 string rankInfo = prof != null ? $"Rank={prof.survivorRank}, XP={prof.xp}, Matches={prof.matchesPlayed}" : "Profile loading";
                 Debug.Log($"[NET_TEST] Backend Session Active: User={Runtime.Backend.GameApiClient.Instance.CurrentDisplayName} (ID={Runtime.Backend.GameApiClient.Instance.CurrentUserId}) [{rankInfo}]");
+            }
+        }
+
+        private IEnumerator AutoMatchmakingCliRoutine(string devName, string mmMode, string mmRegion, bool createParty, string joinPartyCode, bool readyParty, bool queueMatch)
+        {
+            Debug.Log($"[MatchmakeCLI] Starting Automated Matchmaking Workflow: DevName={devName}, Mode={mmMode}, Region={mmRegion}...");
+            yield return new WaitForSeconds(0.5f);
+
+            var api = Runtime.Backend.GameApiClient.Instance;
+            if (api == null)
+            {
+                Debug.LogError("[MatchmakeCLI] GameApiClient not found.");
+                yield break;
+            }
+
+            var loginTask = api.QuickDevLoginAsync(devName);
+            while (!loginTask.IsCompleted) yield return null;
+            var (authOk, authMsg) = loginTask.Result;
+            if (!authOk)
+            {
+                Debug.LogError($"[MatchmakeCLI] Auth failed: {authMsg}");
+                yield break;
+            }
+            Debug.Log($"[MatchmakeCLI] Authenticated as {api.CurrentDisplayName} (ID={api.CurrentUserId})");
+
+            if (createParty)
+            {
+                var partyTask = api.CreatePartyAsync();
+                while (!partyTask.IsCompleted) yield return null;
+                var (pOk, pDetails, pErr) = partyTask.Result;
+                if (pOk && pDetails != null)
+                {
+                    Debug.Log($"[MatchmakeCLI] Party Created: Code={pDetails.code}, PartyId={pDetails.partyId}");
+                }
+                else
+                {
+                    Debug.LogError($"[MatchmakeCLI] Failed to create party: {pErr}");
+                }
+            }
+            else if (!string.IsNullOrEmpty(joinPartyCode))
+            {
+                var joinTask = api.JoinPartyByCodeAsync(joinPartyCode);
+                while (!joinTask.IsCompleted) yield return null;
+                var (jOk, jDetails, jErr) = joinTask.Result;
+                if (jOk && jDetails != null)
+                {
+                    Debug.Log($"[MatchmakeCLI] Joined Party: Code={jDetails.code}");
+                }
+                else
+                {
+                    Debug.LogError($"[MatchmakeCLI] Failed to join party: {jErr}");
+                }
+            }
+
+            if (readyParty)
+            {
+                var readyTask = api.SetPartyReadyAsync(true);
+                while (!readyTask.IsCompleted) yield return null;
+                Debug.Log("[MatchmakeCLI] Party Member marked READY");
+            }
+
+            // Hook match found before enqueuing
+            api.OnMatchFound += assignment =>
+            {
+                Debug.Log($"[MatchmakeCLI] MATCH FOUND! Connecting to {assignment.serverIp}:{assignment.serverPort} (Team={assignment.team})...");
+                StartClientSession(assignment.serverIp, (ushort)assignment.serverPort);
+            };
+
+            if (queueMatch)
+            {
+                bool isParty = api.CurrentParty != null && api.CurrentParty.inParty;
+                Debug.Log($"[MatchmakeCLI] Enqueueing ticket: Mode={mmMode}, Region={mmRegion}, IsParty={isParty}...");
+                var queueTask = api.EnqueueMatchmakingAsync(mmMode, mmRegion, isParty);
+                while (!queueTask.IsCompleted) yield return null;
+                var (qOk, ticket, qErr) = queueTask.Result;
+                if (qOk && ticket != null)
+                {
+                    Debug.Log($"[MatchmakeCLI] Ticket Enqueued: ID={ticket.ticketId}, Status={ticket.status}");
+                }
+                else
+                {
+                    Debug.LogError($"[MatchmakeCLI] Enqueue failed: {qErr}");
+                }
             }
         }
 

@@ -439,3 +439,100 @@ Phase 5: Account & Backend Integration (connecting Unity client to ASP.NET Core 
 ### Next phase
 
 Phase 6: Matchmaking & Social Systems (room code invite flow, party management, matchmaking queues, and friend requests).
+
+---
+
+## Phase 6 — 2026-11-15 (Matchmaking, Parties & Social Systems)
+
+### Completed features
+
+- **Backend Data Models & Schema** (`backend/src/OutrunAftermath.Api/Data/Entities.cs`):
+  - Added `PresenceStatus` and `LastSeenUtc` to `PlayerProfile`.
+  - Created `Friendship` entity (`Id`, `RequesterUserId`, `AddresseeUserId`, `Status` [pending/accepted/declined], `CreatedAtUtc`, `UpdatedAtUtc`) with composite index.
+  - Created `PartyRecord` entity (`Id`, `Code` [6-character unique code `P...`], `LeaderUserId`, `CreatedAtUtc`) and `PartyMemberRecord` (`Id`, `PartyId`, `UserId`, `IsReady`, `JoinedAtUtc`) with foreign keys and navigation mapping.
+  - Added automatic schema migration checks in `Program.cs` startup.
+- **Matchmaking Coordinator Service** (`backend/src/OutrunAftermath.Api/Services/MatchmakingCoordinator.cs`):
+  - Thread-safe service wrapping `OutrunAftermath.Simulation.Matchmaking.MatchmakingQueue`.
+  - Supports both solo and atomic multi-member party tickets; parties are never split across teams.
+  - Implements snake-draft team placement with dynamic skill band expansion and ticket timeout expiry.
+  - Automatically provisions server match assignments (`127.0.0.1:7777`, `deadcity`, assigned teams Rogue/Sentinel).
+- **REST API Endpoints** (`backend/src/OutrunAftermath.Api/Program.cs`):
+  - **Presence**: `POST /api/me/presence` (`online`, `in-lobby`, `in-queue`, `in-match`, `offline`).
+  - **Friends & Social**:
+    - `GET /api/friends`: Retrieves accepted friends with live presence status, rank, and XP.
+    - `GET /api/friends/requests`: Lists incoming and outgoing pending friend requests.
+    - `POST /api/friends/request`: Sends friend request by username or user ID.
+    - `POST /api/friends/respond`: Accepts or declines pending requests.
+    - `DELETE /api/friends/{friendUserId}`: Removes friend.
+  - **Parties / Squads**:
+    - `POST /api/parties`: Creates a new party with a unique 6-character code.
+    - `GET /api/parties/me`: Returns active party details, leader, and member roster with readiness.
+    - `POST /api/parties/join`: Joins a party via 6-character code.
+    - `POST /api/parties/leave`: Leaves party with automatic leader reassignment or deletion if empty.
+    - `POST /api/parties/ready`: Toggles member ready state.
+    - `POST /api/parties/queue`: Initiates party matchmaking (leader only, requires all members ready).
+  - **Matchmaking**:
+    - `POST /api/matchmaking/ticket`: Enqueues solo or party matchmaking ticket.
+    - `GET /api/matchmaking/ticket/{ticketId}`: Returns ticket status and matched server assignment.
+    - `GET /api/matchmaking/status`: Returns current queue metrics across regions and modes.
+    - `DELETE /api/matchmaking/ticket/{ticketId}`: Cancels queued ticket.
+- **Integration Test Suite** (`backend/tests/OutrunAftermath.Api.Tests/ApiTests.cs`):
+  - Added 3 comprehensive integration tests:
+    - `Presence_and_friend_request_lifecycle`
+    - `Party_management_lifecycle`
+    - `Matchmaking_ticket_and_matching`
+  - Total test suite: 78 tests passed (67 simulation tests + 11 API tests).
+- **Unity HTTP Backend API Client** (`client/Assets/Game/Runtime/Backend/GameApiClient.cs`):
+  - Added DTOs: `FriendDto`, `FriendRequestItemDto`, `FriendRequestsContainerDto`, `PartyDetailsDto`, `PartyMemberItemDto`, `MatchmakingTicketDto`, `MatchedAssignmentDto`.
+  - Added events: `OnPartyChanged`, `OnFriendsListUpdated`, `OnMatchmakingTicketUpdated`, `OnMatchFound`.
+  - Implemented async client methods for presence updates, friend requests, party creation/joining/ready, and matchmaking queueing with background polling routine `PollMatchmakingRoutine`.
+- **Interactive Tactical Lobby UI** (`client/Assets/Game/Multiplayer/LobbyConnectionUI.cs`):
+  - Tab navigation bar: "MATCHMAKING & SQUADS" vs "DIRECT CONNECT & ROOMS".
+  - Matchmaking controls: Mode toggle (Ground Operations vs Convoy Operations), Region selector (NA-East, EU-Central, AP-South), "FIND MATCH" button.
+  - Active queue searching overlay with elapsed time counter and "CANCEL SEARCH" button.
+  - Automatic dispatch on `OnMatchFound`: seamlessly triggers `NetworkSessionController.StartClientSession` with assigned server IP/port and dismisses menu.
+  - Survivor Squad (Party) hub: create squad, display 6-char code, join by code, member roster display with leader crowns and ready tags, "READY / UNREADY" toggle, "QUEUE SQUAD" button, and "LEAVE SQUAD".
+  - Squad Network (Friends) side drawer: lists friends with presence indicators (`[ONLINE]`, `[IN-LOBBY]`, `[IN-MATCH]`, `[OFFLINE]`), add friend by username/ID, incoming requests list with "ACCEPT ALL", refresh and close actions.
+- **CLI & Test Workflow Support** (`client/Assets/Game/Multiplayer/NetworkSessionController.cs`):
+  - Added CLI flags: `-matchmake-dev <name>`, `-matchmake-mode <mode>`, `-matchmake-region <region>`, `-party-create`, `-party-join <code>`, `-party-ready`, `-matchmake-queue`.
+  - Implemented `AutoMatchmakingCliRoutine` to support headless automated multi-client matchmaking verification.
+- **Standalone Build & Verification** (`run_build.ps1`, `run_phase6_test.ps1`):
+  - Rebuilt Windows Standalone player: `client/Builds/Windows/OutrunAftermath.exe` (104,451,009 bytes).
+  - Executed end-to-end multi-process verification script validating the entire social, party, matchmaking, and game server dispatch flow.
+
+### Files created
+
+- `backend/src/OutrunAftermath.Api/Services/MatchmakingCoordinator.cs`
+- `run_phase6_test.ps1`
+
+### Files modified
+
+- `backend/src/OutrunAftermath.Api/Data/Entities.cs` (added `PresenceStatus`, `LastSeenUtc`, `Friendship`, `PartyRecord`, `PartyMemberRecord`)
+- `backend/src/OutrunAftermath.Api/Program.cs` (presence, friends, parties, matchmaking endpoints)
+- `backend/tests/OutrunAftermath.Api.Tests/ApiTests.cs` (added 3 new integration tests)
+- `client/Assets/Editor/BuildScript.cs` (updated Phase 6 build targets)
+- `client/Assets/Game/Multiplayer/LobbyConnectionUI.cs` (complete matchmaking, squad, and friends UI)
+- `client/Assets/Game/Multiplayer/NetworkSessionController.cs` (matchmaking CLI automation workflow)
+- `client/Assets/Game/Runtime/Backend/GameApiClient.cs` (Phase 6 DTOs, events, and API client methods)
+- `run_build.ps1` (Phase 6 log pattern filter)
+
+### Tests executed
+
+1. **Backend Integration & Unit Test Suite (`dotnet test backend/OutrunAftermath.sln`)**:
+   - Exit code `0`: All 78 tests passed (67 simulation tests + 11 API tests).
+2. **Unity 6 Standalone Windows Build (`run_build.ps1`)**:
+   - Exit code `0`: Output `client/Builds/Windows/OutrunAftermath.exe` (104,451,009 bytes).
+3. **End-to-End Multi-Process Verification (`run_phase6_test.ps1`)**:
+   - Backend API initialized healthy on `http://127.0.0.1:5000`.
+   - Registered 4 players (`SquadAlpha_3696`, `SquadBravo_3696`, `EnemyCharlie_3696`, `EnemyDelta_3696`).
+   - Verified Presence: `SquadAlpha_3696 -> [in-lobby]`, `SquadBravo_3696 -> [online]`.
+   - Verified Friends & Social: Alpha sent friend request to Bravo, Bravo fetched request, Bravo accepted, Alpha queried friends list confirming Bravo was listed as online friend.
+   - Verified Squad Management: Alpha created squad with code `PD6KUC`, Bravo joined squad by code, Bravo marked ready, queried squad details confirming both members ready.
+   - Verified Matchmaking: Alpha enqueued squad ticket, Charlie and Delta enqueued solo tickets, matchmaker matched tickets into server assignment (`127.0.0.1:7777`, `deadcity`, `GroundOperations`), verified squad integrity (both Alpha and Bravo assigned to Team ROGUE).
+   - Dedicated server launched on UDP `:7777`; matched clients connected and engaged in real ServerRPC hit registration and operator abilities (REX frag, TITAN suppress).
+   - Match ended with victory; server submitted match result payload to `/internal/matches/complete`.
+   - Verified persistent database state: post-match profile updated with XP (`+235`), rank, win count, and match history record written to SQLite.
+
+### Next phase
+
+Phase 7: Maps, Audio & Environmental Systems (expanding map geometry, sound design, ambient audio, and environment hazards).

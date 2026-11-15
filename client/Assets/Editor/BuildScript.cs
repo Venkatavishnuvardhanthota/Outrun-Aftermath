@@ -27,7 +27,7 @@ namespace OutrunAftermath.Client.Editor
 
         public static void BuildWindows()
         {
-            Debug.Log("[BuildScript] Building Phase 5 Accounts & Backend Integration Prefabs & Scene...");
+            Debug.Log("[BuildScript] Building Phase 6 Matchmaking, Parties & Social Integration Prefabs & Scene...");
 
             // 1. Create / update NetworkPlayer and WastelandRaptor prefabs
             GameObject playerPrefab = CreateOrUpdateNetworkPlayerPrefab();
@@ -116,7 +116,7 @@ namespace OutrunAftermath.Client.Editor
                 throw new System.Exception($"Build failed: {summary.result} ({summary.totalErrors} errors)");
             }
 
-            Debug.Log($"[BuildScript] PHASE 5 BUILD SUCCEEDED! Total size: {summary.totalSize} bytes. Output: {outputPath}");
+            Debug.Log($"[BuildScript] PHASE 6 BUILD SUCCEEDED! Total size: {summary.totalSize} bytes. Output: {outputPath}");
         }
 
         private static GameObject CreateOrUpdateNetworkPlayerPrefab()

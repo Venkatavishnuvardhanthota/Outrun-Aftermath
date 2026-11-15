@@ -212,6 +212,145 @@ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.NotNull(list);
     }
 
+    [Fact]
+    public async Task Presence_and_friend_request_lifecycle()
+    {
+        using var c1 = await AuthedClientAsync();
+        using var c2 = await AuthedClientAsync();
+
+        // 1. Update presence
+        var presRes = await c1.PostAsJsonAsync("/api/me/presence", new { status = "in-lobby" });
+        Assert.Equal(HttpStatusCode.OK, presRes.StatusCode);
+
+        // Get Player 2 profile to get their DisplayName
+        var p2Res = await c2.GetAsync("/api/me");
+        var p2Profile = await p2Res.Content.ReadFromJsonAsync<LeaderboardDto>();
+        Assert.NotNull(p2Profile);
+
+        // 2. Send friend request from Player 1 to Player 2
+        var reqRes = await c1.PostAsJsonAsync("/api/friends/request", new { targetDisplayName = p2Profile.DisplayName });
+        Assert.Equal(HttpStatusCode.OK, reqRes.StatusCode);
+
+        // 3. Player 2 views incoming friend requests
+        var incomingRes = await c2.GetAsync("/api/friends/requests");
+        Assert.Equal(HttpStatusCode.OK, incomingRes.StatusCode);
+        var reqs = await incomingRes.Content.ReadFromJsonAsync<FriendRequestsContainerDto>();
+        Assert.NotNull(reqs);
+        Assert.Single(reqs.Incoming);
+        var reqId = reqs.Incoming[0].Id;
+
+        // 4. Player 2 accepts the friend request
+        var acceptRes = await c2.PostAsJsonAsync("/api/friends/respond", new { requestId = reqId, accept = true });
+        Assert.Equal(HttpStatusCode.OK, acceptRes.StatusCode);
+
+        // 5. Both check their friends list
+        var f1Res = await c1.GetAsync("/api/friends");
+        Assert.Equal(HttpStatusCode.OK, f1Res.StatusCode);
+        var friends1 = await f1Res.Content.ReadFromJsonAsync<List<FriendDto>>();
+        Assert.NotNull(friends1);
+        Assert.Single(friends1);
+        Assert.Equal(p2Profile.DisplayName, friends1[0].DisplayName);
+
+        var f2Res = await c2.GetAsync("/api/friends");
+        var friends2 = await f2Res.Content.ReadFromJsonAsync<List<FriendDto>>();
+        Assert.NotNull(friends2);
+        Assert.Single(friends2);
+        Assert.Equal("in-lobby", friends2[0].PresenceStatus);
+
+        // 6. Player 1 removes friend
+        var delRes = await c1.DeleteAsync($"/api/friends/{p2Profile.UserId}");
+        Assert.Equal(HttpStatusCode.OK, delRes.StatusCode);
+
+        var f1After = await (await c1.GetAsync("/api/friends")).Content.ReadFromJsonAsync<List<FriendDto>>();
+        Assert.Empty(f1After!);
+    }
+
+    [Fact]
+    public async Task Party_management_lifecycle()
+    {
+        using var c1 = await AuthedClientAsync();
+        using var c2 = await AuthedClientAsync();
+
+        // 1. Player 1 creates party
+        var createRes = await c1.PostAsync("/api/parties", null);
+        Assert.Equal(HttpStatusCode.OK, createRes.StatusCode);
+        var partyInfo = await createRes.Content.ReadFromJsonAsync<PartyDto>();
+        Assert.NotNull(partyInfo);
+        Assert.StartsWith("P", partyInfo.Code);
+
+        // 2. Player 2 joins party via code
+        var joinRes = await c2.PostAsJsonAsync("/api/parties/join", new { code = partyInfo.Code });
+        Assert.Equal(HttpStatusCode.OK, joinRes.StatusCode);
+
+        // 3. Player 2 marks ready
+        var readyRes = await c2.PostAsJsonAsync("/api/parties/ready", new { isReady = true });
+        Assert.Equal(HttpStatusCode.OK, readyRes.StatusCode);
+
+        // 4. Player 1 inspects party roster
+        var meRes = await c1.GetAsync("/api/parties/me");
+        Assert.Equal(HttpStatusCode.OK, meRes.StatusCode);
+        var myParty = await meRes.Content.ReadFromJsonAsync<PartyDto>();
+        Assert.NotNull(myParty);
+        Assert.True(myParty.InParty);
+        Assert.Equal(2, myParty.Members.Count);
+        Assert.True(myParty.Members.All(m => m.IsReady));
+
+        // 5. Player 2 leaves party
+        var leaveRes = await c2.PostAsync("/api/parties/leave", null);
+        Assert.Equal(HttpStatusCode.OK, leaveRes.StatusCode);
+
+        var partyAfterLeave = await (await c1.GetAsync("/api/parties/me")).Content.ReadFromJsonAsync<PartyDto>();
+        Assert.Single(partyAfterLeave!.Members);
+    }
+
+    [Fact]
+    public async Task Matchmaking_ticket_and_matching()
+    {
+        using var c1 = await AuthedClientAsync();
+        using var c2 = await AuthedClientAsync();
+
+        // Player 1 enqueues
+        var q1Res = await c1.PostAsJsonAsync("/api/matchmaking/ticket", new
+        {
+            mode = "GroundOperations",
+            matchType = "StandardPursuit",
+            region = "na-east",
+            crossplay = true
+        });
+        Assert.Equal(HttpStatusCode.OK, q1Res.StatusCode);
+        var t1 = await q1Res.Content.ReadFromJsonAsync<MatchmakingTicketDto>();
+        Assert.NotNull(t1);
+
+        // Player 2 enqueues in same mode & region -> triggers match!
+        var q2Res = await c2.PostAsJsonAsync("/api/matchmaking/ticket", new
+        {
+            mode = "GroundOperations",
+            matchType = "StandardPursuit",
+            region = "na-east",
+            crossplay = true
+        });
+        Assert.Equal(HttpStatusCode.OK, q2Res.StatusCode);
+        var t2 = await q2Res.Content.ReadFromJsonAsync<MatchmakingTicketDto>();
+        Assert.NotNull(t2);
+
+        // Check ticket 1 status
+        var t1Poll = await (await c1.GetAsync($"/api/matchmaking/ticket/{t1.TicketId}")).Content.ReadFromJsonAsync<MatchmakingTicketDto>();
+        Assert.NotNull(t1Poll);
+        Assert.Equal("matched", t1Poll.Status);
+        Assert.NotNull(t1Poll.Assignment);
+        Assert.Equal("127.0.0.1", t1Poll.Assignment.ServerIp);
+        Assert.Equal(7777, t1Poll.Assignment.ServerPort);
+        Assert.True(t1Poll.Assignment.Team == "Rogue" || t1Poll.Assignment.Team == "Sentinel");
+
+        // Check ticket 2 status
+        var t2Poll = await (await c2.GetAsync($"/api/matchmaking/ticket/{t2.TicketId}")).Content.ReadFromJsonAsync<MatchmakingTicketDto>();
+        Assert.NotNull(t2Poll);
+        Assert.Equal("matched", t2Poll.Status);
+        Assert.NotNull(t2Poll.Assignment);
+        Assert.Equal(t1Poll.Assignment.MatchId, t2Poll.Assignment.MatchId);
+        Assert.NotEqual(t1Poll.Assignment.Team, t2Poll.Assignment.Team); // Opposing teams!
+    }
+
     private async Task<HttpClient> AuthedClientAsync()
     {
         var email = $"p{Guid.NewGuid():N}@outrun.test";
@@ -234,4 +373,11 @@ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
     private sealed record DuplicateDto(bool Duplicate, Guid MatchId);
     private sealed record MatchHistoryDto(Guid Id, string Mode, string MatchType, string MapId, string Faction, string OperatorId, int XpAwarded, string Result);
     private sealed record LeaderboardDto(Guid UserId, string DisplayName, int SurvivorRank, long Xp, int Wins, int Losses);
+    private sealed record FriendDto(Guid UserId, string DisplayName, int SurvivorRank, long Xp, string PresenceStatus);
+    private sealed record FriendRequestDto(Guid Id, Guid RequesterId, string RequesterName, int RequesterRank);
+    private sealed record FriendRequestsContainerDto(List<FriendRequestDto> Incoming, List<object> Outgoing);
+    private sealed record PartyDto(bool InParty, Guid PartyId, string Code, Guid LeaderUserId, List<PartyMemberDto> Members);
+    private sealed record PartyMemberDto(Guid UserId, string DisplayName, int Rank, bool IsLeader, bool IsReady);
+    private sealed record MatchmakingTicketDto(Guid TicketId, string Status, MatchedAssignmentDto? Assignment);
+    private sealed record MatchedAssignmentDto(Guid MatchId, string ServerIp, int ServerPort, string Mode, string MapId, string Team);
 }

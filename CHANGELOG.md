@@ -2,6 +2,33 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [0.8.0] - 2026-11-15 - Phase 6: Matchmaking, Parties & Social Systems
+
+### Added
+- Added `Friendship`, `PartyRecord`, and `PartyMemberRecord` entities to ASP.NET Core API with database migrations in `Entities.cs` and `AppDbContext`.
+- Added player online presence tracking (`PresenceStatus`, `LastSeenUtc`) across `online`, `in-lobby`, `in-queue`, `in-match`, and `offline`.
+- Added `MatchmakingCoordinator` service wrapping authoritative `MatchmakingQueue`: manages solo and party tickets with snake-draft team placement, dynamic skill bands, ticket timeouts, and dedicated server dispatch.
+- Added REST endpoints for Friends (`GET /api/friends`, `GET /api/friends/requests`, `POST /api/friends/request`, `POST /api/friends/respond`, `DELETE /api/friends/{id}`).
+- Added REST endpoints for Parties (`POST /api/parties`, `GET /api/parties/me`, `POST /api/parties/join`, `POST /api/parties/leave`, `POST /api/parties/ready`, `POST /api/parties/queue`).
+- Added REST endpoints for Matchmaking (`POST /api/matchmaking/ticket`, `GET /api/matchmaking/ticket/{id}`, `GET /api/matchmaking/status`, `DELETE /api/matchmaking/ticket/{id}`).
+- Added 3 new integration tests in `ApiTests.cs` covering presence, friend requests, party lifecycles, and matchmaking queues (78 total tests passing).
+- Expanded Unity `GameApiClient` with Phase 6 DTOs, events (`OnPartyChanged`, `OnFriendsListUpdated`, `OnMatchmakingTicketUpdated`, `OnMatchFound`), and asynchronous client methods.
+- Tactical Lobby UI redesign (`LobbyConnectionUI.cs`):
+  - Two-tab layout: "MATCHMAKING & SQUADS" vs "DIRECT CONNECT & ROOMS".
+  - Mode selector (Ground vs Convoy) and Region selector (NA-East, EU-Central, AP-South).
+  - Matchmaking search overlay with animated search timer and "CANCEL SEARCH".
+  - Auto-dispatch to dedicated match server upon `OnMatchFound`.
+  - Survivor Squad hub: party creation, 6-character code sharing, join by code, member readiness roster, "READY / UNREADY" toggle, and leader-only squad queue.
+  - Squad Network (Friends) side drawer: friends list with live status indicators, add friend input, and incoming invite review.
+- Added automated matchmaking CLI parameters in `NetworkSessionController` (`-matchmake-dev`, `-matchmake-mode`, `-matchmake-region`, `-party-create`, `-party-join`, `-party-ready`, `-matchmake-queue`).
+- Comprehensive end-to-end verification script `run_phase6_test.ps1` testing 4 accounts across presence, friend requests, party creation/joining, matchmaking queueing with squad team cohesion preservation, dedicated server combat, and database persistence.
+
+### Fixed
+- Fixed EF Core test database filename scoping in `WebApplicationFactory` to prevent request-level context recreation.
+- Added explicit party member navigation configuration in `AppDbContext` to ensure child entities load reliably on party queries.
+- Standardized `SendFriendRequest` and `UpdatePresenceRequest` JSON payloads to support both username and GUID targeting.
+- Ensured party members are kept on the same team during matchmaking snake draft.
+
 ## [0.7.0] - 2026-11-14 - Phase 5: Account & Backend Integration & Persistence
 
 ### Added

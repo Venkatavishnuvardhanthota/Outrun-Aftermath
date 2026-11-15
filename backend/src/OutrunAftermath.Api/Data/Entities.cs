@@ -35,6 +35,8 @@ public sealed class PlayerProfile
     public int MatchesPlayed { get; set; }
     public int Wins { get; set; }
     public int Losses { get; set; }
+    public string PresenceStatus { get; set; } = "offline"; // "online", "in-lobby", "in-queue", "in-match", "offline"
+    public DateTime LastSeenUtc { get; set; } = DateTime.UtcNow;
 }
 
 public sealed class Room
@@ -93,6 +95,34 @@ public sealed class RewardClaim
     public string ClaimId { get; set; } = "";
 }
 
+public sealed class Friendship
+{
+    public Guid Id { get; set; }
+    public Guid RequesterUserId { get; set; }
+    public Guid AddresseeUserId { get; set; }
+    public string Status { get; set; } = "pending"; // "pending", "accepted", "declined"
+    public DateTime CreatedAtUtc { get; set; }
+    public DateTime UpdatedAtUtc { get; set; }
+}
+
+public sealed class PartyRecord
+{
+    public Guid Id { get; set; }
+    public string Code { get; set; } = "";
+    public Guid LeaderUserId { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+    public List<PartyMemberRecord> Members { get; set; } = new();
+}
+
+public sealed class PartyMemberRecord
+{
+    public Guid Id { get; set; }
+    public Guid PartyId { get; set; }
+    public Guid UserId { get; set; }
+    public bool IsReady { get; set; }
+    public DateTime JoinedAtUtc { get; set; }
+}
+
 public sealed class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
@@ -105,6 +135,9 @@ public sealed class AppDbContext : DbContext
     public DbSet<MatchRecord> Matches => Set<MatchRecord>();
     public DbSet<MatchPlayer> MatchPlayers => Set<MatchPlayer>();
     public DbSet<RewardClaim> RewardClaims => Set<RewardClaim>();
+    public DbSet<Friendship> Friendships => Set<Friendship>();
+    public DbSet<PartyRecord> Parties => Set<PartyRecord>();
+    public DbSet<PartyMemberRecord> PartyMembers => Set<PartyMemberRecord>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -114,6 +147,9 @@ public sealed class AppDbContext : DbContext
         model.Entity<RefreshToken>().HasIndex(t => t.TokenHash).IsUnique();
         model.Entity<Room>().HasIndex(r => r.Code).IsUnique();
         model.Entity<RewardClaim>().HasIndex(r => new { r.UserId, r.ClaimId }).IsUnique();
+        model.Entity<Friendship>().HasIndex(f => new { f.RequesterUserId, f.AddresseeUserId }).IsUnique();
+        model.Entity<PartyRecord>().HasIndex(p => p.Code).IsUnique();
+        model.Entity<PartyRecord>().HasMany(p => p.Members).WithOne().HasForeignKey(m => m.PartyId);
         model.Entity<User>().HasOne(u => u.Profile).WithOne().HasForeignKey<PlayerProfile>(p => p.UserId);
     }
 }
