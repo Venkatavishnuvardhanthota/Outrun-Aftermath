@@ -57,10 +57,27 @@ namespace OutrunAftermath.Client
                 apiGo.AddComponent<Runtime.Backend.GameApiClient>();
             }
 
+            // Phase 7: Ensure AudioManager, AtmosphereDirector, and MapEnvironmentDirector
+            if (Runtime.Audio.AudioManager.Instance == null)
+            {
+                var audioGo = new GameObject("AudioManager");
+                audioGo.AddComponent<Runtime.Audio.AudioManager>();
+            }
+            if (Runtime.Environment.AtmosphereDirector.Instance == null)
+            {
+                var atmoGo = new GameObject("AtmosphereDirector");
+                atmoGo.AddComponent<Runtime.Environment.AtmosphereDirector>();
+            }
+            if (Runtime.Environment.MapEnvironmentDirector.Instance == null)
+            {
+                var mapGo = new GameObject("MapEnvironmentDirector");
+                mapGo.AddComponent<Runtime.Environment.MapEnvironmentDirector>();
+            }
+
             // 1. Build greybox environment if needed
             if (buildEnvironmentOnStart && GameObject.Find("DeadCity_Sector4") == null)
             {
-                DeadCityEnvironment.GenerateEnvironment(transform);
+                Runtime.Environment.MapEnvironmentDirector.Instance.LoadMap("deadcity", Runtime.Environment.WeatherCondition.Clear);
             }
 
             // 2. Ensure Input Manager

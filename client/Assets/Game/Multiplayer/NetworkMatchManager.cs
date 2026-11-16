@@ -28,6 +28,8 @@ namespace OutrunAftermath.Client.Multiplayer
         [SerializeField] private int targetScoreToWin = 5;
 
         public NetworkVariable<int> ActiveGameMode = new NetworkVariable<int>(0); // 0 = Ground, 1 = Convoy
+        public NetworkVariable<Unity.Collections.FixedString32Bytes> NetMapId = new NetworkVariable<Unity.Collections.FixedString32Bytes>("deadcity");
+        public NetworkVariable<int> NetWeather = new NetworkVariable<int>((int)Runtime.Environment.WeatherCondition.Clear);
         public NetworkVariable<int> CurrentPhase = new NetworkVariable<int>((int)MatchPhase.WaitingForPlayers);
         public NetworkVariable<int> RogueScore = new NetworkVariable<int>(0);
         public NetworkVariable<int> SentinelScore = new NetworkVariable<int>(0);
@@ -41,6 +43,8 @@ namespace OutrunAftermath.Client.Multiplayer
         private Runtime.Vehicles.NetworkVehicleController _sentinelVehicle;
         private float _roundResetTimer;
         private System.DateTime _matchStartTimeUtc = System.DateTime.UtcNow;
+        private string _activeMapId = "deadcity";
+        private Runtime.Environment.WeatherCondition _activeWeather = Runtime.Environment.WeatherCondition.Clear;
 
         public Runtime.Vehicles.NetworkVehicleController RogueVehicle => _rogueVehicle;
         public Runtime.Vehicles.NetworkVehicleController SentinelVehicle => _sentinelVehicle;
@@ -78,6 +82,19 @@ namespace OutrunAftermath.Client.Multiplayer
                         Debug.Log($"[NetworkMatchManager] CLI matchDurationSeconds set to {matchDurationSeconds}s");
                     }
                 }
+                else if (args[i].Equals("-map", System.StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    _activeMapId = args[i + 1].ToLowerInvariant();
+                    Debug.Log($"[NetworkMatchManager] CLI map set to {_activeMapId}");
+                }
+                else if (args[i].Equals("-weather", System.StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    if (System.Enum.TryParse<Runtime.Environment.WeatherCondition>(args[i + 1], true, out var weather))
+                    {
+                        _activeWeather = weather;
+                        Debug.Log($"[NetworkMatchManager] CLI weather set to {_activeWeather}");
+                    }
+                }
             }
         }
 
@@ -109,6 +126,8 @@ namespace OutrunAftermath.Client.Multiplayer
             if (IsServer)
             {
                 ActiveGameMode.Value = _configuredGameMode;
+                NetMapId.Value = _activeMapId;
+                NetWeather.Value = (int)_activeWeather;
                 MatchTimer.Value = matchDurationSeconds;
                 CurrentPhase.Value = (int)MatchPhase.WaitingForPlayers;
                 WinningFaction.Value = -1;
@@ -137,6 +156,21 @@ namespace OutrunAftermath.Client.Multiplayer
             RogueCount.OnValueChanged += (_, _) => RefreshHudStatus();
             SentinelCount.OnValueChanged += (_, _) => RefreshHudStatus();
             WinningFaction.OnValueChanged += (_, _) => RefreshHudStatus();
+            NetMapId.OnValueChanged += (_, _) => ApplyMapAndWeather();
+            NetWeather.OnValueChanged += (_, _) => ApplyMapAndWeather();
+
+            ApplyMapAndWeather();
+        }
+
+        private void ApplyMapAndWeather()
+        {
+            if (Runtime.Environment.MapEnvironmentDirector.Instance != null)
+            {
+                string map = NetMapId.Value.ToString();
+                if (string.IsNullOrEmpty(map)) map = "deadcity";
+                Runtime.Environment.WeatherCondition weather = (Runtime.Environment.WeatherCondition)NetWeather.Value;
+                Runtime.Environment.MapEnvironmentDirector.Instance.LoadMap(map, weather);
+            }
         }
 
         public override void OnNetworkDespawn()
@@ -391,7 +425,20 @@ namespace OutrunAftermath.Client.Multiplayer
             Debug.Log($"[NetworkMatchManager] MATCH ENDED — WINNER: {factionLabel} (Rogue {RogueScore.Value} : Sentinel {SentinelScore.Value}){reasonSuffix}");
             BroadcastFeedRpc($"VICTORY: {factionLabel}{reasonSuffix} ({RogueScore.Value} - {SentinelScore.Value})");
 
+            PlayMatchEndStingerRpc(winningFaction);
             ReportMatchToBackendServer(winningFaction);
+        }
+
+        [Rpc(SendTo.ClientsAndHost)]
+        private void PlayMatchEndStingerRpc(int winner)
+        {
+            if (Runtime.Audio.AudioManager.Instance == null) return;
+            bool isWinner = false;
+            if (NetworkManager.Singleton != null && _players.TryGetValue(NetworkManager.Singleton.LocalClientId, out var localPl))
+            {
+                isWinner = (localPl.NetFaction.Value == winner);
+            }
+            Runtime.Audio.AudioManager.Instance.PlayMatchStinger(isWinner);
         }
 
         private void ReportMatchToBackendServer(int winningFaction)
@@ -403,7 +450,7 @@ namespace OutrunAftermath.Client.Multiplayer
                 matchId = System.Guid.NewGuid().ToString(),
                 mode = ActiveGameMode.Value == 1 ? "ConvoyOperations" : "GroundOperations",
                 matchType = "StandardPursuit",
-                mapId = "deadcity",
+                mapId = NetMapId.Value.ToString(),
                 startedAtUtc = _matchStartTimeUtc.ToString("o"),
                 winnerFaction = winningFaction == 0 ? "Rogue" : (winningFaction == 1 ? "Sentinel" : "Draw"),
                 seed = UnityEngine.Random.Range(1, 999999),

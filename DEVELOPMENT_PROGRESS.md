@@ -536,3 +536,81 @@ Phase 6: Matchmaking & Social Systems (room code invite flow, party management, 
 ### Next phase
 
 Phase 7: Maps, Audio & Environmental Systems (expanding map geometry, sound design, ambient audio, and environment hazards).
+
+## Phase 7 — 2026-11-16 (maps, audio & environmental systems)
+
+### Completed features
+
+- **Mathematical Procedural PCM Audio Synthesizer** (`client/Assets/Game/Runtime/Audio/ProceduralAudioSynthesizer.cs`):
+  - Zero-dependency floating-point PCM audio synthesis using `AudioClip.Create` generating authentic sound effects without external audio files.
+  - Distinct gunshot profiles: `rifle` (sharp transient + medium body), `smg` (higher pitch rapid crack), `sniper` (heavy low-frequency sub punch + long reverberant decay), `shotgun` (multi-pellet diffuse crack), `pistol` (compact report), and vehicle `turret` (heavy metallic thud).
+  - Tactical hit feedback: flesh impact thud, metallic armor ping, and dual-frequency chime for headshots.
+  - Low-frequency radial blast explosions, mechanical reload clicks, slide rack snaps, footstep impulses, engine harmonics, nitro hiss, tire skid screeches, heartbeat pulses for downed state, and victory/defeat stingers.
+- **Master Audio Director** (`client/Assets/Game/Runtime/Audio/AudioManager.cs`):
+  - Singleton audio director with volume balancing (master, sfx, hud, ambient).
+  - 2D stereo HUD channel for UI/hit registration feedback.
+  - 16-source 3D spatialized combat audio pool with linear rolloff, min/max distances, and Doppler simulation.
+  - Dedicated continuous vehicle engine/nitro soundscape emitter (`VehicleAudioEmitter`).
+  - Dynamic looping ambient weather audio channel.
+- **Interactive Environmental Hazards** (`client/Assets/Game/Runtime/Environment/EnvironmentalHazard.cs`):
+  - Explosive Barrels: 30 HP, detonates with 135 radial blast damage, 7.0m damage falloff, 750 impulse force, and chain-detonations against adjacent barrels.
+  - Electrified Perimeter Barriers: 35 DPS continuous contact damage.
+  - Destructible Cover: degrades upon bullet impact.
+  - Implements `IDamageable` interface, integrating seamlessly with server-authoritative bullet hit detection.
+- **Atmosphere & Weather Director** (`client/Assets/Game/Runtime/Environment/AtmosphereDirector.cs`):
+  - 5 dynamic weather presets: `Clear`, `Sandstorm`, `ToxicRain`, `Overcast`, and `Night`.
+  - Dynamically controls URP directional sunlight intensity, color, shadow attenuation, ambient trilight harmonics, exponential distance fog, and ambient audio soundscape.
+- **Map Environment Director** (`client/Assets/Game/Runtime/Environment/MapEnvironmentDirector.cs`):
+  - Procedurally constructs and manages all 7 launch maps from the simulation catalog:
+    - **Dead City**: Urban ruins, central avenue, multi-story bank ruins with sniper balcony, warehouse logistics complex, extraction helipad, and objective terminal.
+    - **Dustlands**: Desert canyon, outer convoy circuit loop, sandstone arches, fuel refinery silos, and dune jump ramps.
+    - **Rust Harbor**: Maritime docks, water basin, stacked shipping container CQB maze, and cargo crane gantry.
+    - **Iron Mountain**: Mountain pass switchbacks, cliffside ridge road, tunnel overpass, and sniper overwatch perch.
+    - **Scrapyard Prime**: Vehicle graveyard, crushed car bale corridors, shredder crane, and chassis cover.
+    - **Forgotten Dam**: Hydroelectric dam crest highway, generator towers, dry spillway, and sloping dam wall.
+    - **Neon District**: Cyber-slum ruins, elevated skywalk bridge, glowing neon signs, and holographic pillars.
+- **Netcode Map & Weather Synchronization** (`client/Assets/Game/Multiplayer/NetworkMatchManager.cs`):
+  - Added `NetMapId` and `NetWeather` network variables replicated over Netcode.
+  - CLI overrides `-map <id>` and `-weather <condition>` for automated dedicated server configuration.
+  - Connected clients automatically rebuild matching tactical map environments and synchronize atmospheric weather upon joining.
+- **Standalone Build & Verification** (`run_build.ps1`, `run_phase7_test.ps1`):
+  - Rebuilt Windows Standalone player: `client/Builds/Windows/OutrunAftermath.exe` (104,483,929 bytes).
+  - Executed automated multi-process verification script testing dedicated host on `[DUSTLANDS]` with `[Sandstorm]` weather and remote client synchronization.
+
+### Files created
+
+- `client/Assets/Game/Runtime/Audio/ProceduralAudioSynthesizer.cs`
+- `client/Assets/Game/Runtime/Audio/AudioManager.cs`
+- `client/Assets/Game/Runtime/Environment/AtmosphereDirector.cs`
+- `client/Assets/Game/Runtime/Environment/EnvironmentalHazard.cs`
+- `client/Assets/Game/Runtime/Environment/MapEnvironmentDirector.cs`
+- `run_phase7_test.ps1`
+
+### Files modified
+
+- `client/Assets/Editor/BuildScript.cs` (registered AudioManager, AtmosphereDirector, and MapEnvironmentDirector)
+- `client/Assets/Game/Core/GameBootstrap.cs` (ensured audio and environment managers on boot)
+- `client/Assets/Game/Multiplayer/NetworkMatchManager.cs` (added map/weather network replication, CLI parsing, match end audio stingers)
+- `client/Assets/Game/Multiplayer/NetworkPlayerController.cs` (integrated spatial gunshots, hit markers, and hazard damage)
+- `client/Assets/Game/Runtime/Character/PlayerHealth.cs` (integrated downed heartbeat audio pulse and cleanup)
+- `client/Assets/Game/Runtime/Combat/WeaponSystem.cs` (wired procedural audio playback and hit confirmations)
+- `client/Assets/Game/Runtime/Vehicles/NetworkVehicleController.cs` (attached VehicleAudioEmitter, engine telemetry, and explosion cues)
+
+### Tests executed
+
+1. **Simulation & API Test Suite (`dotnet test backend/OutrunAftermath.sln`)**:
+   - Exit code `0`: All 78 tests passed (67 simulation tests + 11 API tests).
+2. **Unity 6 Standalone Windows Build (`run_build.ps1`)**:
+   - Exit code `0`: Output `client/Builds/Windows/OutrunAftermath.exe` (104,483,929 bytes).
+3. **End-to-End Multi-Process Verification (`run_phase7_test.ps1`)**:
+   - Backend API initialized healthy on `http://127.0.0.1:5000`.
+   - Registered 2 test operators (`AcousticViper_7348` and `DesertFox_7348`).
+   - Host launched on `dustlands` map with `Sandstorm` weather condition.
+   - Host generated procedural PCM audio sound banks (`gun_rifle`, `gun_smg`, `gun_sniper`, `gun_shotgun`, `gun_pistol`, `gun_turret`, `hit_body`, `hit_armor`, `hit_headshot`, `explosion`, `heartbeat`, `stinger_win`, `stinger_lose`, `ambiance_clear`, `ambiance_sandstorm`).
+   - Remote client connected, received replicated `NetMapId = dustlands` and `NetWeather = Sandstorm`.
+   - Client dynamically loaded `DUSTLANDS` tactical environment and applied `SANDSTORM` weather with matched ambiance soundscape.
+   - Verified 100% pattern matching and zero errors.
+
+### Next phase
+
+Phase 8: Polish, Cross-Platform Controls & Optimization (mobile touch HUD controls, graphics quality presets, cross-platform input abstraction, performance profiling, and final packaging).

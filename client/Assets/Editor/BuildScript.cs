@@ -14,6 +14,8 @@ using OutrunAftermath.Client.Runtime.Abilities;
 using OutrunAftermath.Client.Runtime.Objectives;
 using OutrunAftermath.Client.Runtime.Vehicles;
 using OutrunAftermath.Client.Runtime.Backend;
+using OutrunAftermath.Client.Runtime.Audio;
+using OutrunAftermath.Client.Runtime.Environment;
 
 namespace OutrunAftermath.Client.Editor
 {
@@ -80,6 +82,16 @@ namespace OutrunAftermath.Client.Editor
             terminalGo.AddComponent<NetworkObject>();
             var terminal = terminalGo.AddComponent<NetworkObjectiveTerminal>();
             EditorUtility.SetDirty(terminal);
+
+            // Phase 7: AudioManager, AtmosphereDirector & MapEnvironmentDirector
+            var audioGo = new GameObject("AudioManager");
+            audioGo.AddComponent<Runtime.Audio.AudioManager>();
+
+            var atmoGo = new GameObject("AtmosphereDirector");
+            atmoGo.AddComponent<Runtime.Environment.AtmosphereDirector>();
+
+            var mapGo = new GameObject("MapEnvironmentDirector");
+            mapGo.AddComponent<Runtime.Environment.MapEnvironmentDirector>();
 
             // Save Main.unity
             Directory.CreateDirectory("Assets/Scenes");

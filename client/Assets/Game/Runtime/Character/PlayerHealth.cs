@@ -177,6 +177,11 @@ namespace OutrunAftermath.Client.Runtime.Character
             _currentDownedHealth = downedHealth;
             _reviveProgress = 0f;
 
+            if (Audio.AudioManager.Instance != null)
+            {
+                Audio.AudioManager.Instance.SetHeartbeatActive(true);
+            }
+
             OnDowned?.Invoke();
         }
 
@@ -211,6 +216,11 @@ namespace OutrunAftermath.Client.Runtime.Character
             currentArmor = 0f; // Starts without armor after revive
             _reviveProgress = 0f;
 
+            if (Audio.AudioManager.Instance != null)
+            {
+                Audio.AudioManager.Instance.SetHeartbeatActive(false);
+            }
+
             OnHealthArmorChanged?.Invoke(currentHealth, currentArmor);
             OnRevived?.Invoke();
         }
@@ -226,6 +236,11 @@ namespace OutrunAftermath.Client.Runtime.Character
             currentArmor = 0f;
             _respawnTimer = respawnDelay;
 
+            if (Audio.AudioManager.Instance != null)
+            {
+                Audio.AudioManager.Instance.SetHeartbeatActive(false);
+            }
+
             OnHealthArmorChanged?.Invoke(0f, 0f);
             OnEliminated?.Invoke();
         }
@@ -236,6 +251,11 @@ namespace OutrunAftermath.Client.Runtime.Character
             currentHealth = maxHealth;
             currentArmor = maxArmor;
             _reviveProgress = 0f;
+
+            if (Audio.AudioManager.Instance != null)
+            {
+                Audio.AudioManager.Instance.SetHeartbeatActive(false);
+            }
 
             transform.position = _spawnPosition;
             transform.rotation = _spawnRotation;

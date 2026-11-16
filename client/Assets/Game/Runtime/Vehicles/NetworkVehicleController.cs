@@ -72,6 +72,7 @@ namespace OutrunAftermath.Client.Runtime.Vehicles
         private VehicleSeat _localSeat = (VehicleSeat)(-1);
         private Camera _vehicleCamera;
         private GameObject _vehicleCamRoot;
+        private Audio.VehicleAudioEmitter _audioEmitter;
 
         // Constants & tuning
         private const float MaxSteerAngle = 32f;
@@ -89,8 +90,8 @@ namespace OutrunAftermath.Client.Runtime.Vehicles
         {
             _rb = GetComponent<Rigidbody>();
             _rb.mass = 1850f;
-            _rb.drag = 0.35f;
-            _rb.angularDrag = 2.5f;
+            _rb.linearDamping = 0.35f;
+            _rb.angularDamping = 2.5f;
             _rb.interpolation = RigidbodyInterpolation.Interpolate;
             _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
 
@@ -120,6 +121,11 @@ namespace OutrunAftermath.Client.Runtime.Vehicles
             SeatSupportClientId.OnValueChanged += OnSeatAssignmentChanged;
             SeatHeavyClientId.OnValueChanged += OnSeatAssignmentChanged;
 
+            if (Audio.AudioManager.Instance != null)
+            {
+                _audioEmitter = Audio.AudioManager.Instance.AttachVehicleAudio(gameObject);
+            }
+
             UpdateLocalOccupancyStatus();
         }
 
@@ -141,6 +147,11 @@ namespace OutrunAftermath.Client.Runtime.Vehicles
         private void Update()
         {
             if (!IsSpawned || NetIsExploded.Value) return;
+
+            if (_audioEmitter != null)
+            {
+                _audioEmitter.UpdateTelemetry(NetSpeedMps.Value, NetIsNitroActive.Value, _isHandbrake);
+            }
 
             if (_isLocalPlayerInside)
             {
@@ -677,6 +688,10 @@ namespace OutrunAftermath.Client.Runtime.Vehicles
         {
             // Lightweight visual tracer for mounted machine gun
             StartCoroutine(DrawTracerRoutine(start, end));
+            if (Audio.AudioManager.Instance != null)
+            {
+                Audio.AudioManager.Instance.PlayGunshot(start, "turret", 1.15f);
+            }
         }
 
         private IEnumerator DrawTracerRoutine(Vector3 start, Vector3 end)
@@ -727,6 +742,14 @@ namespace OutrunAftermath.Client.Runtime.Vehicles
             if (IsServer)
             {
                 ApplyVehicleDamageServer(VehicleComponent.Body, amount, ulong.MaxValue, hitPoint);
+            }
+        }
+
+        public void ApplyExplosiveDamageServer(float amount)
+        {
+            if (IsServer)
+            {
+                ApplyVehicleDamageServer(VehicleComponent.Body, amount, ulong.MaxValue, transform.position);
             }
         }
 
@@ -830,6 +853,11 @@ namespace OutrunAftermath.Client.Runtime.Vehicles
 
                 _rb.linearVelocity = Vector3.zero;
                 _rb.angularVelocity = Vector3.zero;
+
+                if (Audio.AudioManager.Instance != null)
+                {
+                    Audio.AudioManager.Instance.PlayExplosion(transform.position, 1.8f);
+                }
             }
         }
 

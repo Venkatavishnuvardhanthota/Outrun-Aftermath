@@ -76,6 +76,7 @@ namespace OutrunAftermath.Client.Runtime.Combat
         public IReadOnlyList<WeaponData> Loadout => loadout;
         public int ActiveSlotIndex => activeSlotIndex;
         public WeaponData CurrentWeapon => (loadout.Count > 0 && activeSlotIndex < loadout.Count) ? loadout[activeSlotIndex] : null;
+        public WeaponData ActiveWeapon => CurrentWeapon;
         public bool IsReloading => _isReloading;
         public float ReloadProgress => _isReloading && CurrentWeapon != null ? (1f - (_reloadTimer / CurrentWeapon.reloadTime)) : 0f;
         public float CurrentSpread => _currentSpread;
@@ -254,6 +255,10 @@ namespace OutrunAftermath.Client.Runtime.Combat
                 {
                     // Empty mag click
                     _nextFireTime = Time.time + 0.35f;
+                    if (Audio.AudioManager.Instance != null)
+                    {
+                        Audio.AudioManager.Instance.PlayReloadClick(transform.position, 0, 0.4f);
+                    }
                     StartReload();
                 }
             }
@@ -307,6 +312,12 @@ namespace OutrunAftermath.Client.Runtime.Combat
                 -0.07f
             );
 
+            // Procedural spatial gunshot audio
+            if (Audio.AudioManager.Instance != null)
+            {
+                Audio.AudioManager.Instance.PlayGunshot(transform.position, weapon.id, 1.0f);
+            }
+
             // Raycast shot execution
             Ray baseRay = _cameraRig != null ? _cameraRig.GetAimRay() : new Ray(transform.position + Vector3.up * 1.6f, transform.forward);
 
@@ -355,6 +366,13 @@ namespace OutrunAftermath.Client.Runtime.Combat
                         playerHealth.TakeDamage(actualDamage, hit.point);
                     }
 
+                    // Environmental Hazard damage
+                    var hazard = hit.collider.GetComponentInParent<Environment.EnvironmentalHazard>();
+                    if (hazard != null)
+                    {
+                        hazard.TakeDamage(actualDamage, hit.point, shotRay.direction);
+                    }
+
                     var rb = hit.collider.attachedRigidbody;
                     if (rb != null)
                     {
@@ -375,6 +393,10 @@ namespace OutrunAftermath.Client.Runtime.Combat
             if (registeredAnyHit)
             {
                 OnHitConfirmed?.Invoke(true, registeredHeadshot);
+                if (Audio.AudioManager.Instance != null)
+                {
+                    Audio.AudioManager.Instance.PlayHitMarker(registeredHeadshot, false);
+                }
             }
 
             OnFired?.Invoke();
@@ -386,6 +408,10 @@ namespace OutrunAftermath.Client.Runtime.Combat
             if (isHit)
             {
                 OnHitConfirmed?.Invoke(true, isHeadshot);
+                if (Audio.AudioManager.Instance != null)
+                {
+                    Audio.AudioManager.Instance.PlayHitMarker(isHeadshot, false);
+                }
             }
         }
 
@@ -468,6 +494,10 @@ namespace OutrunAftermath.Client.Runtime.Combat
 
             _isReloading = true;
             _reloadTimer = weapon.reloadTime;
+            if (Audio.AudioManager.Instance != null)
+            {
+                Audio.AudioManager.Instance.PlayReloadClick(transform.position, 1, 0.7f);
+            }
             OnReloadStarted?.Invoke();
         }
 
@@ -485,6 +515,10 @@ namespace OutrunAftermath.Client.Runtime.Combat
             }
 
             _isReloading = false;
+            if (Audio.AudioManager.Instance != null)
+            {
+                Audio.AudioManager.Instance.PlayReloadClick(transform.position, 2, 0.8f);
+            }
             OnReloadCompleted?.Invoke();
         }
 

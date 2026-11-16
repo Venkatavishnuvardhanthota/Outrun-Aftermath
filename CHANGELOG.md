@@ -2,6 +2,40 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [0.9.0] - 2026-11-16 - Phase 7: Maps, Audio & Environmental Systems
+
+### Added
+- Mathematical Procedural PCM Audio Synthesizer (`ProceduralAudioSynthesizer.cs`):
+  - Zero-dependency runtime audio generation using `AudioClip.Create` with IEEE float waveform synthesis.
+  - Weapon gunshot profiles for `rifle`, `smg`, `sniper`, `shotgun`, `pistol`, and vehicle `turret` with transient crack, harmonic punch, and exponential decay.
+  - Interactive hit markers: flesh impact thud, metallic armor ping, and dual harmonic headshot chime.
+  - Radial blast explosion with low-frequency rumble, mechanical reload and slide rack clicks, footstep impulses, and vehicle engine pitch harmonics.
+  - Dynamic heartbeat audio pulse for downed state and victory/defeat stingers.
+- Master Audio Director (`AudioManager.cs`):
+  - Singleton audio director with 2D stereo HUD channel, 16-source 3D spatialized combat audio pool, continuous vehicle engine/nitro emitter (`VehicleAudioEmitter`), and ambient weather channel.
+- Environmental Hazard System (`EnvironmentalHazard.cs`):
+  - Explosive Barrels: 30 HP, detonates with 135 radial blast damage, 7.0m damage falloff, 750 impulse force, and chain-detonations against adjacent hazards.
+  - Electrified Perimeter Barriers: 35 DPS continuous contact damage.
+  - Destructible Cover: absorbs incoming bullet impacts and degrades.
+- Atmosphere & Weather Director (`AtmosphereDirector.cs`):
+  - 5 dynamic weather states: `Clear`, `Sandstorm`, `ToxicRain`, `Overcast`, and `Night`.
+  - Configures URP directional sunlight intensity, color, shadow attenuation, ambient trilight harmonics, exponential distance fog, and background audio ambiance.
+- Map Environment Director (`MapEnvironmentDirector.cs`):
+  - Procedural generation of all 7 launch maps from the simulation catalog:
+    - **Dead City**: Urban ruins, central avenue, multi-story bank ruins with sniper balcony, warehouse logistics complex, extraction helipad, and objective beacon.
+    - **Dustlands**: Desert canyon, outer convoy circuit loop, sandstone arches, fuel refinery silos, and dune jump ramps.
+    - **Rust Harbor**: Maritime docks, water basin, stacked shipping container CQB maze, and cargo crane gantry.
+    - **Iron Mountain**: Mountain pass switchbacks, cliffside ridge road, tunnel overpass, and sniper overwatch perch.
+    - **Scrapyard Prime**: Vehicle graveyard, crushed car bale corridors, shredder crane, and chassis cover.
+    - **Forgotten Dam**: Hydroelectric dam crest highway, generator towers, dry spillway, and sloping dam wall.
+    - **Neon District**: Cyber-slum ruins, elevated skywalk bridge, glowing neon signs, and holographic pillars.
+- Netcode Map & Weather Replication (`NetworkMatchManager.cs`):
+  - Added replicated `NetMapId` and `NetWeather` network variables ensuring all connected clients synchronize map layouts and weather conditions with host/server.
+  - CLI overrides `-map <id>` and `-weather <condition>` for automated server launch.
+- Live multi-process verification script (`run_phase7_test.ps1`):
+  - Verified dedicated host on `[DUSTLANDS]` with `[Sandstorm]` weather.
+  - Verified remote client Netcode synchronization, procedural PCM audio compilation, and spatial audio pooling.
+
 ## [0.8.0] - 2026-11-15 - Phase 6: Matchmaking, Parties & Social Systems
 
 ### Added

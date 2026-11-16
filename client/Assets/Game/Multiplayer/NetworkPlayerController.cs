@@ -509,12 +509,21 @@ namespace OutrunAftermath.Client.Multiplayer
                     }
                     else
                     {
-                        var damageable = hit.collider.GetComponentInParent<IDamageable>();
-                        if (damageable != null)
+                        var hazard = hit.collider.GetComponentInParent<Runtime.Environment.EnvironmentalHazard>();
+                        if (hazard != null)
                         {
                             anyHit = true;
-                            if (isHeadshot) anyHeadshot = true;
-                            damageable.TakeDamage(dmg, hit.point, hit.normal, isHeadshot);
+                            hazard.TakeDamage(dmg, hit.point, normDir);
+                        }
+                        else
+                        {
+                            var damageable = hit.collider.GetComponentInParent<IDamageable>();
+                            if (damageable != null)
+                            {
+                                anyHit = true;
+                                if (isHeadshot) anyHeadshot = true;
+                                damageable.TakeDamage(dmg, hit.point, hit.normal, isHeadshot);
+                            }
                         }
                     }
                 }
@@ -569,6 +578,16 @@ namespace OutrunAftermath.Client.Multiplayer
                 if (IsOwner && didHit)
                 {
                     _weapons.TriggerRemoteHitConfirm(true, isHeadshot);
+                }
+            }
+
+            if (Runtime.Audio.AudioManager.Instance != null)
+            {
+                string weaponId = (_weapons != null && _weapons.ActiveWeapon != null) ? _weapons.ActiveWeapon.id : "rifle";
+                Runtime.Audio.AudioManager.Instance.PlayGunshot(tracerStart, weaponId, 1.0f);
+                if (IsOwner && didHit)
+                {
+                    Runtime.Audio.AudioManager.Instance.PlayHitMarker(isHeadshot, false);
                 }
             }
         }
