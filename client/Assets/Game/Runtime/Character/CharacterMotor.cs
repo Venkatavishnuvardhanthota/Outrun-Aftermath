@@ -153,6 +153,10 @@ namespace OutrunAftermath.Client.Runtime.Character
                     {
                         targetSpeed = 0f;
                     }
+                    else if (input.Move.sqrMagnitude < 0.5f)
+                    {
+                        targetSpeed = walkSpeed;
+                    }
 
                     // Forward and right directions aligned to camera yaw
                     Vector3 camForward = Vector3.ProjectOnPlane(_cameraRig.transform.forward, Vector3.up).normalized;

@@ -1,0 +1,40 @@
+# =========================================================
+# OUTRUN: AFTERMATH — Production ASP.NET Core 8 API
+# Multi-stage production container
+# =========================================================
+
+# Build Stage
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy project files and restore dependencies
+COPY ["shared/OutrunAftermath.Simulation/OutrunAftermath.Simulation.csproj", "shared/OutrunAftermath.Simulation/"]
+COPY ["backend/src/OutrunAftermath.Api/OutrunAftermath.Api.csproj", "backend/src/OutrunAftermath.Api/"]
+RUN dotnet restore "backend/src/OutrunAftermath.Api/OutrunAftermath.Api.csproj"
+
+# Copy full source tree and publish
+COPY shared/OutrunAftermath.Simulation/ shared/OutrunAftermath.Simulation/
+COPY backend/src/OutrunAftermath.Api/ backend/src/OutrunAftermath.Api/
+WORKDIR "/src/backend/src/OutrunAftermath.Api"
+RUN dotnet publish "OutrunAftermath.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+# Runtime Stage
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+WORKDIR /app
+EXPOSE 5000
+
+ENV ASPNETCORE_URLS=http://+:5000 \
+    ASPNETCORE_ENVIRONMENT=Production \
+    DOTNET_RUNNING_IN_CONTAINER=true
+
+# Create data directory for SQLite database persistence
+RUN mkdir -p /app/data && chown -R 1000:1000 /app/data
+
+COPY --from=build /app/publish .
+
+# Health check probing /health endpoint
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:5000/health || exit 1
+
+USER 1000
+ENTRYPOINT ["dotnet", "OutrunAftermath.Api.dll"]

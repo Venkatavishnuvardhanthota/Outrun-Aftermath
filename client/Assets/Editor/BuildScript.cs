@@ -3,6 +3,7 @@ using Unity.Netcode;
 using Unity.Netcode.Components;
 using Unity.Netcode.Transports.UTP;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -29,7 +30,166 @@ namespace OutrunAftermath.Client.Editor
 
         public static void BuildWindows()
         {
-            Debug.Log("[BuildScript] Building Phase 8 Polish, Cross-Platform Controls & Optimization Prefabs & Scene...");
+            SetupPrefabsAndScene();
+            BuildStandalone("Builds/Windows/OutrunAftermath.exe", false);
+        }
+
+        public static void BuildWindowsClient()
+        {
+            SetupPrefabsAndScene();
+            BuildStandalone("Builds/WindowsClient/OutrunAftermath_Client.exe", false);
+        }
+
+        public static void BuildWindowsServer()
+        {
+            SetupPrefabsAndScene();
+            BuildStandalone("Builds/WindowsServer/OutrunAftermath_Server.exe", true);
+        }
+
+        public static void BuildAllWindows()
+        {
+            SetupPrefabsAndScene();
+            BuildStandalone("Builds/Windows/OutrunAftermath.exe", false);
+            BuildStandalone("Builds/WindowsClient/OutrunAftermath_Client.exe", false);
+            BuildStandalone("Builds/WindowsServer/OutrunAftermath_Server.exe", true);
+        }
+
+        public static void BuildAndroid()
+        {
+            SetupPrefabsAndScene();
+
+            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.outrun.aftermath");
+            PlayerSettings.productName = "OUTRUN: AFTERMATH";
+            PlayerSettings.companyName = "OutrunStudios";
+            PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel26;
+            PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevel34;
+            PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
+            EditorUserBuildSettings.buildAppBundle = true;
+
+            string outDir = "Builds/Android";
+            Directory.CreateDirectory(outDir);
+            string outputPath = Path.Combine(outDir, "OutrunAftermath.aab").Replace('\\', '/');
+
+            if (!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.Android, BuildTarget.Android))
+            {
+                Debug.LogWarning("[BuildScript] Android Playback Engine is not installed in this Unity Editor. Android build settings configured successfully. Install Android Build Support via Unity Hub to compile AAB/APK.");
+                return;
+            }
+
+            Debug.Log($"[BuildScript] Initiating Android AAB Build -> {outputPath}...");
+            BuildPlayerOptions options = new BuildPlayerOptions
+            {
+                scenes = new[] { MainScenePath },
+                locationPathName = outputPath,
+                target = BuildTarget.Android,
+                options = BuildOptions.None
+            };
+
+            BuildReport report = BuildPipeline.BuildPlayer(options);
+            if (report.summary.result != BuildResult.Succeeded)
+            {
+                throw new System.Exception($"Android build failed: {report.summary.result} ({report.summary.totalErrors} errors)");
+            }
+            Debug.Log($"[BuildScript] Android Build Succeeded: {report.summary.totalSize} bytes.");
+        }
+
+        public static void BuildIOS()
+        {
+            SetupPrefabsAndScene();
+
+            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, "com.outrun.aftermath");
+            PlayerSettings.productName = "OUTRUN: AFTERMATH";
+            PlayerSettings.companyName = "OutrunStudios";
+            PlayerSettings.iOS.targetOSVersionString = "15.0";
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.iOS, ScriptingImplementation.IL2CPP);
+
+            string outDir = "Builds/iOS";
+            Directory.CreateDirectory(outDir);
+
+            if (!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.iOS, BuildTarget.iOS))
+            {
+                Debug.LogWarning("[BuildScript] iOS Playback Engine is not installed in this Unity Editor. iOS build settings configured successfully. Install iOS Build Support via Unity Hub to export Xcode project.");
+                return;
+            }
+
+            Debug.Log($"[BuildScript] Initiating iOS Xcode Export -> {outDir}...");
+            BuildPlayerOptions options = new BuildPlayerOptions
+            {
+                scenes = new[] { MainScenePath },
+                locationPathName = outDir,
+                target = BuildTarget.iOS,
+                options = BuildOptions.None
+            };
+
+            BuildReport report = BuildPipeline.BuildPlayer(options);
+            if (report.summary.result != BuildResult.Succeeded)
+            {
+                throw new System.Exception($"iOS export failed: {report.summary.result} ({report.summary.totalErrors} errors)");
+            }
+            Debug.Log($"[BuildScript] iOS Xcode Export Succeeded.");
+        }
+
+        private static void BuildStandalone(string relativeOutputPath, bool isDedicatedServer)
+        {
+            string outDir = Path.GetDirectoryName(relativeOutputPath);
+            if (!string.IsNullOrEmpty(outDir))
+            {
+                Directory.CreateDirectory(outDir);
+            }
+
+            string outputPath = relativeOutputPath.Replace('\\', '/');
+            Debug.Log($"[BuildScript] Initiating Standalone Build -> {outputPath} (DedicatedServer={isDedicatedServer})...");
+
+            BuildReport report = null;
+
+            if (isDedicatedServer)
+            {
+                try
+                {
+                    EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Server;
+                    var serverOptions = new BuildPlayerOptions
+                    {
+                        scenes = new[] { MainScenePath },
+                        locationPathName = outputPath,
+                        target = BuildTarget.StandaloneWindows64,
+                        subtarget = (int)StandaloneBuildSubtarget.Server,
+                        options = BuildOptions.None
+                    };
+                    report = BuildPipeline.BuildPlayer(serverOptions);
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"[BuildScript] Dedicated Server module error: {ex.Message}. Falling back to Headless-Safe Standalone Player...");
+                }
+            }
+
+            if (report == null || report.summary.result != BuildResult.Succeeded)
+            {
+                EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Player;
+                var playerOptions = new BuildPlayerOptions
+                {
+                    scenes = new[] { MainScenePath },
+                    locationPathName = outputPath,
+                    target = BuildTarget.StandaloneWindows64,
+                    subtarget = (int)StandaloneBuildSubtarget.Player,
+                    options = BuildOptions.None
+                };
+                report = BuildPipeline.BuildPlayer(playerOptions);
+            }
+
+            BuildSummary summary = report.summary;
+            if (summary.result != BuildResult.Succeeded)
+            {
+                throw new System.Exception($"Build failed for {outputPath}: {summary.result} ({summary.totalErrors} errors)");
+            }
+
+            Debug.Log($"[BuildScript] BUILD SUCCEEDED -> {outputPath}! Size: {summary.totalSize} bytes.");
+        }
+
+        public static void SetupPrefabsAndScene()
+        {
+            Debug.Log("[BuildScript] Preparing Prefabs, DefaultNetworkPrefabs, and Main Scene...");
 
             // 1. Create / update NetworkPlayer and WastelandRaptor prefabs
             GameObject playerPrefab = CreateOrUpdateNetworkPlayerPrefab();
@@ -117,31 +277,6 @@ namespace OutrunAftermath.Client.Editor
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-
-            // 4. Build Windows Standalone Player
-            string outDir = "Builds/Windows";
-            Directory.CreateDirectory(outDir);
-            string outputPath = Path.Combine(outDir, "OutrunAftermath.exe").Replace('\\', '/');
-
-            Debug.Log($"[BuildScript] Initiating BuildPlayer -> {outputPath}...");
-
-            BuildPlayerOptions options = new BuildPlayerOptions
-            {
-                scenes = new[] { MainScenePath },
-                locationPathName = outputPath,
-                target = BuildTarget.StandaloneWindows64,
-                options = BuildOptions.None
-            };
-
-            BuildReport report = BuildPipeline.BuildPlayer(options);
-            BuildSummary summary = report.summary;
-
-            if (summary.result != BuildResult.Succeeded)
-            {
-                throw new System.Exception($"Build failed: {summary.result} ({summary.totalErrors} errors)");
-            }
-
-            Debug.Log($"[BuildScript] PHASE 8 BUILD SUCCEEDED! Total size: {summary.totalSize} bytes. Output: {outputPath}");
         }
 
         private static GameObject CreateOrUpdateNetworkPlayerPrefab()

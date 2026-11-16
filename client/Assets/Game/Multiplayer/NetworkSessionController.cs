@@ -157,6 +157,11 @@ namespace OutrunAftermath.Client.Multiplayer
             ActiveIp = ip;
             ActivePort = port;
 
+            if (mode == SessionStartMode.InteractiveMenu && (Application.isBatchMode || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null))
+            {
+                mode = SessionStartMode.DedicatedServer;
+            }
+
             switch (mode)
             {
                 case SessionStartMode.DedicatedServer:

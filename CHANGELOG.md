@@ -2,6 +2,25 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [1.2.0] - 2026-11-16 - Phase 10: Production Release, Packaging & Launch Operations (Golden Master)
+
+### Added
+- **Multi-Target Standalone Production Build Pipeline**:
+  - `BuildScript.BuildWindowsClient`: Dedicated visual game client (`Builds/WindowsClient/OutrunAftermath_Client.exe`).
+  - `BuildScript.BuildWindowsServer`: Headless authoritative dedicated game server (`Builds/WindowsServer/OutrunAftermath_Server.exe`) using Unity 6 `StandaloneBuildSubtarget.Server`.
+  - `BuildScript.BuildAllWindows`: Automation pipeline compiling Universal, Client, and Dedicated Server binaries in one pass.
+  - `BuildScript.BuildAndroid`: Android AAB/APK build pipeline targeting Google Play API level 34, ARM64 IL2CPP, and App Bundle format with `build_android.ps1`.
+  - `BuildScript.BuildIOS`: iOS Xcode project scaffolding targeting iOS 15.0+, ARM64 IL2CPP.
+  - Automation scripts: `build_standalone.ps1` and `build_android.ps1`.
+- **Docker Containerization & Service Orchestration**:
+  - Multi-stage production container `Dockerfile.api` for ASP.NET Core 8 Web API with health checking and non-root execution.
+  - Headless authoritative game server container `Dockerfile.server` with UDP 7777 port exposure.
+  - Turnkey `docker-compose.yml` orchestrating API (port 5000), Redis (port 6379), and Dedicated Game Server (UDP 7777) with persistent volumes for SQLite databases and caching.
+- **Automated End-to-End Production Verification Suite (`run_e2e_production_test.ps1`)**:
+  - 11-stage automated smoke test pipeline validating API health, pilot registration, JWT issuance, profile retrieval, room creation, HMAC-SHA256 match completion, XP persistence, anti-cheat tamper defense, headless server UDP listener handshake, client Netcode lifecycle, and the full 88-test simulation/API suite with 100% pass rate.
+- **Production Operations & Deployment Runbook (`docs/PRODUCTION_DEPLOYMENT.md`)**:
+  - Comprehensive guide covering network architecture, firewall rules, environment variable reference matrices, Docker Compose deployment, Windows Service installation (NSSM), and store release guidelines (Steam, Epic Games Store, Google Play, Apple App Store).
+
 ## [1.1.0] - 2026-11-16 - Phase 9: Anti-Cheat, Match Telemetry & Security Hardening
 
 ### Added

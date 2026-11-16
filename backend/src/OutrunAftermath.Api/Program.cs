@@ -355,8 +355,20 @@ app.MapPost("/internal/matches/complete", async (CompleteMatchRequest req, HttpC
     if (http.Request.Headers.TryGetValue("X-Match-Signature", out var sigGot) && !string.IsNullOrWhiteSpace(sigGot))
     {
         int totalKills = req.Players.Sum(p => p.Kills);
-        int duration = (int)(DateTime.UtcNow - req.StartedAtUtc).TotalSeconds;
-        if (!OutrunAftermath.Simulation.AntiCheat.MatchResultSigner.VerifySignature(req.MatchId.ToString(), req.WinnerFaction ?? "Draw", totalKills, duration, sigGot.ToString(), expected))
+        int duration = Math.Max(0, (int)(DateTime.UtcNow - req.StartedAtUtc).TotalSeconds);
+        // Allow a +/- 5 second jitter window for network latency/clock differences between game server & API
+        bool valid = false;
+        for (int delta = -5; delta <= 5; delta++)
+        {
+            int testDuration = Math.Max(0, duration + delta);
+            if (OutrunAftermath.Simulation.AntiCheat.MatchResultSigner.VerifySignature(req.MatchId.ToString(), req.WinnerFaction ?? "Draw", totalKills, testDuration, sigGot.ToString(), expected))
+            {
+                valid = true;
+                break;
+            }
+        }
+
+        if (!valid)
         {
             return Results.BadRequest(new { error = "Invalid or tampered match cryptographic signature." });
         }

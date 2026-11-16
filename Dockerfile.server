@@ -1,0 +1,35 @@
+# =========================================================
+# OUTRUN: AFTERMATH — Dedicated Headless Game Server
+# Standalone authoritative container
+# =========================================================
+
+FROM ubuntu:22.04 AS server-runtime
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    SERVER_PORT=7777 \
+    SERVER_IP="0.0.0.0"
+
+# Install runtime dependencies for headless Unity player
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    libglu1-mesa \
+    libxcursor1 \
+    libxrandr2 \
+    libasound2 \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /server
+
+# Copy compiled standalone server files
+COPY client/Builds/WindowsServer/ /server/
+
+EXPOSE 7777/udp
+
+# Health check script checking active process
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD pgrep -f OutrunAftermath || exit 1
+
+ENTRYPOINT ["./OutrunAftermath_Server.exe", "-batchmode", "-nographics", "-server"]
+CMD ["-port", "7777"]

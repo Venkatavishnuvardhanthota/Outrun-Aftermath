@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # =========================================================
+  # OUTRUN: AFTERMATH — ASP.NET Core 8 Backend REST API
+  # =========================================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    image: outrun-aftermath-api:1.0.0
+    container_name: outrun-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/outrun.db
+      - ConnectionStrings__Redis=redis:6379,abortConnect=false
+      - Jwt__SecretKey=DEV_SUPER_SECRET_KEY_REPLACE_IN_PRODUCTION_32_BYTES_MINIMUM!
+      - Matchmaking__ServerKey=DEV_MATCH_SERVER_KEY_CHANGE
+      - Logging__LogLevel__Default=Information
+      - Logging__LogLevel__Microsoft.AspNetCore=Warning
+    volumes:
+      - api-data:/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - outrun-net
+
+  # =========================================================
+  # Distributed Cache / Matchmaking Queue Store
+  # =========================================================
+  redis:
+    image: redis:7-alpine
+    container_name: outrun-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --save 60 1
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - outrun-net
+
+  # =========================================================
+  # Dedicated Authoritative Headless Game Server
+  # =========================================================
+  game-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    image: outrun-aftermath-server:1.0.0
+    container_name: outrun-dedicated-server
+    restart: unless-stopped
+    ports:
+      - "7777:7777/udp"
+    environment:
+      - SERVER_PORT=7777
+      - SERVER_MODE=GroundOperations
+      - MATCH_MAP=deadcity
+      - API_URL=http://api:5000
+      - MATCH_SERVER_KEY=DEV_MATCH_SERVER_KEY_CHANGE
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - outrun-net
+
+volumes:
+  api-data:
+    name: outrun-api-data
+  redis-data:
+    name: outrun-redis-data
+
+networks:
+  outrun-net:
+    name: outrun-network
+    driver: bridge
