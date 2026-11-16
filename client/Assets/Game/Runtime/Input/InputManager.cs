@@ -35,7 +35,14 @@ namespace OutrunAftermath.Client.Runtime.Input
         [SerializeField] private float gamepadSensitivity = 90f;
         [SerializeField] private bool invertY = false;
 
+        private PlayerInputState _virtualInput;
+
         public PlayerInputState Current { get; private set; }
+
+        public void InjectVirtualInput(PlayerInputState virtualInput)
+        {
+            _virtualInput = virtualInput;
+        }
 
         private void Awake()
         {
@@ -131,6 +138,29 @@ namespace OutrunAftermath.Client.Runtime.Input
             {
                 move.Normalize();
             }
+
+            // 3. Virtual / Mobile Touch Input aggregation
+            if (_virtualInput.Move.sqrMagnitude > move.sqrMagnitude)
+            {
+                move = _virtualInput.Move;
+            }
+            if (_virtualInput.Look.sqrMagnitude > look.sqrMagnitude)
+            {
+                look = _virtualInput.Look;
+            }
+
+            state.Sprint |= _virtualInput.Sprint;
+            state.Crouch |= _virtualInput.Crouch;
+            state.Jump |= _virtualInput.Jump;
+            state.Fire |= _virtualInput.Fire;
+            state.FireHeld |= _virtualInput.FireHeld;
+            state.Aim |= _virtualInput.Aim;
+            state.Reload |= _virtualInput.Reload;
+            state.Interact |= _virtualInput.Interact;
+            state.AbilityPrimary |= _virtualInput.AbilityPrimary;
+            state.AbilityUltimate |= _virtualInput.AbilityUltimate;
+            state.TogglePerspective |= _virtualInput.TogglePerspective;
+            if (_virtualInput.WeaponSlot > 0) state.WeaponSlot = _virtualInput.WeaponSlot;
 
             state.Move = move;
             state.Look = look;

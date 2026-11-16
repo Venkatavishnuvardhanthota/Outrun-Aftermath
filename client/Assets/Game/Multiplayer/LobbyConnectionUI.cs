@@ -155,8 +155,15 @@ namespace OutrunAftermath.Client.Multiplayer
 
             // Top Account & Presence Bar
             var accountBar = CreatePanel(_menuRoot.transform, "AccountBar", new Vector2(0f, 252f), new Vector2(620f, 40f), new Color(0.11f, 0.14f, 0.18f, 0.95f));
-            _accountLabel = CreateText(accountBar.transform, "AccountText", "GUEST MODE (UNAUTHENTICATED)", font, 12, TextAnchor.MiddleLeft, new Vector2(-70f, 0f), new Vector2(440f, 32f), Color.white);
-            CreateButton(accountBar.transform, "QuickAuthBtn", "DEV LOGIN", font, new Vector2(240f, 0f), new Vector2(110f, 30f), new Color(0.2f, 0.52f, 0.32f), OnQuickDevAuthClicked);
+            _accountLabel = CreateText(accountBar.transform, "AccountText", "GUEST MODE (UNAUTHENTICATED)", font, 12, TextAnchor.MiddleLeft, new Vector2(-110f, 0f), new Vector2(360f, 32f), Color.white);
+            CreateButton(accountBar.transform, "SettingsBtn", "SETTINGS", font, new Vector2(140f, 0f), new Vector2(95f, 30f), new Color(0.25f, 0.32f, 0.40f), () =>
+            {
+                if (Runtime.UI.SettingsModalUI.Instance != null)
+                {
+                    Runtime.UI.SettingsModalUI.Instance.ToggleOpen();
+                }
+            });
+            CreateButton(accountBar.transform, "QuickAuthBtn", "DEV LOGIN", font, new Vector2(250f, 0f), new Vector2(100f, 30f), new Color(0.2f, 0.52f, 0.32f), OnQuickDevAuthClicked);
 
             // Tab Navigation Bar
             var tabNavBar = CreatePanel(_menuRoot.transform, "TabNavBar", new Vector2(0f, 205f), new Vector2(620f, 38f), new Color(0.09f, 0.11f, 0.14f, 1f));

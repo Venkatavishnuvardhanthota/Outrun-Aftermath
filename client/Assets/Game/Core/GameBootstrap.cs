@@ -74,6 +74,28 @@ namespace OutrunAftermath.Client
                 mapGo.AddComponent<Runtime.Environment.MapEnvironmentDirector>();
             }
 
+            // Phase 8: SettingsDirector, VirtualTouchControls, PerformanceProfilerHUD, SettingsModalUI
+            if (Runtime.Settings.SettingsDirector.Instance == null)
+            {
+                var settingsGo = new GameObject("SettingsDirector");
+                settingsGo.AddComponent<Runtime.Settings.SettingsDirector>();
+            }
+            if (Runtime.Input.VirtualTouchControls.Instance == null)
+            {
+                var touchGo = new GameObject("VirtualTouchControls");
+                touchGo.AddComponent<Runtime.Input.VirtualTouchControls>();
+            }
+            if (Runtime.UI.PerformanceProfilerHUD.Instance == null)
+            {
+                var profilerGo = new GameObject("PerformanceProfilerHUD");
+                profilerGo.AddComponent<Runtime.UI.PerformanceProfilerHUD>();
+            }
+            if (Runtime.UI.SettingsModalUI.Instance == null)
+            {
+                var modalGo = new GameObject("SettingsModalUI");
+                modalGo.AddComponent<Runtime.UI.SettingsModalUI>();
+            }
+
             // 1. Build greybox environment if needed
             if (buildEnvironmentOnStart && GameObject.Find("DeadCity_Sector4") == null)
             {

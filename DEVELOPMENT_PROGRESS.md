@@ -614,3 +614,78 @@ Phase 7: Maps, Audio & Environmental Systems (expanding map geometry, sound desi
 ### Next phase
 
 Phase 8: Polish, Cross-Platform Controls & Optimization (mobile touch HUD controls, graphics quality presets, cross-platform input abstraction, performance profiling, and final packaging).
+
+## Phase 8 — 2026-11-16 (polish, cross-platform controls & optimization)
+
+### Completed features
+
+- **Cross-Platform Settings & Optimization Director** (`client/Assets/Game/Runtime/Settings/SettingsDirector.cs`):
+  - 4 Graphics quality presets: `Low`, `Medium`, `High`, and `Ultra` dynamically applying shadow distance, LOD bias, texture filtering, and dynamic resolution scaling via `ScalableBufferManager.ResizeBuffers`.
+  - Target framerate configurations (30, 60, 120, Uncapped) and V-Sync management.
+  - Gameplay comfort controls: Field of View (65° to 105°) and Look Sensitivity multipliers (0.4x to 5.0x).
+  - Audio mixer balance integration with `AudioManager` (Master, SFX, HUD, Ambient volumes).
+  - Full persistence using Unity `PlayerPrefs`.
+  - Dedicated server / headless protection: detects `SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null` to bypass native render buffer resize commands in `-batchmode -nographics` environments.
+- **Dual-Zone Virtual Touch Controls (Android / iOS)** (`client/Assets/Game/Runtime/Input/VirtualTouchControls.cs`):
+  - Dynamic left virtual thumbstick: deadzones, floating anchor, and normalized 2D movement vector generation.
+  - Right screen drag-to-look rotation zone.
+  - 12 on-screen tactile touch buttons: `[FIRE]`, `[AIM / ADS]`, `[JUMP]`, `[CROUCH / SLIDE]`, `[SPRINT]`, `[RELOAD]`, `[ACTION / REVIVE / BOARD]`, `[SKILL Q]`, `[ULT F]`, `[VIEW T]`, `[PRIMARY]`, and `[SECONDARY]`.
+  - Touch display modes: `AUTO` (detects `Application.isMobilePlatform` / `Touchscreen.current`), `FORCE ON`, or `FORCE OFF`.
+- **Cross-Platform Input Abstraction Pipeline** (`client/Assets/Game/Runtime/Input/InputManager.cs`):
+  - Seamless input fusion via `InjectVirtualInput(PlayerInputState)`: merges Keyboard & Mouse, Gamepad, and Virtual Touch inputs into a unified frame state without race conditions.
+- **In-Game Settings Modal Dialog** (`client/Assets/Game/Runtime/UI/SettingsModalUI.cs`):
+  - 3 tabbed procedural uGUI panels:
+    - Tab 1: Graphics & Performance (Preset dropdown, Target FPS, V-Sync, Dynamic Resolution).
+    - Tab 2: Audio Balances (Master, SFX, HUD, Ambient volume sliders).
+    - Tab 3: Controls & Mobile (Touch mode toggle, FOV slider, Look Sensitivity slider).
+  - Toggled with `[ESC]`, `[F2]`, or on-screen `[SETTINGS]` header buttons.
+- **Diagnostic Performance Profiler HUD** (`client/Assets/Game/Runtime/UI/PerformanceProfilerHUD.cs`):
+  - Real-time diagnostic telemetry overlay toggled via `[F3]`:
+    - Current, Min (1% low), and Max FPS.
+    - Frame time in milliseconds.
+    - Garbage collector allocated memory in megabytes.
+    - Active graphics preset, screen resolution, and display DPI.
+    - Netcode network role (Host / Server / Client), connected peer count, and round-trip ping latency.
+- **Draw Call Batching & GPU Instancing** (`client/Assets/Game/Runtime/Environment/MapEnvironmentDirector.cs`):
+  - Implemented shared material caching (`_litMaterialCache`, `_unlitMaterialCache`) and forced `enableInstancing = true` across all 7 procedural maps, enabling URP SRP Batcher optimization and lowering draw calls.
+- **HUD & Lobby Polish**:
+  - Added header `[SETTINGS F2]` shortcut to `TacticalHUD.cs`.
+  - Added top-bar `[SETTINGS]` button to `LobbyConnectionUI.cs`.
+
+### Files created
+
+- `client/Assets/Game/Runtime/Settings/SettingsDirector.cs`
+- `client/Assets/Game/Runtime/Input/VirtualTouchControls.cs`
+- `client/Assets/Game/Runtime/UI/SettingsModalUI.cs`
+- `client/Assets/Game/Runtime/UI/PerformanceProfilerHUD.cs`
+- `run_phase8_test.ps1`
+
+### Files modified
+
+- `client/Assets/Editor/BuildScript.cs` (registered SettingsDirector, VirtualTouchControls, PerformanceProfilerHUD, SettingsModalUI)
+- `client/Assets/Game/Core/GameBootstrap.cs` (registered runtime services and settings initialization)
+- `client/Assets/Game/Multiplayer/LobbyConnectionUI.cs` (integrated settings modal open button)
+- `client/Assets/Game/Runtime/Environment/MapEnvironmentDirector.cs` (GPU instancing and material caching)
+- `client/Assets/Game/Runtime/Input/InputManager.cs` (added virtual touch input aggregation)
+- `client/Assets/Game/Runtime/UI/TacticalHUD.cs` (integrated settings shortcut)
+- `client/Assets/Scenes/Main.unity` (scene hierarchy updates)
+- `run_build.ps1` (verified standalone build script)
+
+### Tests executed
+
+1. **Simulation & API Test Suite (`dotnet test backend/OutrunAftermath.sln`)**:
+   - Exit code `0`: All 78 tests passed (67 simulation tests + 11 API tests).
+2. **Unity 6 Standalone Windows Build (`run_build.ps1`)**:
+   - Exit code `0`: Output `client/Builds/Windows/OutrunAftermath.exe` (104,516,253 bytes).
+3. **End-to-End Multi-Process Verification (`run_phase8_test.ps1`)**:
+   - Backend API initialized healthy on `http://127.0.0.1:5000`.
+   - Host launched on `dead_city` map in headless batchmode.
+   - Initialized `SettingsDirector` with `Medium` quality preset.
+   - Initialized `VirtualTouchControls` with touch input injection.
+   - Registered `PerformanceProfilerHUD` with 1% low FPS, memory, and ping tracking.
+   - Remote client joined, received session replication, and synchronized without errors.
+   - Verified 100% pattern matching.
+
+### Next phase
+
+Phase 9: Anti-Cheat, Match Telemetry & Security Hardening (server-side movement speed cap verification, aim-angle snap rate detection, heartbeat packet sequence tracking, encrypted match results, and automated exploit auditing).

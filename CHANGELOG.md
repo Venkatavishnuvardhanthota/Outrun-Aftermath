@@ -2,6 +2,31 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [1.0.0] - 2026-11-16 - Phase 8: Polish, Cross-Platform Controls & Optimization
+
+### Added
+- **Cross-Platform Settings & Optimization Director** (`SettingsDirector.cs`):
+  - Graphics quality presets (`Low`, `Medium`, `High`, `Ultra`) controlling shadow resolution/distance, LOD bias, texture filtering, and dynamic render scaling (`ScalableBufferManager.ResizeBuffers`).
+  - Performance budgets: target framerate (30, 60, 120, Uncapped), V-Sync toggle, FOV adjustments (65° to 105°), and look sensitivity scaling (0.4x to 5.0x).
+  - Audio channel mix controls: Master, SFX, HUD, and Ambient sliders persisted via `PlayerPrefs`.
+  - Headless/dedicated server safety guards preventing native graphics crashes on `NullGfxDevice` instances (`-batchmode -nographics`).
+- **Dual-Zone Virtual Touch Controls for Mobile (Android / iOS)** (`VirtualTouchControls.cs`):
+  - Dynamic left virtual thumbstick with deadzones, auto-centering, and smooth normalized 2D movement vector generation.
+  - Right camera drag-look zone for responsive touch aiming and orientation.
+  - Full tactile touch action buttons: `[FIRE]`, `[AIM / ADS]`, `[JUMP]`, `[CROUCH / SLIDE]`, `[SPRINT]`, `[RELOAD]`, `[ACTION / REVIVE / BOARD]`, `[SKILL Q]`, `[ULT F]`, `[VIEW T]`, `[PRIMARY]`, and `[SECONDARY]`.
+  - Configurable display policy: `AUTO` (detects `Application.isMobilePlatform` / `Touchscreen.current`), `FORCE ON`, or `FORCE OFF`.
+- **Unified Cross-Platform Input Abstraction** (`InputManager.cs`):
+  - Added `InjectVirtualInput(PlayerInputState)` to aggregate Keyboard & Mouse, Gamepad, and Virtual Touch inputs into a unified, conflict-free state pipeline every frame.
+- **In-Game Settings Modal Dialog** (`SettingsModalUI.cs`):
+  - Procedural 3-tab configuration window: "1. GRAPHICS & PERFORMANCE", "2. AUDIO BALANCES", and "3. CONTROLS & MOBILE".
+  - Accessible via `[ESC]`, `[F2]`, or on-screen `[SETTINGS]` buttons in the Tactical HUD and Lobby UI.
+- **Diagnostic Performance Profiler HUD** (`PerformanceProfilerHUD.cs`):
+  - Real-time diagnostic overlay (`[F3]` toggle): current FPS, 1% min FPS, max FPS, frame time (ms), GC allocated memory (MB), active quality preset, screen resolution and DPI, Netcode role, connected peer count, and network RTT ping.
+- **Draw Call Batching & GPU Instancing** (`MapEnvironmentDirector.cs`):
+  - Static shared material caching (`_litMaterialCache`, `_unlitMaterialCache`) and `enableInstancing = true` across all 7 procedural maps, enabling URP SRP Batcher acceleration and minimal draw calls.
+- **Automated Phase 8 End-to-End Test Suite** (`run_phase8_test.ps1`):
+  - Validated headless dedicated server launch, settings initialization, mobile touch control injection, profiler registration, and remote client join.
+
 ## [0.9.0] - 2026-11-16 - Phase 7: Maps, Audio & Environmental Systems
 
 ### Added

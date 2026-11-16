@@ -29,7 +29,7 @@ namespace OutrunAftermath.Client.Editor
 
         public static void BuildWindows()
         {
-            Debug.Log("[BuildScript] Building Phase 6 Matchmaking, Parties & Social Integration Prefabs & Scene...");
+            Debug.Log("[BuildScript] Building Phase 8 Polish, Cross-Platform Controls & Optimization Prefabs & Scene...");
 
             // 1. Create / update NetworkPlayer and WastelandRaptor prefabs
             GameObject playerPrefab = CreateOrUpdateNetworkPlayerPrefab();
@@ -93,6 +93,19 @@ namespace OutrunAftermath.Client.Editor
             var mapGo = new GameObject("MapEnvironmentDirector");
             mapGo.AddComponent<Runtime.Environment.MapEnvironmentDirector>();
 
+            // Phase 8: SettingsDirector, VirtualTouchControls, PerformanceProfilerHUD & SettingsModalUI
+            var settingsGo = new GameObject("SettingsDirector");
+            settingsGo.AddComponent<Runtime.Settings.SettingsDirector>();
+
+            var touchGo = new GameObject("VirtualTouchControls");
+            touchGo.AddComponent<Runtime.Input.VirtualTouchControls>();
+
+            var profilerGo = new GameObject("PerformanceProfilerHUD");
+            profilerGo.AddComponent<Runtime.UI.PerformanceProfilerHUD>();
+
+            var modalGo = new GameObject("SettingsModalUI");
+            modalGo.AddComponent<Runtime.UI.SettingsModalUI>();
+
             // Save Main.unity
             Directory.CreateDirectory("Assets/Scenes");
             EditorSceneManager.SaveScene(scene, MainScenePath);
@@ -128,7 +141,7 @@ namespace OutrunAftermath.Client.Editor
                 throw new System.Exception($"Build failed: {summary.result} ({summary.totalErrors} errors)");
             }
 
-            Debug.Log($"[BuildScript] PHASE 6 BUILD SUCCEEDED! Total size: {summary.totalSize} bytes. Output: {outputPath}");
+            Debug.Log($"[BuildScript] PHASE 8 BUILD SUCCEEDED! Total size: {summary.totalSize} bytes. Output: {outputPath}");
         }
 
         private static GameObject CreateOrUpdateNetworkPlayerPrefab()

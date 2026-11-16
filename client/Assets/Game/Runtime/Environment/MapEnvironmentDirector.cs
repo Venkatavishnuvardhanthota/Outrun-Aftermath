@@ -435,8 +435,17 @@ namespace OutrunAftermath.Client.Runtime.Environment
             root.AddComponent<DamageableTarget>();
         }
 
+        private static readonly Dictionary<int, Material> _litMaterialCache = new Dictionary<int, Material>();
+        private static readonly Dictionary<int, Material> _unlitMaterialCache = new Dictionary<int, Material>();
+
         private static Material CreateLitMaterial(Color color, float smoothness)
         {
+            int hash = HashCode.Combine(color.GetHashCode(), smoothness.GetHashCode());
+            if (_litMaterialCache.TryGetValue(hash, out var cached) && cached != null)
+            {
+                return cached;
+            }
+
             var shader = Shader.Find("Universal Render Pipeline/Lit") ??
                          Shader.Find("Standard") ??
                          Shader.Find("Sprites/Default") ??
@@ -465,17 +474,27 @@ namespace OutrunAftermath.Client.Runtime.Environment
                 {
                     mat.SetFloat("_Smoothness", smoothness);
                 }
+                mat.enableInstancing = true; // Enables GPU Instancing and SRP Batcher acceleration
+                _litMaterialCache[hash] = mat;
             }
             return mat;
         }
 
         private static Material CreateUnlitMaterial(Color color)
         {
+            int hash = color.GetHashCode();
+            if (_unlitMaterialCache.TryGetValue(hash, out var cached) && cached != null)
+            {
+                return cached;
+            }
+
             var shader = Shader.Find("Universal Render Pipeline/Unlit") ??
                          Shader.Find("Unlit/Color") ??
                          Shader.Find("Sprites/Default");
             var mat = new Material(shader);
             mat.color = color;
+            mat.enableInstancing = true;
+            _unlitMaterialCache[hash] = mat;
             return mat;
         }
     }

@@ -257,8 +257,27 @@ namespace OutrunAftermath.Client.Runtime.UI
             // 5. Controls Helper (Top Right)
             _controlsPanel = CreatePanel(canvasGo.transform, "ControlsPanel", new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-30f, -30f), new Vector2(280f, 230f), new Color(0.05f, 0.06f, 0.08f, 0.85f));
             CreateText(_controlsPanel.transform, "ControlsTitle", "TACTICAL CONTROLS (F1/H)", defaultFont, 14, TextAnchor.UpperCenter, new Vector2(0f, -10f), new Vector2(260f, 20f), Color.cyan);
-            string controls = "WASD - Move / Drive Vehicle\nSHIFT - Sprint / Nitro | C - Crouch/Slide\nSPACE - Jump / Handbrake Drift\nLEFT CLICK - Fire / Mounted Turret\nQ - Tactical Ability | F - Ultimate Ability\nT - Toggle Perspective (FPS / TPS)\n1-4 - Switch Seat | X - Dismount\nE - Interact / Revive / Board / Hack\nESC - Free Cursor";
+            string controls = "WASD - Move / Drive Vehicle\nSHIFT - Sprint / Nitro | C - Crouch/Slide\nSPACE - Jump / Handbrake Drift\nLEFT CLICK - Fire / Mounted Turret\nQ - Tactical Ability | F - Ultimate Ability\nT - Toggle Perspective (FPS / TPS)\n1-4 - Switch Seat | X - Dismount\nE - Interact / Revive / Board / Hack\nESC/F2 - Settings & Sensitivity";
             CreateText(_controlsPanel.transform, "ControlsBody", controls, defaultFont, 12, TextAnchor.UpperLeft, new Vector2(15f, -35f), new Vector2(250f, 185f), Color.white);
+
+            // 5B. Settings Button (Top Right above Controls)
+            var settingsBtnGo = new GameObject("Btn_SettingsMenu", typeof(RectTransform), typeof(Image), typeof(Button));
+            settingsBtnGo.transform.SetParent(canvasGo.transform, false);
+            var sBtnRt = settingsBtnGo.GetComponent<RectTransform>();
+            sBtnRt.anchorMin = new Vector2(1f, 1f);
+            sBtnRt.anchorMax = new Vector2(1f, 1f);
+            sBtnRt.anchoredPosition = new Vector2(-160f, -18f);
+            sBtnRt.sizeDelta = new Vector2(120f, 26f);
+            settingsBtnGo.GetComponent<Image>().color = new Color(0.18f, 0.22f, 0.28f, 0.85f);
+            var sBtn = settingsBtnGo.GetComponent<Button>();
+            sBtn.onClick.AddListener(() =>
+            {
+                if (SettingsModalUI.Instance != null)
+                {
+                    SettingsModalUI.Instance.ToggleOpen();
+                }
+            });
+            CreateText(settingsBtnGo.transform, "SettingsLabel", "SETTINGS [F2]", defaultFont, 11, TextAnchor.MiddleCenter, Vector2.zero, new Vector2(120f, 26f), Color.white);
 
             // 6. Downed / Bleed-Out Overlay
             _downedOverlay = CreatePanel(canvasGo.transform, "DownedOverlay", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(500f, 180f), new Color(0.4f, 0.05f, 0.05f, 0.85f));
