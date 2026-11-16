@@ -66,6 +66,7 @@ namespace OutrunAftermath.Client.Multiplayer
             string mmPartyJoinCode = null;
             bool mmPartyReady = false;
             bool mmQueue = false;
+            string screenshotPath = null;
 
             for (int i = 0; i < args.Length; i++)
             {
@@ -142,6 +143,15 @@ namespace OutrunAftermath.Client.Multiplayer
                 {
                     mmQueue = true;
                 }
+                else if (arg.Equals("-screenshot", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    screenshotPath = args[++i];
+                }
+            }
+
+            if (!string.IsNullOrEmpty(screenshotPath))
+            {
+                StartCoroutine(CaptureScreenshotRoutine(screenshotPath));
             }
 
             if (!string.IsNullOrEmpty(mmDevName))
@@ -302,6 +312,14 @@ namespace OutrunAftermath.Client.Multiplayer
                 NetworkManager.Singleton.Shutdown();
             }
             Application.Quit(0);
+        }
+
+        private IEnumerator CaptureScreenshotRoutine(string path)
+        {
+            // Wait 2.5 seconds for graphics pipeline warmup, lighting calculations, and post-processing
+            yield return new WaitForSeconds(2.5f);
+            ScreenCapture.CaptureScreenshot(path);
+            Debug.Log($"[SCREENSHOT] Frame captured successfully to: {path}");
         }
 
         private IEnumerator RunAutoTestCombatRoutine()

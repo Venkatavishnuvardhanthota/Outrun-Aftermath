@@ -191,6 +191,10 @@ namespace OutrunAftermath.Client.Editor
         {
             Debug.Log("[BuildScript] Preparing Prefabs, DefaultNetworkPrefabs, and Main Scene...");
 
+            // 0. Authoritative URP Foundation & Modular 3D Art Assets
+            URPSetupPipeline.SetupURP();
+            ArtAssetPipeline.ConfigureArtAssets();
+
             // 1. Create / update NetworkPlayer and WastelandRaptor prefabs
             GameObject playerPrefab = CreateOrUpdateNetworkPlayerPrefab();
             GameObject vehiclePrefab = CreateOrUpdateVehiclePrefab();
@@ -265,6 +269,12 @@ namespace OutrunAftermath.Client.Editor
 
             var modalGo = new GameObject("SettingsModalUI");
             modalGo.AddComponent<Runtime.UI.SettingsModalUI>();
+
+            // Phase B: Authoritative URP Global Post-Processing Volume
+            var globalVolGo = new GameObject("GlobalVolume");
+            var globalVol = globalVolGo.AddComponent<UnityEngine.Rendering.Volume>();
+            globalVol.isGlobal = true;
+            globalVol.profile = AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.VolumeProfile>("Assets/DefaultVolumeProfile.asset");
 
             // EventSystem + InputSystemUIInputModule baked into scene
             var esGo = new GameObject("EventSystem");

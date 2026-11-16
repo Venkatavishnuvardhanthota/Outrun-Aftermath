@@ -114,3 +114,9 @@ ExportedObj/
 # Node Tooling
 node_modules/
 
+# Python Tooling
+__pycache__/
+*.py[cod]
+*$py.class
+
+

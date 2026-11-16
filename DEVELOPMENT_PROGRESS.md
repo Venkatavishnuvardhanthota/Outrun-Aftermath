@@ -823,6 +823,88 @@ Phase 10: Production Release, Packaging & Launch Operations (multi-platform depl
 2. **Simulation & API Test Suite (`dotnet test backend/OutrunAftermath.sln`)**:
    - Exit code `0`: All 88 tests passed (76 simulation + 12 API).
 
-### Master Status
+### Next phase
 
-All 10 Phases of OUTRUN: AFTERMATH are 100% complete, verified, and ready for production release.
+Phase A: Complete Project Audit, Baseline Checkpoint & Corrective Development Roadmap.
+
+---
+
+## Phase A — 2026-11-16 (Complete Project Audit & Baseline Checkpoint)
+
+### Completed features
+
+- Comprehensive systemic audit of all client, backend, shared simulation, and network components.
+- Established strict architectural invariant rules: preserve core gameplay (`CharacterMotor`, `WeaponSystem`, `PlayerHealth`, `NetworkPlayerController`, `NetworkMatchManager`, ASP.NET Core backend).
+- Created baseline Git checkpoint tag `checkpoint-pre-phase-a` preserving all functional multiplayer and physics implementations.
+- Authored master development roadmap and architecture audit documentation (`MASTER_PLAN.md`).
+
+---
+
+## Phase B — 2026-11-16 (Visual Foundation & Dead City Environment Overhaul)
+
+### Completed features
+
+- **Authoritative Universal Render Pipeline (URP) Foundation (Phase B1)**:
+  - Authored `Assets/Settings/URP_HighFidelity.asset` and `URP_HighFidelity_Renderer.asset` with Forward+ rendering and SSAO.
+  - Configured 4 shadow cascades (splits 0.067, 0.20, 0.467), 80m shadow distance, soft shadows, and HDR support.
+  - Bound pipeline asset authoritatively to `GraphicsSettings.asset` (`m_CustomRenderPipeline`) and across all 6 quality tiers in `QualitySettings.asset`.
+  - Configured cinematic post-processing volume profile (`Assets/DefaultVolumeProfile.asset`) with ACES tonemapping, Bloom, Color Adjustments, and Vignette.
+- **PBR Texture and 3D Asset Sourcing Engine (Phase B2)**:
+  - Developed `scripts/generate_phase_b_assets.py` authoring 11 seamless PBR texture sets (Albedo, Sobel-filtered Normal maps, Metallic/AO/Smoothness MaskMaps) and 10 authentic Wavefront OBJ meshes.
+  - Configured `ArtAssetPipeline.cs` Unity Editor asset post-processor to author URP Lit materials (`M_Asphalt_Damaged`, `M_Concrete_Weathered`, `M_CorrugatedMetal_Rust`, `M_Barrier_Jersey`, `M_FuelBarrel_Explosive`, `M_VehicleWreck_Burnt`, `M_Weapon_TacticalSteel`) and assemble game-ready collidable prefabs in `Assets/Resources/Art/Prefabs/`.
+- **Dead City Sector 4 Modular Architectural Overhaul**:
+  - Overhauled `MapEnvironmentDirector.cs` to assemble Sector 4 using modular architectural prefabs: 2-lane asphalt avenues, road intersections, bomb craters, brutalist multi-story bank ruins with accessible stairwells and rooftop snipers' perches, industrial warehouses, 20ft shipping containers, jersey barriers, burnt vehicle wrecks, broken streetlights, and explosive rusted fuel barrels.
+  - Integrated dynamic atmospheric particle emitter (`DeadCity_AtmosphereFX`) simulating drifting post-apocalyptic dust, ash, and wind turbulence.
+- **Authoritative Asset Register**:
+  - Authored `docs/ASSET_REGISTER.md` cataloging all 3D models, textures, materials, and prefabs with complete polygon counts, dimension bounds, licenses, import settings, and dependencies.
+- **Weapon Visual Alignment**:
+  - Replaced procedural primitive gun placeholders in `WeaponSystem.cs` with the high-fidelity `PF_Weapon_Vanguard_AssaultRifle` prefab and `M_Weapon_TacticalSteel` URP Lit material, completely eliminating magenta shader artifacts.
+
+### Files created
+
+- `client/Assets/Art/Meshes/*.obj` (10 3D meshes)
+- `client/Assets/Art/Textures/*.png` (11 PBR texture maps)
+- `client/Assets/Art/Materials/*.mat` (7 URP Lit PBR materials)
+- `client/Assets/Resources/Art/Prefabs/*.prefab` (12 modular architectural and prop prefabs)
+- `client/Assets/Settings/URP_HighFidelity.asset`
+- `client/Assets/Settings/URP_HighFidelity_Renderer.asset`
+- `client/Assets/Editor/URPSetupPipeline.cs`
+- `client/Assets/Editor/ArtAssetPipeline.cs`
+- `scripts/generate_phase_b_assets.py`
+- `docs/ASSET_REGISTER.md`
+- `screenshot_deadcity_b2.png`
+- `screenshot_deadcity_b2_v2.png`
+
+### Files modified
+
+- `client/Assets/DefaultVolumeProfile.asset`
+- `client/Assets/Editor/BuildScript.cs`
+- `client/Assets/Editor/OutrunAftermath.Client.Editor.asmdef`
+- `client/Assets/Game/Multiplayer/NetworkSessionController.cs`
+- `client/Assets/Game/Runtime/Combat/WeaponSystem.cs`
+- `client/Assets/Game/Runtime/Environment/MapEnvironmentDirector.cs`
+- `client/Assets/Scenes/Main.unity`
+- `client/Assets/UniversalRenderPipelineGlobalSettings.asset`
+- `client/Packages/manifest.json`
+- `client/Packages/packages-lock.json`
+- `client/ProjectSettings/GraphicsSettings.asset`
+- `client/ProjectSettings/QualitySettings.asset`
+- `run_e2e_production_test.ps1`
+- `.gitignore`
+- `CHANGELOG.md`
+
+### Tests executed
+
+1. **Standalone Production Build (`BuildWindowsClient` & `BuildWindowsServer`)**:
+   - Exit code `0`: Output `OutrunAftermath_Client.exe` (104.9 MB) and `OutrunAftermath_Server.exe` (81.6 MB).
+2. **End-to-End Production Verification Suite (`run_e2e_production_test.ps1`)**:
+   - Total Passed: 11 / 11 checks (100% PASS).
+3. **Simulation & API Test Suite (`dotnet test backend/OutrunAftermath.sln`)**:
+   - Exit code `0`: All 88 tests passed (76 simulation + 12 API).
+4. **Visual & In-Engine In-Game Capture Verification**:
+   - Verified zero pink/magenta materials, verified high-fidelity PBR rendering, SSAO, soft shadows, post-processing tonemapping, and tactical weapon visual presentation.
+
+### Next phase
+
+Phase C: Character Foundation — Rigged Operators REX (Rogue Assault) and TRACE (Sentinel Tracker) with modular gear, weapon attachment sockets, third-person and first-person presentations, and complete 13-state animation controller system.
+

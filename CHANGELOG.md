@@ -2,6 +2,30 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [1.3.0] - 2026-11-16 - Phase B: Visual Foundation & Dead City Sector 4 Overhaul
+
+### Added
+- **Universal Render Pipeline (URP) Authoritative Configuration**:
+  - Authored `Assets/Settings/URP_HighFidelity.asset` and `URP_HighFidelity_Renderer.asset` configured for Forward+ rendering, Screen Space Ambient Occlusion (SSAO), 4 shadow cascades (splits 0.067, 0.20, 0.467), 80m shadow distance, soft shadows, and HDR support.
+  - Bound pipeline asset authoritatively to `GraphicsSettings.asset` (`m_CustomRenderPipeline`) and across all 6 quality tiers in `QualitySettings.asset`.
+  - Configured cinematic post-processing volume profile (`Assets/DefaultVolumeProfile.asset`) with ACES tonemapping, Bloom (intensity 0.65, threshold 0.90, scatter 0.70), Color Adjustments (exposure +0.2 EV, contrast +12, saturation +8), and Vignette (intensity 0.25, smoothness 0.35).
+- **Procedural PBR Texture & 3D Wavefront Mesh Engine**:
+  - Developed `scripts/generate_phase_b_assets.py` generating 11 seamless PBR texture sets (Albedo, Sobel-filtered Normal maps, Metallic/AO/Smoothness MaskMaps) and 10 authentic Wavefront OBJ meshes.
+  - Configured `ArtAssetPipeline.cs` Unity Editor asset post-processor to author URP Lit materials (`M_Asphalt_Damaged`, `M_Concrete_Weathered`, `M_CorrugatedMetal_Rust`, `M_Barrier_Jersey`, `M_FuelBarrel_Explosive`, `M_VehicleWreck_Burnt`, `M_Weapon_TacticalSteel`) and assemble game-ready collidable prefabs in `Assets/Resources/Art/Prefabs/`.
+- **Dead City Sector 4 Modular Architectural Overhaul**:
+  - Overhauled `MapEnvironmentDirector.cs` to assemble the Sector 4 tactical combat zone using modular architectural prefabs: 2-lane asphalt avenues, road intersections, bomb craters, brutalist multi-story bank ruins with accessible stairwells and rooftop snipers' perches, industrial warehouses, 20ft shipping containers, jersey barriers, burnt vehicle wrecks, broken streetlights, and explosive rusted fuel barrels.
+  - Integrated dynamic atmospheric particle emitter (`DeadCity_AtmosphereFX`) simulating drifting post-apocalyptic dust, ash, and wind turbulence.
+- **Authoritative Asset Register**:
+  - Authored `docs/ASSET_REGISTER.md` cataloging all 3D models, textures, materials, and prefabs with complete polygon counts, dimension bounds, licenses, import settings, and dependencies.
+- **Weapon Visual Alignment**:
+  - Replaced procedural primitive gun placeholders in `WeaponSystem.cs` with the high-fidelity `PF_Weapon_Vanguard_AssaultRifle` prefab and `M_Weapon_TacticalSteel` URP Lit material, completely eliminating magenta shader artifacts.
+
+### Changed
+- Updated `run_e2e_production_test.ps1` client handshake verification timeout from 10s to 18s to ensure reliable multi-process initialization on heavy local load.
+- Added `com.unity.modules.screencapture` package to `Packages/manifest.json`.
+
+---
+
 ## [1.2.0] - 2026-11-16 - Phase 10: Production Release, Packaging & Launch Operations (Golden Master)
 
 ### Added

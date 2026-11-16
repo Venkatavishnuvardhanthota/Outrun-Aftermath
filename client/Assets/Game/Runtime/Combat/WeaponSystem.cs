@@ -175,36 +175,51 @@ namespace OutrunAftermath.Client.Runtime.Combat
                 gunHolder.transform.localRotation = Quaternion.identity;
                 gunRoot = gunHolder.transform;
 
-                // Procedural stylized gun mesh
-                var gunBody = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                gunBody.name = "GunBody";
-                gunBody.transform.SetParent(gunRoot);
-                gunBody.transform.localPosition = new Vector3(0f, 0f, 0.15f);
-                gunBody.transform.localScale = new Vector3(0.08f, 0.12f, 0.45f);
-                var col = gunBody.GetComponent<Collider>();
-                if (col != null) Destroy(col);
+                // Load high-fidelity 3D weapon model if available
+                var weaponPrefab = Resources.Load<GameObject>("Art/Prefabs/PF_Weapon_Vanguard_AssaultRifle");
+                if (weaponPrefab != null)
+                {
+                    var gunVisual = Instantiate(weaponPrefab, gunRoot);
+                    gunVisual.name = "Vanguard_AssaultRifle_Visual";
+                    gunVisual.transform.localPosition = new Vector3(0f, -0.04f, 0.22f);
+                    gunVisual.transform.localRotation = Quaternion.identity;
+                    gunVisual.transform.localScale = Vector3.one;
 
-                var mat = gunBody.GetComponent<Renderer>()?.material;
-                if (mat != null) mat.color = new Color(0.18f, 0.2f, 0.22f);
+                    var muzzle = new GameObject("MuzzleTip");
+                    muzzle.transform.SetParent(gunVisual.transform);
+                    muzzle.transform.localPosition = new Vector3(0f, 0.015f, 0.49f);
+                    muzzlePoint = muzzle.transform;
+                }
+                else
+                {
+                    // Fallback using explicit URP Lit material (prevents magenta fallback)
+                    var litShader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard") ?? Shader.Find("Unlit/Color");
+                    var gunMat = new Material(litShader) { color = new Color(0.2f, 0.22f, 0.24f) };
 
-                // Barrel
-                var barrel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                barrel.name = "GunBarrel";
-                barrel.transform.SetParent(gunRoot);
-                barrel.transform.localPosition = new Vector3(0f, 0.03f, 0.42f);
-                barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                barrel.transform.localScale = new Vector3(0.04f, 0.15f, 0.04f);
-                var bCol = barrel.GetComponent<Collider>();
-                if (bCol != null) Destroy(bCol);
+                    var gunBody = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    gunBody.name = "GunBody";
+                    gunBody.transform.SetParent(gunRoot);
+                    gunBody.transform.localPosition = new Vector3(0f, 0f, 0.15f);
+                    gunBody.transform.localScale = new Vector3(0.08f, 0.12f, 0.45f);
+                    var col = gunBody.GetComponent<Collider>();
+                    if (col != null) Destroy(col);
+                    gunBody.GetComponent<Renderer>().material = gunMat;
 
-                var bMat = barrel.GetComponent<Renderer>()?.material;
-                if (bMat != null) bMat.color = new Color(0.12f, 0.13f, 0.14f);
+                    var barrel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    barrel.name = "GunBarrel";
+                    barrel.transform.SetParent(gunRoot);
+                    barrel.transform.localPosition = new Vector3(0f, 0.03f, 0.42f);
+                    barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    barrel.transform.localScale = new Vector3(0.04f, 0.15f, 0.04f);
+                    var bCol = barrel.GetComponent<Collider>();
+                    if (bCol != null) Destroy(bCol);
+                    barrel.GetComponent<Renderer>().material = gunMat;
 
-                // Muzzle tip
-                var muzzle = new GameObject("MuzzleTip");
-                muzzle.transform.SetParent(gunRoot);
-                muzzle.transform.localPosition = new Vector3(0f, 0.03f, 0.58f);
-                muzzlePoint = muzzle.transform;
+                    var muzzle = new GameObject("MuzzleTip");
+                    muzzle.transform.SetParent(gunRoot);
+                    muzzle.transform.localPosition = new Vector3(0f, 0.03f, 0.58f);
+                    muzzlePoint = muzzle.transform;
+                }
             }
         }
 

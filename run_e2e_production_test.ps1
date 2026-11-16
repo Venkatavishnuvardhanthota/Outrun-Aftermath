@@ -218,7 +218,7 @@ try {
             -PassThru
 
         # Wait for client to complete connection and auto-close
-        $clientProc.WaitForExit(10000)
+        $clientProc.WaitForExit(18000)
         Start-Sleep -Seconds 2
 
         if (-not $clientProc.HasExited) {

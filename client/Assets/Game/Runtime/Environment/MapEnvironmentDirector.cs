@@ -81,7 +81,7 @@ namespace OutrunAftermath.Client.Runtime.Environment
         }
 
         // ==========================================
-        // MAP 1: DEAD CITY (URBAN RUINS)
+        // MAP 1: DEAD CITY (URBAN RUINS) - HIGH FIDELITY 3D
         // ==========================================
         private void BuildDeadCity(Transform root)
         {
@@ -92,43 +92,95 @@ namespace OutrunAftermath.Client.Runtime.Environment
             var extractMat = CreateLitMaterial(new Color(0.12f, 0.65f, 0.45f), 0.3f);
             var redMat = CreateLitMaterial(new Color(0.85f, 0.15f, 0.12f), 0.5f);
 
-            // Ground floor
+            // Ground floor foundation
             CreatePlane(root, "SectorFloor", Vector3.zero, new Vector3(16f, 1f, 16f), asphaltMat);
 
-            // Central Avenue
-            CreateBlock(root, "MainAvenueStrip", new Vector3(0f, 0.02f, 10f), new Vector3(18f, 0.05f, 140f), asphaltMat);
+            // 1. Central Avenue 3D Modular Roads (textured asphalt, curbs, potholes, crater)
+            SpawnPrefabOrFallback("PF_Road_2Lane_Straight_12m", root, new Vector3(0f, 0.02f, -15f), Quaternion.identity, new Vector3(1.2f, 1f, 1.2f),
+                () => CreateBlock(root, "MainAvenueStrip_S", new Vector3(0f, 0.02f, -15f), new Vector3(18f, 0.05f, 25f), asphaltMat));
 
-            // West Sector: Multi-story Bank Ruins & Sniper Balcony
-            CreateBlock(root, "BankRuins_GF", new Vector3(-24f, 3.5f, 15f), new Vector3(20f, 7f, 35f), concreteMat);
-            CreateBlock(root, "BankRuins_2F", new Vector3(-24f, 8.5f, 10f), new Vector3(20f, 3f, 20f), concreteMat);
-            CreateBlock(root, "Bank_BalconyRail", new Vector3(-14.2f, 10.6f, 10f), new Vector3(0.5f, 1.2f, 20f), steelMat);
-            CreateRamp(root, "Bank_StairRamp", new Vector3(-13.5f, 5f, -8f), new Vector3(3.5f, 0.4f, 16f), 30f, steelMat);
+            SpawnPrefabOrFallback("PF_Road_2Lane_Straight_12m", root, new Vector3(0f, 0.02f, 8f), Quaternion.identity, new Vector3(1.2f, 1f, 1.2f),
+                () => CreateBlock(root, "MainAvenueStrip_M", new Vector3(0f, 0.02f, 8f), new Vector3(18f, 0.05f, 25f), asphaltMat));
 
-            // East Sector: Warehouse Logistics Complex & Stacked Shipping Containers
-            CreateBlock(root, "WarehouseEast", new Vector3(25f, 4.5f, -10f), new Vector3(22f, 9f, 40f), concreteMat);
-            CreateBlock(root, "Container_Blue", new Vector3(11.5f, 1.4f, 15f), new Vector3(3.2f, 2.8f, 7.5f), CreateLitMaterial(new Color(0.15f, 0.35f, 0.65f), 0.4f));
-            CreateBlock(root, "Container_Red", new Vector3(11.5f, 4.2f, 15f), new Vector3(3.2f, 2.8f, 7.5f), CreateLitMaterial(new Color(0.65f, 0.2f, 0.15f), 0.4f));
-            CreateBlock(root, "Container_Orange", new Vector3(12.5f, 1.4f, 25f), new Vector3(3.2f, 2.8f, 7.5f), CreateLitMaterial(new Color(0.8f, 0.45f, 0.15f), 0.4f));
+            SpawnPrefabOrFallback("PF_Road_Crater", root, new Vector3(0f, 0.02f, 32f), Quaternion.identity, new Vector3(1.2f, 1f, 1.2f),
+                () => CreateBlock(root, "MainAvenueStrip_Crater", new Vector3(0f, 0.02f, 32f), new Vector3(18f, 0.05f, 25f), asphaltMat));
 
-            // Central Avenue Tactical Barricades
-            CreateBlock(root, "Barrier_1", new Vector3(-3.5f, 0.6f, 18f), new Vector3(5f, 1.2f, 0.8f), barrierMat);
-            CreateBlock(root, "Barrier_2", new Vector3(4.5f, 0.6f, 24f), new Vector3(6f, 1.2f, 0.8f), barrierMat);
-            CreateBlock(root, "Barrier_3", new Vector3(-2.0f, 0.6f, 38f), new Vector3(4.5f, 1.2f, 0.8f), barrierMat);
+            SpawnPrefabOrFallback("PF_Road_Intersection", root, new Vector3(0f, 0.02f, 55f), Quaternion.identity, new Vector3(1.2f, 1f, 1.2f),
+                () => CreateBlock(root, "MainAvenueStrip_N", new Vector3(0f, 0.02f, 55f), new Vector3(18f, 0.05f, 25f), asphaltMat));
 
-            // Extraction Helipad & Objective Terminal
+            // 2. West Sector: Multi-story Bank Ruins & Sniper Balcony
+            SpawnPrefabOrFallback("PF_Building_Bank_GF", root, new Vector3(-24f, 0f, 15f), Quaternion.identity, Vector3.one,
+                () => CreateBlock(root, "BankRuins_GF", new Vector3(-24f, 3.5f, 15f), new Vector3(20f, 7f, 35f), concreteMat));
+
+            SpawnPrefabOrFallback("PF_Building_Bank_2F", root, new Vector3(-24f, 6.2f, 15f), Quaternion.identity, Vector3.one,
+                () => CreateBlock(root, "BankRuins_2F", new Vector3(-24f, 8.5f, 10f), new Vector3(20f, 3f, 20f), concreteMat));
+
+            SpawnPrefabOrFallback("PF_Building_Rooftop_Perch", root, new Vector3(-24f, 11.2f, 15f), Quaternion.identity, Vector3.one,
+                () => CreateBlock(root, "Bank_BalconyRail", new Vector3(-14.2f, 10.6f, 10f), new Vector3(0.5f, 1.2f, 20f), steelMat));
+
+            // Bank access ramp
+            CreateRamp(root, "Bank_StairRamp", new Vector3(-13.5f, 3.1f, -2f), new Vector3(3.5f, 0.4f, 16f), 24f, concreteMat);
+
+            // 3. East Sector: Warehouse Logistics Complex & Stacked Shipping Containers
+            SpawnPrefabOrFallback("PF_Building_Warehouse", root, new Vector3(25f, 0f, -10f), Quaternion.identity, Vector3.one,
+                () => CreateBlock(root, "WarehouseEast", new Vector3(25f, 4.5f, -10f), new Vector3(22f, 9f, 40f), concreteMat));
+
+            SpawnPrefabOrFallback("PF_Prop_ShippingContainer_20ft", root, new Vector3(11.5f, 0f, 15f), Quaternion.Euler(0f, 12f, 0f), Vector3.one,
+                () => CreateBlock(root, "Container_Blue", new Vector3(11.5f, 1.4f, 15f), new Vector3(3.2f, 2.8f, 7.5f), CreateLitMaterial(new Color(0.15f, 0.35f, 0.65f), 0.4f)));
+
+            SpawnPrefabOrFallback("PF_Prop_ShippingContainer_20ft", root, new Vector3(11.5f, 2.6f, 15.5f), Quaternion.Euler(0f, 15f, 0f), Vector3.one,
+                () => CreateBlock(root, "Container_Red", new Vector3(11.5f, 4.2f, 15f), new Vector3(3.2f, 2.8f, 7.5f), CreateLitMaterial(new Color(0.65f, 0.2f, 0.15f), 0.4f)));
+
+            SpawnPrefabOrFallback("PF_Prop_ShippingContainer_20ft", root, new Vector3(12.5f, 0f, 25f), Quaternion.Euler(0f, -8f, 0f), Vector3.one,
+                () => CreateBlock(root, "Container_Orange", new Vector3(12.5f, 1.4f, 25f), new Vector3(3.2f, 2.8f, 7.5f), CreateLitMaterial(new Color(0.8f, 0.45f, 0.15f), 0.4f)));
+
+            // 4. Central Avenue Tactical Barricades & Wrecked Vehicles
+            SpawnPrefabOrFallback("PF_Prop_Barrier_Jersey", root, new Vector3(-3.5f, 0f, 18f), Quaternion.Euler(0f, -10f, 0f), new Vector3(1.3f, 1.2f, 1.4f),
+                () => CreateBlock(root, "Barrier_1", new Vector3(-3.5f, 0.6f, 18f), new Vector3(5f, 1.2f, 0.8f), barrierMat));
+
+            SpawnPrefabOrFallback("PF_Prop_Barrier_Jersey", root, new Vector3(4.5f, 0f, 24f), Quaternion.Euler(0f, 15f, 0f), new Vector3(1.3f, 1.2f, 1.4f),
+                () => CreateBlock(root, "Barrier_2", new Vector3(4.5f, 0.6f, 24f), new Vector3(6f, 1.2f, 0.8f), barrierMat));
+
+            SpawnPrefabOrFallback("PF_Prop_Barrier_Jersey", root, new Vector3(-2.0f, 0f, 38f), Quaternion.Euler(0f, -5f, 0f), new Vector3(1.3f, 1.2f, 1.4f),
+                () => CreateBlock(root, "Barrier_3", new Vector3(-2.0f, 0.6f, 38f), new Vector3(4.5f, 1.2f, 0.8f), barrierMat));
+
+            // Abandoned civilian sedan wrecks
+            SpawnPrefabOrFallback("PF_Prop_Vehicle_Sedan_Wreck", root, new Vector3(4.2f, 0f, 12f), Quaternion.Euler(0f, -25f, 0f), Vector3.one, null);
+            SpawnPrefabOrFallback("PF_Prop_Vehicle_Sedan_Wreck", root, new Vector3(-6.5f, 0f, 44f), Quaternion.Euler(0f, 35f, 0f), Vector3.one, null);
+
+            // Concrete rubble piles
+            SpawnPrefabOrFallback("PF_Debris_ConcreteRubble_Pile", root, new Vector3(-10.5f, 0f, 28f), Quaternion.Euler(0f, 40f, 0f), Vector3.one, null);
+            SpawnPrefabOrFallback("PF_Debris_ConcreteRubble_Pile", root, new Vector3(8.5f, 0f, -4f), Quaternion.Euler(0f, -20f, 0f), Vector3.one, null);
+
+            // Broken streetlights
+            SpawnPrefabOrFallback("PF_Prop_StreetLight_Broken", root, new Vector3(-5.5f, 0f, 5f), Quaternion.Euler(0f, -90f, 0f), Vector3.one, null);
+            SpawnPrefabOrFallback("PF_Prop_StreetLight_Broken", root, new Vector3(5.5f, 0f, 42f), Quaternion.Euler(0f, 90f, 0f), Vector3.one, null);
+
+            // 5. Extraction Helipad & Objective Terminal
             CreateBlock(root, "ExtractionHelipad", new Vector3(0f, 0.08f, 65f), new Vector3(16f, 0.15f, 16f), extractMat);
             CreateBlock(root, "BeaconTower", new Vector3(7.5f, 3.5f, 72f), new Vector3(0.8f, 7f, 0.8f), steelMat);
             CreateBlock(root, "TerminalBase", new Vector3(0f, 0.75f, 65f), new Vector3(1.2f, 1.5f, 1.2f), steelMat);
 
-            // Practice Targets
+            // 6. Practice Targets
             CreateTarget(root, "Target_15m", new Vector3(-4f, 1.0f, 15f), 100f);
             CreateTarget(root, "Target_30m", new Vector3(3.5f, 1.0f, 30f), 150f);
             CreateTarget(root, "Target_Sniper_45m", new Vector3(-14f, 11.2f, 18f), 90f);
 
-            // Explosive Hazards
-            CreateExplosiveBarrel(root, "Barrel_1", new Vector3(-6.2f, 0.8f, 18f), redMat);
-            CreateExplosiveBarrel(root, "Barrel_2", new Vector3(7.5f, 0.8f, 36f), redMat);
-            CreateExplosiveBarrel(root, "Barrel_3", new Vector3(-12.8f, 0.8f, 42f), redMat);
+            // 7. Explosive Hazards (High-fidelity fuel drums with EnvironmentalHazard)
+            var b1 = SpawnPrefabOrFallback("PF_Prop_Barrel_FuelRusted", root, new Vector3(-6.2f, 0f, 18f), Quaternion.identity, Vector3.one,
+                () => CreateExplosiveBarrel(root, "Barrel_1", new Vector3(-6.2f, 0.8f, 18f), redMat));
+            if (b1 != null && b1.GetComponent<DamageableTarget>() == null) b1.AddComponent<DamageableTarget>();
+
+            var b2 = SpawnPrefabOrFallback("PF_Prop_Barrel_FuelRusted", root, new Vector3(7.5f, 0f, 36f), Quaternion.identity, Vector3.one,
+                () => CreateExplosiveBarrel(root, "Barrel_2", new Vector3(7.5f, 0.8f, 36f), redMat));
+            if (b2 != null && b2.GetComponent<DamageableTarget>() == null) b2.AddComponent<DamageableTarget>();
+
+            var b3 = SpawnPrefabOrFallback("PF_Prop_Barrel_FuelRusted", root, new Vector3(-12.8f, 0f, 42f), Quaternion.identity, Vector3.one,
+                () => CreateExplosiveBarrel(root, "Barrel_3", new Vector3(-12.8f, 0.8f, 42f), redMat));
+            if (b3 != null && b3.GetComponent<DamageableTarget>() == null) b3.AddComponent<DamageableTarget>();
+
+            // 8. Atmospheric Particles (Dust, Ash, and Wind currents)
+            CreateAtmosphericParticles(root);
         }
 
         // ==========================================
@@ -496,6 +548,68 @@ namespace OutrunAftermath.Client.Runtime.Environment
             mat.enableInstancing = true;
             _unlitMaterialCache[hash] = mat;
             return mat;
+        }
+
+        private static GameObject SpawnPrefabOrFallback(string prefabResourceName, Transform parent, Vector3 pos, Quaternion rot, Vector3 scale, Action fallback)
+        {
+            var prefab = Resources.Load<GameObject>($"Art/Prefabs/{prefabResourceName}");
+            if (prefab != null)
+            {
+                var instance = Instantiate(prefab, parent);
+                instance.name = prefabResourceName;
+                instance.transform.position = pos;
+                instance.transform.rotation = rot;
+                if (scale != Vector3.one)
+                {
+                    instance.transform.localScale = scale;
+                }
+                return instance;
+            }
+
+            fallback?.Invoke();
+            return null;
+        }
+
+        private static void CreateAtmosphericParticles(Transform parent)
+        {
+            var dustGo = new GameObject("DeadCity_AtmosphereFX");
+            dustGo.transform.SetParent(parent);
+            dustGo.transform.position = new Vector3(0f, 3.5f, 25f);
+
+            var ps = dustGo.AddComponent<ParticleSystem>();
+            var main = ps.main;
+            main.loop = true;
+            main.duration = 5f;
+            main.startLifetime = 8f;
+            main.startSpeed = 0.5f;
+            main.startSize = 0.08f;
+            main.maxParticles = 200;
+            main.startColor = new Color(0.82f, 0.80f, 0.74f, 0.35f);
+
+            var emission = ps.emission;
+            emission.rateOverTime = 25f;
+
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(65f, 10f, 95f);
+
+            var vel = ps.velocityOverLifetime;
+            vel.enabled = true;
+            vel.x = -0.3f;
+            vel.y = -0.05f;
+            vel.z = 0.15f;
+
+            var pRenderer = dustGo.GetComponent<ParticleSystemRenderer>();
+            if (pRenderer != null)
+            {
+                var particleShader = Shader.Find("Universal Render Pipeline/Particles/Unlit") ??
+                                     Shader.Find("Particles/Standard Unlit") ??
+                                     Shader.Find("Sprites/Default");
+                if (particleShader != null)
+                {
+                    pRenderer.material = new Material(particleShader);
+                }
+            }
         }
     }
 }
