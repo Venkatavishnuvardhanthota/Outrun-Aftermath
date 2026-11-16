@@ -88,6 +88,7 @@ namespace OutrunAftermath.Client.Multiplayer
         private InputField _authRegEmailInput;
         private InputField _authRegPassInput;
         private Text _authStatusLabel;
+        private readonly List<(RectTransform rt, Action onClick, GameObject go)> _registeredButtons = new List<(RectTransform, Action, GameObject)>();
 
         private void Start()
         {
@@ -97,6 +98,7 @@ namespace OutrunAftermath.Client.Multiplayer
                 return;
             }
 
+            EnsureEventSystem();
             BuildLobbyUI();
 
             if (NetworkSessionController.Instance != null)
@@ -118,6 +120,53 @@ namespace OutrunAftermath.Client.Multiplayer
 
         private void Update()
         {
+            // 1. Direct screen-space mouse click fallback (guarantees click execution even if EventSystem raycast misses)
+            if (Input.GetMouseButtonDown(0))
+            {
+                Vector2 mousePos = Input.mousePosition;
+                for (int i = _registeredButtons.Count - 1; i >= 0; i--)
+                {
+                    var entry = _registeredButtons[i];
+                    if (entry.go != null && entry.go.activeInHierarchy && entry.rt != null)
+                    {
+                        if (RectTransformUtility.RectangleContainsScreenPoint(entry.rt, mousePos, null))
+                        {
+                            entry.onClick?.Invoke();
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // 2. Keyboard shortcuts for immediate turnkey control
+            if (Input.GetKeyDown(KeyCode.P) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+            {
+                OnOfflineClicked();
+            }
+            else if (Input.GetKeyDown(KeyCode.M))
+            {
+                OnToggleMapClicked();
+            }
+            else if (Input.GetKeyDown(KeyCode.W))
+            {
+                OnToggleWeatherClicked();
+            }
+            else if (Input.GetKeyDown(KeyCode.L))
+            {
+                OnToggleAuthModalClicked();
+            }
+            else if (Input.GetKeyDown(KeyCode.H))
+            {
+                OnHostClicked();
+            }
+            else if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                if (_authModal != null && _authModal.activeSelf) _authModal.SetActive(false);
+                else if (_leaderboardPanel != null && _leaderboardPanel.activeSelf) _leaderboardPanel.SetActive(false);
+                else if (_friendsPanel != null && _friendsPanel.activeSelf) _friendsPanel.SetActive(false);
+                else Runtime.UI.SettingsModalUI.Instance?.ToggleOpen();
+            }
+
             if (_isSearchingMatch)
             {
                 _searchTimer += Time.deltaTime;
@@ -128,6 +177,38 @@ namespace OutrunAftermath.Client.Multiplayer
                     _queueSearchTimerText.text = $"SEARCHING FOR MATCH ({mins:00}:{secs:00})...";
                 }
             }
+        }
+
+        private static void EnsureEventSystem()
+        {
+            var es = FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>();
+            if (es == null)
+            {
+                var esGo = new GameObject("EventSystem");
+                es = esGo.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            }
+
+            var inputModule = es.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+            if (inputModule == null)
+            {
+                inputModule = es.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+            }
+
+            inputModule.enabled = false;
+            inputModule.AssignDefaultActions();
+            if (inputModule.actionsAsset != null)
+            {
+                inputModule.actionsAsset.Enable();
+                foreach (var map in inputModule.actionsAsset.actionMaps)
+                {
+                    map.Enable();
+                    foreach (var act in map.actions)
+                    {
+                        act.Enable();
+                    }
+                }
+            }
+            inputModule.enabled = true;
         }
 
         private void OnDestroy()
@@ -1068,7 +1149,7 @@ namespace OutrunAftermath.Client.Multiplayer
             return input;
         }
 
-        private static Button CreateButton(Transform parent, string name, string label, Font font, Vector2 pos, Vector2 size, Color bgColor, UnityEngine.Events.UnityAction onClick)
+        private Button CreateButton(Transform parent, string name, string label, Font font, Vector2 pos, Vector2 size, Color bgColor, UnityEngine.Events.UnityAction onClick)
         {
             var go = CreatePanel(parent, name, pos, size, bgColor);
             var btn = go.AddComponent<Button>();
@@ -1088,11 +1169,13 @@ namespace OutrunAftermath.Client.Multiplayer
             nav.mode = Navigation.Mode.None;
             btn.navigation = nav;
 
-            btn.onClick.AddListener(() =>
+            Action wrappedClick = () =>
             {
                 Runtime.Audio.AudioManager.Instance?.PlayHitMarker(false, true);
                 onClick?.Invoke();
-            });
+            };
+            btn.onClick.AddListener(() => wrappedClick());
+            _registeredButtons.Add((go.GetComponent<RectTransform>(), wrappedClick, go));
 
             var lbl = CreateText(go.transform, "Label", label, font, 13, TextAnchor.MiddleCenter, Vector2.zero, size, Color.white);
             lbl.raycastTarget = false; // Label will NOT intercept clicks

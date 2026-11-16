@@ -3,7 +3,8 @@
   "rootNamespace": "OutrunAftermath.Client.Editor",
   "references": [
     "OutrunAftermath.Client",
-    "Unity.Netcode.Runtime"
+    "Unity.Netcode.Runtime",
+    "Unity.InputSystem"
   ],
   "includePlatforms": [
     "Editor"

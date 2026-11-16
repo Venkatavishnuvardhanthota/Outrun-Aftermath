@@ -266,6 +266,12 @@ namespace OutrunAftermath.Client.Editor
             var modalGo = new GameObject("SettingsModalUI");
             modalGo.AddComponent<Runtime.UI.SettingsModalUI>();
 
+            // EventSystem + InputSystemUIInputModule baked into scene
+            var esGo = new GameObject("EventSystem");
+            esGo.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            var inputModule = esGo.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+            inputModule.AssignDefaultActions();
+
             // Save Main.unity
             Directory.CreateDirectory("Assets/Scenes");
             EditorSceneManager.SaveScene(scene, MainScenePath);
