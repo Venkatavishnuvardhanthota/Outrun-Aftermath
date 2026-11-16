@@ -79,13 +79,32 @@ using (var scope = app.Services.CreateScope())
     // Ensure Phase 6 schema migrations on existing SQLite databases
     try
     {
-        db.Database.ExecuteSqlRaw("ALTER TABLE Profiles ADD COLUMN PresenceStatus TEXT NOT NULL DEFAULT 'offline';");
-    }
-    catch {}
+        var conn = db.Database.GetDbConnection();
+        if (conn.State != System.Data.ConnectionState.Open) conn.Open();
+        var cols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = "PRAGMA table_info(Profiles);";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                cols.Add(reader.GetString(1));
+            }
+        }
 
-    try
-    {
-        db.Database.ExecuteSqlRaw("ALTER TABLE Profiles ADD COLUMN LastSeenUtc TEXT NOT NULL DEFAULT '2026-01-01T00:00:00Z';");
+        if (!cols.Contains("PresenceStatus"))
+        {
+            using var alterCmd = conn.CreateCommand();
+            alterCmd.CommandText = "ALTER TABLE Profiles ADD COLUMN PresenceStatus TEXT NOT NULL DEFAULT 'offline';";
+            alterCmd.ExecuteNonQuery();
+        }
+
+        if (!cols.Contains("LastSeenUtc"))
+        {
+            using var alterCmd = conn.CreateCommand();
+            alterCmd.CommandText = "ALTER TABLE Profiles ADD COLUMN LastSeenUtc TEXT NOT NULL DEFAULT '2026-01-01T00:00:00Z';";
+            alterCmd.ExecuteNonQuery();
+        }
     }
     catch {}
 
