@@ -809,6 +809,70 @@ def generate_prop_models():
 
     m_rub.write_obj(f"{MESHES_ROOT}/Debris/Debris_ConcreteRubble_Pile.obj")
 
+def generate_weapon_models():
+    print("Generating Tactical Weapon 3D models...")
+    # 1. Weapon_Vanguard_AssaultRifle (5.56mm Tactical Assault Rifle)
+    m_ar = ObjMeshBuilder("Weapon_Vanguard_AssaultRifle")
+    # Receiver / Upper & Lower
+    m_ar.add_box(0, 0, 0.05, 0.045, 0.07, 0.28, 1.0, 1.0)
+    # Barrel
+    m_ar.add_box(0, 0.015, 0.32, 0.02, 0.02, 0.28, 0.5, 1.0)
+    # Muzzle Brake / Flash Hider
+    m_ar.add_box(0, 0.015, 0.47, 0.028, 0.028, 0.04, 0.3, 0.3)
+    # Handguard / Picatinny Quad Rail
+    m_ar.add_box(0, 0.01, 0.22, 0.042, 0.055, 0.16, 0.5, 0.5)
+    # Curved 30-round STANAG Magazine
+    m_ar.add_box(0, -0.09, 0.08, 0.032, 0.14, 0.065, 0.5, 1.0)
+    # Tactical Ergonomic Pistol Grip
+    m_ar.add_box(0, -0.075, -0.05, 0.034, 0.11, 0.05, 0.5, 0.5)
+    # Telescopic Adjustable Carbine Stock
+    m_ar.add_box(0, 0.005, -0.21, 0.036, 0.095, 0.24, 0.5, 1.0)
+    # Holographic / Red Dot Combat Optic
+    m_ar.add_box(0, 0.065, 0.02, 0.035, 0.045, 0.08, 0.5, 0.5)
+    m_ar.write_obj(f"{MESHES_ROOT}/Props/Weapon_Vanguard_AssaultRifle.obj")
+
+    # 2. Weapon_Breacher_Shotgun (12-Gauge Tactical Pump-Action Shotgun)
+    m_sg = ObjMeshBuilder("Weapon_Breacher_Shotgun")
+    # Main Steel Receiver
+    m_sg.add_box(0, 0.002, 0.03, 0.044, 0.075, 0.26, 1.0, 1.0)
+    # Heavy 12ga Smoothbore Barrel
+    m_sg.add_box(0, 0.021, 0.35, 0.032, 0.032, 0.38, 0.5, 1.0)
+    # Extended 8-round Magazine Tube under barrel
+    m_sg.add_box(0, -0.016, 0.33, 0.028, 0.028, 0.34, 0.5, 1.0)
+    # Ribbed Pump Forend / Slide
+    m_sg.add_box(0, -0.016, 0.30, 0.048, 0.048, 0.16, 0.5, 0.5)
+    # Tactical Pistol Grip
+    m_sg.add_box(0, -0.075, -0.08, 0.036, 0.11, 0.06, 0.5, 0.5)
+    # Fixed Polymer Tactical Stock with Recoil Pad
+    m_sg.add_box(0, -0.015, -0.22, 0.036, 0.09, 0.24, 0.5, 1.0)
+    # Ghost Ring Rear Sight & Front Bead
+    m_sg.add_box(0, 0.049, -0.06, 0.024, 0.018, 0.03, 0.3, 0.3)
+    m_sg.add_box(0, 0.044, 0.52, 0.012, 0.015, 0.02, 0.3, 0.3)
+    # Ejection Port indicator
+    m_sg.add_box(0.022, 0.012, 0.02, 0.005, 0.025, 0.08, 0.2, 0.2)
+    m_sg.write_obj(f"{MESHES_ROOT}/Props/Weapon_Breacher_Shotgun.obj")
+
+    # 3. Weapon_Sidekick_Pistol (9mm Tactical Combat Pistol)
+    m_p = ObjMeshBuilder("Weapon_Sidekick_Pistol")
+    # Steel Slide with Serrations
+    m_p.add_box(0, 0.023, 0.055, 0.032, 0.036, 0.21, 1.0, 1.0)
+    # Barrel Tip & Recoil Spring Bushing
+    m_p.add_box(0, 0.021, 0.17, 0.022, 0.022, 0.03, 0.3, 0.3)
+    # Polymer Frame & Accessory Rail
+    m_p.add_box(0, -0.005, 0.045, 0.030, 0.022, 0.19, 0.8, 0.5)
+    # Trigger Guard
+    m_p.add_box(0, -0.032, 0.05, 0.020, 0.032, 0.06, 0.4, 0.4)
+    # Trigger
+    m_p.add_box(0, -0.027, 0.046, 0.008, 0.018, 0.012, 0.2, 0.2)
+    # Ergonomic Textured Grip
+    m_p.add_box(0, -0.075, -0.035, 0.032, 0.12, 0.052, 0.5, 0.8)
+    # Extended Magazine Baseplate
+    m_p.add_box(0, -0.141, -0.035, 0.036, 0.014, 0.062, 0.3, 0.3)
+    # Tactical 3-Dot Combat Sights
+    m_p.add_box(0, 0.047, -0.04, 0.022, 0.012, 0.012, 0.2, 0.2)
+    m_p.add_box(0, 0.047, 0.15, 0.008, 0.012, 0.012, 0.2, 0.2)
+    m_p.write_obj(f"{MESHES_ROOT}/Props/Weapon_Sidekick_Pistol.obj")
+
 def main():
     print("=== Starting OUTRUN: AFTERMATH Phase B Asset Generation ===")
     ensure_dirs()
@@ -819,7 +883,9 @@ def main():
     generate_road_models()
     generate_building_models()
     generate_prop_models()
+    generate_weapon_models()
     print("=== Phase B Asset Generation Completed Successfully! ===")
+
 
 if __name__ == "__main__":
     main()

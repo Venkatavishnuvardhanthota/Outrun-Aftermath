@@ -2,6 +2,25 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [1.3.1] - 2026-11-16 - Phase B.1: Independent Visual Foundation Audit & Corrective Fixes
+
+### Added
+- **Multi-Tier Universal Render Pipeline Architecture**:
+  - Authored 6 discrete URP Pipeline Assets and Renderers (`Assets/Settings/URP_Quality_{VeryLow,Low,Medium,High,VeryHigh,Ultra}.asset` and `URP_Renderer_{tier}.asset`) authoritatively bound to `QualitySettings.asset`.
+  - Configured graduated shadow distances (20m to 120m), cascade counts (1 to 4), SSAO ground contact shading, MSAA levels (Off, 2x, 4x, 8x), render scaling (0.75 to 1.0), and LOD bias scaling (0.4 to 2.0).
+- **Dynamic 3-Weapon Visual System**:
+  - Authored 3D meshes and prefabs for Breacher-12 Tactical Shotgun (`PF_Weapon_Breacher_Shotgun`) and Sidekick-9 Combat Pistol (`PF_Weapon_Sidekick_Pistol`) matching Vanguard-4 Assault Rifle.
+  - Enhanced `WeaponSystem.cs` with dynamic weapon visual switching: updates visible mesh, iron sights/ADS offsets, rest positions, and muzzle flash anchors when switching slots (keys 1, 2, 3) while preserving 100% of server-authoritative combat, damage, recoil, and networking logic.
+- **Fail-Fast Asset Validation Engine**:
+  - Implemented `StrictAssetValidationMode` and `-strict-assets` CLI flag in `MapEnvironmentDirector.cs`.
+  - Replaced silent fallback primitives with structured `AssetValidationReport` and explicit `MissingReferenceException` in strict mode to prevent undetected asset degradation in production builds.
+- **Independent 10-Stage Multiplayer E2E Verification**:
+  - Upgraded `run_e2e_production_test.ps1` Stage 3 to verify all 10 distinct networking stages: Dedicated Server spawn, NGO init, UDP socket listening (netstat/log), Client connect, Server connection callback, Server player spawn, Client player replication, Server-authoritative `FireWeaponRpc` execution, Client clean disconnect, and Server clean shutdown.
+- **Comprehensive 3D Model Quality Audit**:
+  - Conducted automated geometric inspection of all 16 OBJ models, recording exact vertex/triangle counts and normal distributions in `docs/ASSET_REGISTER.md` and `KNOWN_ISSUES.md`. Documented the clear boundary between prototype architectural blockouts and required final DCC 3D artist assets.
+
+---
+
 ## [1.3.0] - 2026-11-16 - Phase B: Visual Foundation & Dead City Sector 4 Overhaul
 
 ### Added

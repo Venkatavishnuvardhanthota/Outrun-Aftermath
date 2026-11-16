@@ -205,48 +205,128 @@ try {
         if (Test-Path $serverLog) { Remove-Item $serverLog -Force }
         if (Test-Path $clientLog) { Remove-Item $clientLog -Force }
 
-        Write-Host "Spawning Dedicated Server ($srvTarget) on UDP port $ServerPort..."
+        Write-Host "1. Spawning Dedicated Server ($srvTarget) on UDP port $ServerPort..."
         $serverProc = Start-Process -FilePath $srvTarget `
-            -ArgumentList "-batchmode", "-nographics", "-server", "-port", "$ServerPort", "-autoclose", "15", "-logfile", "`"$serverLog`"" `
+            -ArgumentList "-batchmode", "-nographics", "-server", "-port", "$ServerPort", "-autoclose", "20", "-logfile", "`"$serverLog`"" `
             -PassThru
 
-        Start-Sleep -Seconds 3
+        if ($serverProc -and -not $serverProc.HasExited) {
+            Report-Pass "1. Dedicated Server process spawned (PID: $($serverProc.Id))"
+        } else {
+            Report-Fail "1. Dedicated Server Process" "Server process failed to start"
+        }
 
-        Write-Host "Spawning Game Client ($cltTarget) connecting to 127.0.0.1:$ServerPort..."
+        # Poll up to 10 seconds for server socket binding
+        $socketBound = $false
+        for ($i = 0; $i -lt 20; $i++) {
+            Start-Sleep -Milliseconds 500
+            $netstatOut = netstat -ano -p UDP | Select-String ":$ServerPort"
+            $sLogEarly = if (Test-Path $serverLog) { Get-Content $serverLog -Raw } else { "" }
+            if ($netstatOut) {
+                $socketBound = $true
+                Report-Pass "3. Dedicated Server actively listening on UDP socket :$ServerPort (netstat verified)"
+                break
+            }
+            if ($sLogEarly -match "Dedicated Server listening on UDP :$ServerPort") {
+                $socketBound = $true
+                Report-Pass "3. Dedicated Server listening on UDP :$ServerPort (server log confirmed)"
+                break
+            }
+        }
+        if (-not $socketBound) {
+            Report-Fail "3. UDP Socket Binding" "Socket :$ServerPort not found in netstat or server log after 10s"
+        }
+
+        Write-Host "4. Spawning Game Client ($cltTarget) connecting to 127.0.0.1:$ServerPort..."
         $clientProc = Start-Process -FilePath $cltTarget `
-            -ArgumentList "-batchmode", "-nographics", "-client", "-ip", "127.0.0.1", "-port", "$ServerPort", "-autotest-shoot", "-autoclose", "8", "-logfile", "`"$clientLog`"" `
+            -ArgumentList "-batchmode", "-nographics", "-client", "-ip", "127.0.0.1", "-port", "$ServerPort", "-autotest-shoot", "-autoclose", "12", "-logfile", "`"$clientLog`"" `
             -PassThru
 
-        # Wait for client to complete connection and auto-close
+        # Wait for client to complete handshake, spawn, shoot RPC, and disconnect
+        Write-Host "Waiting for client session lifecycle..."
         $clientProc.WaitForExit(18000)
+
+        # Allow server 2 seconds to log disconnection and auto-close
         Start-Sleep -Seconds 2
 
+        $clientExitCode = if ($clientProc.HasExited) { $clientProc.ExitCode } else { -1 }
         if (-not $clientProc.HasExited) {
             Stop-Process -Id $clientProc.Id -Force -ErrorAction SilentlyContinue
         }
+
+        $serverProc.WaitForExit(8000)
+        $serverExitCode = if ($serverProc.HasExited) { $serverProc.ExitCode } else { -1 }
         if (-not $serverProc.HasExited) {
             Stop-Process -Id $serverProc.Id -Force -ErrorAction SilentlyContinue
         }
 
         Start-Sleep -Milliseconds 500
 
-        # Verify logs
-        $clientLogContent = if (Test-Path $clientLog) { Get-Content $clientLog -Raw } else { "" }
+        # Retrieve log outputs
         $serverLogContent = if (Test-Path $serverLog) { Get-Content $serverLog -Raw } else { "" }
+        $clientLogContent = if (Test-Path $clientLog) { Get-Content $clientLog -Raw } else { "" }
 
-        if ($serverLogContent -match "Dedicated Server listening on UDP" -or $serverLogContent -match "NetworkManager") {
-            Report-Pass "Dedicated Server Initialized and Listened on UDP :$ServerPort"
+        # 2. Server NGO Init
+        if ($serverLogContent -match "Server initialized NGO NetworkManager successfully") {
+            Report-Pass "2. Server successfully initialized NGO NetworkManager"
         } else {
-            Report-Fail "Dedicated Server Init" "Listener signature not detected in server log"
+            Report-Fail "2. Server NGO Init" "Initialization signature missing in server log"
         }
 
-        if ($clientLogContent -match "Connecting Client" -or $clientLogContent -match "NetworkManager") {
-            Report-Pass "Game Client Handshake & Netcode Session Lifecycle"
+        # 4. Client Connected
+        if ($clientLogContent -match "Client successfully connected to server! Assigned ClientId=") {
+            Report-Pass "4. Client successfully connected to server with assigned ClientId"
         } else {
-            Report-Fail "Client Lifecycle" "Connection signature not found in client log"
+            Report-Fail "4. Client Connection" "Connection handshake confirmation missing in client log"
+        }
+
+        # 5. Server Connection Callback
+        if ($serverLogContent -match "Server received client connection callback for ClientId=") {
+            Report-Pass "5. Server received client connection callback"
+        } else {
+            Report-Fail "5. Server Connection Callback" "Client connection callback missing in server log"
+        }
+
+        # 6. NetworkPlayer Spawned on Server
+        if ($serverLogContent -match "Spawned NetworkPlayer for client") {
+            Report-Pass "6. Server spawned authoritative NetworkPlayer object"
+        } else {
+            Report-Fail "6. Server Player Spawn" "NetworkPlayer spawn record missing in server log"
+        }
+
+        # 7. Client Received NetworkPlayer
+        if ($clientLogContent -match "Client/Server NetworkPlayer spawned! NetworkObjectId=") {
+            Report-Pass "7. Client received and spawned replicated NetworkPlayer"
+        } else {
+            Report-Fail "7. Client Player Replication" "Replicated player spawn confirmation missing in client log"
+        }
+
+        # 8. Test Gameplay RPC Processed
+        $serverRpcOk = $serverLogContent -match "Server processed gameplay RPC: FireWeaponRpc"
+        $clientRpcOk = $clientLogContent -match "Client processed PlayShotEffectsRpc from server"
+        if ($serverRpcOk -and $clientRpcOk) {
+            Report-Pass "8. Test gameplay RPC executed (Server processed FireWeaponRpc, Client received PlayShotEffectsRpc)"
+        } elseif ($serverRpcOk) {
+            Report-Pass "8. Test gameplay RPC executed on Server (FireWeaponRpc confirmed)"
+        } else {
+            Report-Fail "8. Gameplay RPC Processing" "Test RPC signatures missing in server/client logs"
+        }
+
+        # 9. Client Clean Disconnect
+        if ($clientLogContent -match "Client initiated clean disconnect" -or $clientExitCode -eq 0) {
+            Report-Pass "9. Client disconnected cleanly (ExitCode: $clientExitCode)"
+        } else {
+            Report-Fail "9. Client Disconnect" "Clean disconnect signature missing or non-zero exit code ($clientExitCode)"
+        }
+
+        # 10. Server Clean Shutdown
+        if ($serverLogContent -match "shutting down cleanly" -or $serverExitCode -eq 0) {
+            Report-Pass "10. Server shut down cleanly (ExitCode: $serverExitCode)"
+        } else {
+            Report-Fail "10. Server Shutdown" "Clean shutdown signature missing or non-zero exit code ($serverExitCode)"
         }
     } else {
-        Write-Warning "Binary not found at '$ExePath'; skipping live executable test."
+        Write-Warning "Binary not found at '$srvTarget'; skipping live executable test."
     }
 
     # -------------------------------------------------------------

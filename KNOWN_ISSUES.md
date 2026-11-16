@@ -55,9 +55,13 @@
 
 ## Design / product
 
-9. Maps, characters, vehicles, and audio in the Unity project use procedural/greybox models.
-10. Voice chat vendor not selected; no voice chat in any build.
-11. Aim assist, mobile HUD, and touch controls are specified but unimplemented (Phase 8).
+9. **Phase B & B.1 Model Quality Audit (Blockout vs Production 3D DCC Models)**:
+   - The 16 OBJ models in `Assets/Art/Meshes/` (Roads, Buildings, Props, Debris, Vehicles, and Weapons) are programmatic compound-box and cylinder blockouts generated via Python (`scripts/generate_phase_b_assets.py`). They establish proper world-space proportions, pivot origins, PBR material assignments, and collision hulls.
+   - **Quality Audit Finding**: While these models fully replace Unity primitive capsules and flat cubes, they are *architectural blockout / prototype models*. They do not feature sculpted bevels, baked high-to-low poly normal details, or non-overlapping bespoke UV unwraps. For final AAA production quality, professional 3D DCC artist assets (Blender/Maya/Substance) must replace these blockouts.
+10. **Character & Vehicle Animation Rigs**:
+   - Player operators and vehicles currently utilize rigid modular compound hierarchies rather than skinned, bone-weighted skeletal meshes with Mecanim humanoid controllers and articulated suspension.
+11. Voice chat vendor not selected; no voice chat in any build.
+12. Aim assist, mobile HUD, and touch controls are specified but unimplemented (Phase 8).
 
 ## Systems
 

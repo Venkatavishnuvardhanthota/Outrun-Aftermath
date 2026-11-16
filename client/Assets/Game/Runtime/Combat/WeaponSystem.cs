@@ -64,6 +64,9 @@ namespace OutrunAftermath.Client.Runtime.Combat
         private Vector3 _gunAdsPos = new Vector3(0f, -0.14f, 0.32f);
         private Vector3 _proceduralRecoil;
 
+        private readonly Dictionary<int, GameObject> _weaponVisualInstances = new Dictionary<int, GameObject>();
+        private readonly Dictionary<int, Transform> _weaponMuzzlePoints = new Dictionary<int, Transform>();
+
         public event Action<WeaponData> OnWeaponSwitched;
         public event Action<int, int> OnAmmoChanged; // currentMag, reserve
         public event Action<bool, bool> OnHitConfirmed; // isHit, isHeadshot (kill confirmation)
@@ -175,52 +178,137 @@ namespace OutrunAftermath.Client.Runtime.Combat
                 gunHolder.transform.localRotation = Quaternion.identity;
                 gunRoot = gunHolder.transform;
 
-                // Load high-fidelity 3D weapon model if available
-                var weaponPrefab = Resources.Load<GameObject>("Art/Prefabs/PF_Weapon_Vanguard_AssaultRifle");
-                if (weaponPrefab != null)
+                UpdateActiveWeaponVisual(activeSlotIndex);
+            }
+        }
+
+        private void UpdateActiveWeaponVisual(int slotIndex)
+        {
+            if (gunRoot == null) return;
+            if (slotIndex < 0 || slotIndex >= loadout.Count) return;
+
+            var weapon = loadout[slotIndex];
+            string weaponId = (weapon.id ?? "vanguard4").ToLowerInvariant();
+
+            // Set weapon-specific rest and ADS positions
+            switch (weaponId)
+            {
+                case "breacher12":
+                    _gunLocalRestPos = new Vector3(0.25f, -0.22f, 0.44f);
+                    _gunAdsPos = new Vector3(0f, -0.15f, 0.30f);
+                    break;
+                case "sidekick9":
+                    _gunLocalRestPos = new Vector3(0.20f, -0.20f, 0.38f);
+                    _gunAdsPos = new Vector3(0f, -0.13f, 0.28f);
+                    break;
+                case "vanguard4":
+                default:
+                    _gunLocalRestPos = new Vector3(0.24f, -0.2f, 0.45f);
+                    _gunAdsPos = new Vector3(0f, -0.14f, 0.32f);
+                    break;
+            }
+
+            // Deactivate all previously loaded weapon visuals
+            foreach (var kvp in _weaponVisualInstances)
+            {
+                if (kvp.Value != null) kvp.Value.SetActive(false);
+            }
+
+            // Check if visual is already cached
+            if (!_weaponVisualInstances.TryGetValue(slotIndex, out var visualGo) || visualGo == null)
+            {
+                string prefabName = weaponId switch
                 {
-                    var gunVisual = Instantiate(weaponPrefab, gunRoot);
-                    gunVisual.name = "Vanguard_AssaultRifle_Visual";
-                    gunVisual.transform.localPosition = new Vector3(0f, -0.04f, 0.22f);
-                    gunVisual.transform.localRotation = Quaternion.identity;
-                    gunVisual.transform.localScale = Vector3.one;
+                    "breacher12" => "PF_Weapon_Breacher_Shotgun",
+                    "sidekick9" => "PF_Weapon_Sidekick_Pistol",
+                    _ => "PF_Weapon_Vanguard_AssaultRifle"
+                };
+
+                Vector3 localOffset = weaponId switch
+                {
+                    "breacher12" => new Vector3(0f, -0.05f, 0.24f),
+                    "sidekick9" => new Vector3(0f, -0.04f, 0.18f),
+                    _ => new Vector3(0f, -0.04f, 0.22f)
+                };
+
+                Vector3 muzzleOffset = weaponId switch
+                {
+                    "breacher12" => new Vector3(0f, 0.021f, 0.54f),
+                    "sidekick9" => new Vector3(0f, 0.021f, 0.19f),
+                    _ => new Vector3(0f, 0.015f, 0.49f)
+                };
+
+                var prefab = Resources.Load<GameObject>($"Art/Prefabs/{prefabName}");
+                if (prefab != null)
+                {
+                    visualGo = Instantiate(prefab, gunRoot);
+                    visualGo.name = $"{prefabName}_Visual";
+                    visualGo.transform.localPosition = localOffset;
+                    visualGo.transform.localRotation = Quaternion.identity;
+                    visualGo.transform.localScale = Vector3.one;
 
                     var muzzle = new GameObject("MuzzleTip");
-                    muzzle.transform.SetParent(gunVisual.transform);
-                    muzzle.transform.localPosition = new Vector3(0f, 0.015f, 0.49f);
-                    muzzlePoint = muzzle.transform;
+                    muzzle.transform.SetParent(visualGo.transform);
+                    muzzle.transform.localPosition = muzzleOffset;
+
+                    _weaponVisualInstances[slotIndex] = visualGo;
+                    _weaponMuzzlePoints[slotIndex] = muzzle.transform;
                 }
                 else
                 {
-                    // Fallback using explicit URP Lit material (prevents magenta fallback)
-                    var litShader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard") ?? Shader.Find("Unlit/Color");
-                    var gunMat = new Material(litShader) { color = new Color(0.2f, 0.22f, 0.24f) };
-
-                    var gunBody = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    gunBody.name = "GunBody";
-                    gunBody.transform.SetParent(gunRoot);
-                    gunBody.transform.localPosition = new Vector3(0f, 0f, 0.15f);
-                    gunBody.transform.localScale = new Vector3(0.08f, 0.12f, 0.45f);
-                    var col = gunBody.GetComponent<Collider>();
-                    if (col != null) Destroy(col);
-                    gunBody.GetComponent<Renderer>().material = gunMat;
-
-                    var barrel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                    barrel.name = "GunBarrel";
-                    barrel.transform.SetParent(gunRoot);
-                    barrel.transform.localPosition = new Vector3(0f, 0.03f, 0.42f);
-                    barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                    barrel.transform.localScale = new Vector3(0.04f, 0.15f, 0.04f);
-                    var bCol = barrel.GetComponent<Collider>();
-                    if (bCol != null) Destroy(bCol);
-                    barrel.GetComponent<Renderer>().material = gunMat;
-
-                    var muzzle = new GameObject("MuzzleTip");
-                    muzzle.transform.SetParent(gunRoot);
-                    muzzle.transform.localPosition = new Vector3(0f, 0.03f, 0.58f);
-                    muzzlePoint = muzzle.transform;
+                    Debug.LogWarning($"[WeaponSystem] Missing prefab 'Art/Prefabs/{prefabName}' for weapon '{weaponId}'. Creating explicit URP Lit fallback.");
+                    visualGo = CreateFallbackGunVisual(slotIndex, weaponId, out var muzzle);
+                    _weaponVisualInstances[slotIndex] = visualGo;
+                    _weaponMuzzlePoints[slotIndex] = muzzle;
                 }
             }
+
+            if (visualGo != null)
+            {
+                visualGo.SetActive(true);
+            }
+
+            if (_weaponMuzzlePoints.TryGetValue(slotIndex, out var activeMuz) && activeMuz != null)
+            {
+                muzzlePoint = activeMuz;
+            }
+        }
+
+        private GameObject CreateFallbackGunVisual(int slotIndex, string weaponId, out Transform muzzle)
+        {
+            var fallbackRoot = new GameObject($"Fallback_{weaponId}_Visual");
+            fallbackRoot.transform.SetParent(gunRoot);
+            fallbackRoot.transform.localPosition = Vector3.zero;
+            fallbackRoot.transform.localRotation = Quaternion.identity;
+
+            var litShader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard") ?? Shader.Find("Unlit/Color");
+            var gunMat = new Material(litShader) { color = new Color(0.2f, 0.22f, 0.24f) };
+
+            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            body.name = "Body";
+            body.transform.SetParent(fallbackRoot.transform);
+            body.transform.localPosition = new Vector3(0f, 0f, 0.15f);
+            body.transform.localScale = new Vector3(0.06f, 0.10f, 0.35f);
+            var col = body.GetComponent<Collider>();
+            if (col != null) Destroy(col);
+            body.GetComponent<Renderer>().material = gunMat;
+
+            var barrel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            barrel.name = "Barrel";
+            barrel.transform.SetParent(fallbackRoot.transform);
+            barrel.transform.localPosition = new Vector3(0f, 0.02f, 0.38f);
+            barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            barrel.transform.localScale = new Vector3(0.03f, 0.12f, 0.03f);
+            var bCol = barrel.GetComponent<Collider>();
+            if (bCol != null) Destroy(bCol);
+            barrel.GetComponent<Renderer>().material = gunMat;
+
+            var mGo = new GameObject("MuzzleTip");
+            mGo.transform.SetParent(fallbackRoot.transform);
+            mGo.transform.localPosition = new Vector3(0f, 0.02f, 0.50f);
+            muzzle = mGo.transform;
+
+            return fallbackRoot;
         }
 
         public void ProcessWeapons(PlayerInputState input)
@@ -544,6 +632,8 @@ namespace OutrunAftermath.Client.Runtime.Combat
             activeSlotIndex = slotIndex;
             _isReloading = false;
             _currentSpread = CurrentWeapon.baseSpread;
+
+            UpdateActiveWeaponVisual(slotIndex);
 
             OnWeaponSwitched?.Invoke(CurrentWeapon);
             OnAmmoChanged?.Invoke(CurrentWeapon.currentMagazine, CurrentWeapon.reserveAmmo);

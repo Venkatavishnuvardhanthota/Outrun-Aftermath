@@ -188,6 +188,8 @@ namespace OutrunAftermath.Client.Multiplayer
         {
             base.OnNetworkSpawn();
 
+            Debug.Log($"[NetworkPlayer] Client/Server NetworkPlayer spawned! NetworkObjectId={NetworkObjectId}, OwnerClientId={OwnerClientId}, IsOwner={IsOwner}, IsServer={IsServer}");
+
             // Subscribe to state replication
             NetFaction.OnValueChanged += (_, _) => UpdateFactionVisuals();
             NetCallsign.OnValueChanged += (_, _) => UpdateOverheadLabel();
@@ -474,6 +476,8 @@ namespace OutrunAftermath.Client.Multiplayer
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
         public void FireWeaponRpc(Vector3 origin, Vector3 direction, float clientSpreadDeg, int weaponSlot)
         {
+            Debug.Log($"[NetworkPlayer] Server processed gameplay RPC: FireWeaponRpc from ClientId={OwnerClientId}, WeaponSlot={weaponSlot}, Origin={origin}");
+
             if (_health.State != PlayerLifeState.Alive) return;
             if (weaponSlot < 0 || weaponSlot >= _weapons.Loadout.Count) return;
 
@@ -605,6 +609,8 @@ namespace OutrunAftermath.Client.Multiplayer
         [Rpc(SendTo.ClientsAndHost)]
         private void PlayShotEffectsRpc(Vector3 tracerStart, Vector3 tracerEnd, bool didHit, bool isHeadshot)
         {
+            Debug.Log($"[NetworkPlayer] Client processed PlayShotEffectsRpc from server confirming shot fired! Start={tracerStart}, End={tracerEnd}, Hit={didHit}");
+
             if (_weapons != null)
             {
                 _weapons.SpawnVisualTracer(tracerStart, tracerEnd);

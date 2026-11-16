@@ -1,23 +1,26 @@
 # OUTRUN: AFTERMATH — AUTHORITATIVE ASSET REGISTER
-**Phase B: Visual Foundation & Dead City Environment Overhaul**
+**Phase B & B.1: Visual Foundation, Quality Profiles & Multi-Tier Weapon Visuals**
 
-This register maintains an authoritative, audit-compliant inventory of all 3D geometry, PBR textures, shaders, materials, and prefabs created and integrated for **OUTRUN: AFTERMATH** in compliance with Phase B guidelines.
+This register maintains an authoritative, audit-compliant inventory of all 3D geometry, PBR textures, shaders, materials, prefabs, and tiered render pipeline configurations created and integrated for **OUTRUN: AFTERMATH** in compliance with Phase B and B.1 guidelines.
 
 ---
 
 ## 1. Technical Pipeline & Rendering Foundation
 
 - **Render Pipeline**: Universal Render Pipeline (URP 17.6.0 on Unity 6000.6.9f1)
-- **Pipeline Asset**: `Assets/Settings/URP_HighFidelity.asset`
-- **Renderer Data**: `Assets/Settings/URP_HighFidelity_Renderer.asset` (Forward+ cluster lighting loop)
-- **Renderer Features**: `ScreenSpaceAmbientOcclusion` (SSAO enabled for ground contact shadows and architectural crevice depth)
+- **Multi-Tier Quality Architecture**: 6 discrete URP Pipeline Assets and forward renderer configurations bound to `QualitySettings.asset`:
+  - **Very Low** (`URP_Quality_VeryLow.asset`): Shadow distance 20m, 1 cascade, soft shadows disabled, MSAA disabled, render scale 0.75, SSAO disabled, LOD bias 0.4.
+  - **Low** (`URP_Quality_Low.asset`): Shadow distance 35m, 2 cascades, soft shadows disabled, MSAA 2x, render scale 0.85, SSAO disabled, LOD bias 0.7.
+  - **Medium** (`URP_Quality_Medium.asset`): Shadow distance 50m, 2 cascades, soft shadows enabled, MSAA 2x, render scale 1.0, SSAO disabled, LOD bias 1.0.
+  - **High** (`URP_Quality_High.asset`): Shadow distance 70m, 3 cascades, soft shadows enabled, MSAA 4x, render scale 1.0, SSAO enabled, LOD bias 1.3.
+  - **Very High** (`URP_Quality_VeryHigh.asset`): Shadow distance 90m, 4 cascades, soft shadows enabled, MSAA 4x, render scale 1.0, SSAO enabled, LOD bias 1.6.
+  - **Ultra** (`URP_Quality_Ultra.asset`): Shadow distance 120m, 4 cascades, soft shadows enabled, MSAA 8x, render scale 1.0, SSAO enabled (high samples), LOD bias 2.0.
 - **Volume Profile**: `Assets/DefaultVolumeProfile.asset`
   - **Tonemapping**: ACES (Academy Color Encoding System)
   - **Bloom**: Intensity 0.65, Threshold 0.90, Scatter 0.70
   - **Color Adjustments**: Post-Exposure +0.20 EV, Contrast +12.0, Saturation +8.0
   - **Vignette**: Intensity 0.25, Smoothness 0.35
-- **Shadow Quality**: 4 Cascades (split ratios 0.067, 0.2, 0.467), 80m distance, Soft Shadows enabled
-- **Anti-Aliasing**: 4x MSAA with HDR (High Dynamic Range 32-bit float buffer)
+- **Asset Validation Engine**: `MapEnvironmentDirector.cs` enforces explicit runtime verification (`-strict-assets` CLI arg / `StrictAssetValidationMode = true`), validating all 16 Sector 4 prefabs and failing fast with `MissingReferenceException` rather than silent geometric degradation.
 
 ---
 
@@ -38,6 +41,10 @@ This register maintains an authoritative, audit-compliant inventory of all 3D ge
 | `Prop_ShippingContainer_20ft` | 3D Mesh | Authored 3D Generator (`scripts/generate_phase_b_assets.py`) | Project Original | `Assets/Art/Meshes/Props/Prop_ShippingContainer_20ft.obj` | Model, Normals: Import, Tangents: Calculate | `M_CorrugatedMetal_Rust` | None |
 | `Prop_StreetLight_Broken` | 3D Mesh | Authored 3D Generator (`scripts/generate_phase_b_assets.py`) | Project Original | `Assets/Art/Meshes/Props/Prop_StreetLight_Broken.obj` | Model, Normals: Import, Tangents: Calculate | `M_CorrugatedMetal_Rust` | None |
 | `Debris_ConcreteRubble_Pile` | 3D Mesh | Authored 3D Generator (`scripts/generate_phase_b_assets.py`) | Project Original | `Assets/Art/Meshes/Debris/Debris_ConcreteRubble_Pile.obj` | Model, Normals: Import, Tangents: Calculate | `M_Concrete_Weathered` | None |
+| `Vehicle_Convoy_Technical_Armored` | 3D Mesh | Authored 3D Generator (`scripts/generate_phase_b_assets.py`) | Project Original | `Assets/Art/Meshes/Vehicles/Vehicle_Convoy_Technical_Armored.obj` | Model, Normals: Import, Tangents: Calculate | `M_VehicleWreck_Burnt` | None |
+| `Weapon_Vanguard_AssaultRifle` | 3D Mesh | Authored 3D Generator (`scripts/generate_phase_b_assets.py`) | Project Original | `Assets/Art/Meshes/Props/Weapon_Vanguard_AssaultRifle.obj` | Model, Normals: Import, Tangents: Calculate | `M_Weapon_TacticalSteel` | None |
+| `Weapon_Breacher_Shotgun` | 3D Mesh | Authored 3D Generator (`scripts/generate_phase_b_assets.py`) | Project Original | `Assets/Art/Meshes/Props/Weapon_Breacher_Shotgun.obj` | Model, Normals: Import, Tangents: Calculate | `M_Weapon_TacticalSteel` | None |
+| `Weapon_Sidekick_Pistol` | 3D Mesh | Authored 3D Generator (`scripts/generate_phase_b_assets.py`) | Project Original | `Assets/Art/Meshes/Props/Weapon_Sidekick_Pistol.obj` | Model, Normals: Import, Tangents: Calculate | `M_Weapon_TacticalSteel` | None |
 | `T_Asphalt_Albedo` | 2D Texture | Procedural PBR (`scripts/generate_phase_b_assets.py`) | Project Original | `Assets/Art/Textures/Roads/T_Asphalt_Albedo.png` | 1024x1024, sRGB=True, MaxSize=1024 | `M_Asphalt_Damaged` | None |
 | `T_Asphalt_Normal` | 2D Texture | Procedural Sobel (`scripts/generate_phase_b_assets.py`) | Project Original | `Assets/Art/Textures/Roads/T_Asphalt_Normal.png` | 1024x1024, NormalMap, sRGB=False | `M_Asphalt_Damaged` | None |
 | `T_Asphalt_MaskMap` | 2D Texture | Procedural MaskMap (`scripts/generate_phase_b_assets.py`) | Project Original | `Assets/Art/Textures/Roads/T_Asphalt_MaskMap.png` | 1024x1024, Default, sRGB=False | `M_Asphalt_Damaged` | None |
@@ -62,6 +69,7 @@ This register maintains an authoritative, audit-compliant inventory of all 3D ge
 | `M_Barrier_Jersey` | Material | URP Lit Shader | Project Original | `Assets/Art/Materials/M_Barrier_Jersey.mat` | GPU Instanced, Metallic=0, Smoothness=0.25 | URP Lit | Albedo, Normal, MaskMap |
 | `M_FuelBarrel_Explosive` | Material | URP Lit Shader | Project Original | `Assets/Art/Materials/M_FuelBarrel_Explosive.mat` | GPU Instanced, Metallic=0.65, Smoothness=0.50 | URP Lit | Albedo, Normal, MaskMap |
 | `M_VehicleWreck_Burnt` | Material | URP Lit Shader | Project Original | `Assets/Art/Materials/M_VehicleWreck_Burnt.mat` | GPU Instanced, Metallic=0.40, Smoothness=0.35 | URP Lit | Albedo, Normal, MaskMap |
+| `M_Weapon_TacticalSteel` | Material | URP Lit Shader | Project Original | `Assets/Art/Materials/M_Weapon_TacticalSteel.mat` | GPU Instanced, Metallic=0.85, Smoothness=0.60 | URP Lit | Albedo, Normal, MaskMap |
 | `PF_Road_2Lane_Straight_12m` | Prefab | `ArtAssetPipeline` | Project Original | `Assets/Resources/Art/Prefabs/PF_Road_2Lane_Straight_12m.prefab` | MeshFilter + MeshRenderer + BoxCollider | `M_Asphalt_Damaged` | `Road_2Lane_Straight_12m.obj` |
 | `PF_Road_Intersection` | Prefab | `ArtAssetPipeline` | Project Original | `Assets/Resources/Art/Prefabs/PF_Road_Intersection.prefab` | MeshFilter + MeshRenderer + BoxCollider | `M_Asphalt_Damaged` | `Road_Intersection_Square.obj` |
 | `PF_Road_Crater` | Prefab | `ArtAssetPipeline` | Project Original | `Assets/Resources/Art/Prefabs/PF_Road_Crater.prefab` | MeshFilter + MeshRenderer + MeshCollider (Concave) | `M_Asphalt_Damaged` | `Road_Crater_Section_12m.obj` |
@@ -75,4 +83,7 @@ This register maintains an authoritative, audit-compliant inventory of all 3D ge
 | `PF_Prop_ShippingContainer_20ft` | Prefab | `ArtAssetPipeline` | Project Original | `Assets/Resources/Art/Prefabs/PF_Prop_ShippingContainer_20ft.prefab` | MeshFilter + MeshRenderer + BoxCollider | `M_CorrugatedMetal_Rust` | `Prop_ShippingContainer_20ft.obj` |
 | `PF_Prop_StreetLight_Broken` | Prefab | `ArtAssetPipeline` | Project Original | `Assets/Resources/Art/Prefabs/PF_Prop_StreetLight_Broken.prefab` | MeshFilter + MeshRenderer + BoxCollider | `M_CorrugatedMetal_Rust` | `Prop_StreetLight_Broken.obj` |
 | `PF_Debris_ConcreteRubble_Pile` | Prefab | `ArtAssetPipeline` | Project Original | `Assets/Resources/Art/Prefabs/PF_Debris_ConcreteRubble_Pile.prefab` | MeshFilter + MeshRenderer + MeshCollider | `M_Concrete_Weathered` | `Debris_ConcreteRubble_Pile.obj` |
+| `PF_Weapon_Vanguard_AssaultRifle` | Prefab | `ArtAssetPipeline` | Project Original | `Assets/Resources/Art/Prefabs/PF_Weapon_Vanguard_AssaultRifle.prefab` | MeshFilter + MeshRenderer + Muzzle Point | `M_Weapon_TacticalSteel` | `Weapon_Vanguard_AssaultRifle.obj` |
+| `PF_Weapon_Breacher_Shotgun` | Prefab | `ArtAssetPipeline` | Project Original | `Assets/Resources/Art/Prefabs/PF_Weapon_Breacher_Shotgun.prefab` | MeshFilter + MeshRenderer + Muzzle Point | `M_Weapon_TacticalSteel` | `Weapon_Breacher_Shotgun.obj` |
+| `PF_Weapon_Sidekick_Pistol` | Prefab | `ArtAssetPipeline` | Project Original | `Assets/Resources/Art/Prefabs/PF_Weapon_Sidekick_Pistol.prefab` | MeshFilter + MeshRenderer + Muzzle Point | `M_Weapon_TacticalSteel` | `Weapon_Sidekick_Pistol.obj` |
 | `DeadCity_AtmosphereFX` | Particle System | Procedural Subsystem | Project Original | Spawned at runtime by `MapEnvironmentDirector` | ParticleSystem, Box Volume (65x10x95), Rate: 25/s, Max: 200 | URP Particles Unlit | Atmospheric wind drift & ash |

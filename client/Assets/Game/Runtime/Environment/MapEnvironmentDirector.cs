@@ -15,6 +15,73 @@ namespace OutrunAftermath.Client.Runtime.Environment
     {
         public static MapEnvironmentDirector Instance { get; private set; }
 
+        public static bool StrictAssetValidationMode { get; set; } = false;
+
+        public static readonly string[] RequiredSector4Prefabs = new string[]
+        {
+            "PF_Road_2Lane_Straight_12m",
+            "PF_Road_Crater",
+            "PF_Road_Intersection",
+            "PF_Building_Bank_GF",
+            "PF_Building_Bank_2F",
+            "PF_Building_Rooftop_Perch",
+            "PF_Building_Warehouse",
+            "PF_Prop_ShippingContainer_20ft",
+            "PF_Prop_Barrier_Jersey",
+            "PF_Prop_Vehicle_Sedan_Wreck",
+            "PF_Debris_ConcreteRubble_Pile",
+            "PF_Prop_StreetLight_Broken",
+            "PF_Prop_Barrel_FuelRusted",
+            "PF_Weapon_Vanguard_AssaultRifle",
+            "PF_Weapon_Breacher_Shotgun",
+            "PF_Weapon_Sidekick_Pistol"
+        };
+
+        [Serializable]
+        public sealed class AssetValidationReport
+        {
+            public int TotalChecked;
+            public int LoadedCount;
+            public int MissingCount;
+            public List<string> LoadedPrefabs = new List<string>();
+            public List<string> MissingPrefabs = new List<string>();
+            public bool AllRequiredLoaded => MissingCount == 0;
+
+            public override string ToString()
+            {
+                string status = AllRequiredLoaded ? "PASSED" : "FAILED (MISSING ASSETS)";
+                return $"[AssetValidationReport] Total: {TotalChecked}, Loaded: {LoadedCount}, Missing: {MissingCount} => Status: {status}";
+            }
+        }
+
+        public static AssetValidationReport ValidateRequiredAssets(string[] required = null)
+        {
+            required ??= RequiredSector4Prefabs;
+            var report = new AssetValidationReport
+            {
+                TotalChecked = required.Length
+            };
+
+            foreach (var assetName in required)
+            {
+                var prefab = Resources.Load<GameObject>($"Art/Prefabs/{assetName}");
+                if (prefab != null)
+                {
+                    report.LoadedCount++;
+                    report.LoadedPrefabs.Add(assetName);
+                }
+                else
+                {
+                    report.MissingCount++;
+                    report.MissingPrefabs.Add(assetName);
+                    Debug.LogWarning($"[MapEnvironmentDirector][ASSET VALIDATION WARNING] Required prefab missing: 'Art/Prefabs/{assetName}'");
+                }
+            }
+
+            Debug.Log(report.ToString());
+            return report;
+        }
+
         [Header("Active Map State")]
         [SerializeField] private string activeMapId = "deadcity";
         [SerializeField] private WeatherCondition activeWeather = WeatherCondition.Clear;
@@ -29,6 +96,16 @@ namespace OutrunAftermath.Client.Runtime.Environment
                 return;
             }
             Instance = this;
+
+            string[] args = System.Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i].Equals("-strict-assets", StringComparison.OrdinalIgnoreCase))
+                {
+                    StrictAssetValidationMode = true;
+                    Debug.Log("[MapEnvironmentDirector] Strict Asset Validation Mode ENABLED via command line flag.");
+                }
+            }
         }
 
         public void LoadMap(string mapId, WeatherCondition weather = WeatherCondition.Clear)
@@ -85,6 +162,13 @@ namespace OutrunAftermath.Client.Runtime.Environment
         // ==========================================
         private void BuildDeadCity(Transform root)
         {
+            var validationReport = ValidateRequiredAssets();
+            Debug.Log($"[MapEnvironmentDirector] Sector 4 Asset Validation: {validationReport}");
+            if (StrictAssetValidationMode && !validationReport.AllRequiredLoaded)
+            {
+                throw new MissingReferenceException($"[MapEnvironmentDirector][STRICT ASSET FAILURE] {validationReport.MissingCount} required prefabs missing in Dead City Sector 4!");
+            }
+
             var asphaltMat = CreateLitMaterial(new Color(0.18f, 0.19f, 0.20f), 0.2f);
             var concreteMat = CreateLitMaterial(new Color(0.35f, 0.36f, 0.38f), 0.15f);
             var steelMat = CreateLitMaterial(new Color(0.25f, 0.28f, 0.32f), 0.65f);
@@ -566,7 +650,18 @@ namespace OutrunAftermath.Client.Runtime.Environment
                 return instance;
             }
 
-            fallback?.Invoke();
+            Debug.LogWarning($"[MapEnvironmentDirector][ASSET MISSING] Required prefab 'Art/Prefabs/{prefabResourceName}' could not be loaded from Resources!");
+
+            if (StrictAssetValidationMode)
+            {
+                throw new MissingReferenceException($"[MapEnvironmentDirector][STRICT ASSET FAILURE] Required prefab 'Art/Prefabs/{prefabResourceName}' missing in strict validation mode!");
+            }
+
+            if (fallback != null)
+            {
+                Debug.LogWarning($"[MapEnvironmentDirector][FALLBACK ENGAGED] Using development placeholder fallback for '{prefabResourceName}'.");
+                fallback.Invoke();
+            }
             return null;
         }
 

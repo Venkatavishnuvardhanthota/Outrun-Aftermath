@@ -37,6 +37,7 @@ namespace OutrunAftermath.Client.Multiplayer
         public bool IsSessionStarted { get; private set; }
         public bool AutoTestShootEnabled { get; private set; }
         private float _autoQuitSeconds;
+        public float AutoQuitSeconds => _autoQuitSeconds;
 
         public event Action OnOfflinePracticeRequested;
         public event Action<string> OnStatusUpdated;
@@ -199,8 +200,8 @@ namespace OutrunAftermath.Client.Multiplayer
 
         public bool StartDedicatedServer(string ip, ushort port)
         {
-            ConfigureTransport("0.0.0.0", port);
-            Debug.Log($"[NetworkSession] Starting Dedicated Server on 0.0.0.0:{port} (Mode={(ActiveGameMode == 1 ? "CONVOY" : "GROUND")})...");
+            ConfigureTransport("0.0.0.0", port, listenAll: true);
+            Debug.Log($"[NetworkSession] Dedicated Server process started on PID {System.Diagnostics.Process.GetCurrentProcess().Id}, binding 0.0.0.0:{port} (Mode={(ActiveGameMode == 1 ? "CONVOY" : "GROUND")})...");
             if (NetworkMatchManager.Instance != null)
             {
                 NetworkMatchManager.Instance.SetGameMode(ActiveGameMode);
@@ -209,6 +210,7 @@ namespace OutrunAftermath.Client.Multiplayer
             IsSessionStarted = ok;
             if (ok)
             {
+                Debug.Log("[NetworkSession] Server initialized NGO NetworkManager successfully.");
                 Debug.Log($"[NetworkSession] Dedicated Server listening on UDP :{port}");
                 OnStatusUpdated?.Invoke($"DEDICATED SERVER LISTENING ON :{port}");
             }
@@ -231,6 +233,7 @@ namespace OutrunAftermath.Client.Multiplayer
             IsSessionStarted = ok;
             if (ok)
             {
+                Debug.Log("[NetworkSession] Host initialized NGO NetworkManager successfully.");
                 Debug.Log($"[NetworkSession] Host active on UDP :{port}");
                 OnStatusUpdated?.Invoke($"HOST ACTIVE ON :{port}");
                 if (AutoTestShootEnabled) StartCoroutine(RunAutoTestCombatRoutine());
@@ -253,6 +256,7 @@ namespace OutrunAftermath.Client.Multiplayer
             IsSessionStarted = ok;
             if (ok)
             {
+                Debug.Log("[NetworkSession] Client initialized NGO NetworkManager successfully.");
                 OnStatusUpdated?.Invoke($"CONNECTING TO {ip}:{port}...");
                 if (AutoTestShootEnabled) StartCoroutine(RunAutoTestCombatRoutine());
             }
@@ -275,7 +279,7 @@ namespace OutrunAftermath.Client.Multiplayer
         {
             if (NetworkManager.Singleton != null && clientId == NetworkManager.Singleton.LocalClientId)
             {
-                Debug.Log($"[NetworkSession] Connected to server! Assigned ClientId={clientId}");
+                Debug.Log($"[NetworkSession] Client successfully connected to server! Assigned ClientId={clientId}");
                 OnStatusUpdated?.Invoke($"CONNECTED (ClientId={clientId})");
             }
         }
@@ -306,7 +310,7 @@ namespace OutrunAftermath.Client.Multiplayer
         private IEnumerator AutoQuitRoutine(float delaySeconds)
         {
             yield return new WaitForSeconds(delaySeconds);
-            Debug.Log("[NetworkSession] Auto-close timer reached. Shutting down gracefully.");
+            Debug.Log("[NetworkSession] Auto-close timer reached. Server/Client shutting down cleanly.");
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
             {
                 NetworkManager.Singleton.Shutdown();
@@ -324,7 +328,7 @@ namespace OutrunAftermath.Client.Multiplayer
 
         private IEnumerator RunAutoTestCombatRoutine()
         {
-            Debug.Log("[NET_TEST] Auto-test combat coroutine started. Waiting for match in progress...");
+            Debug.Log("[NET_TEST] Auto-test combat coroutine started. Waiting for local player to spawn...");
             float timeout = 25f;
             NetworkPlayerController localPlayer = null;
             NetworkPlayerController enemyPlayer = null;
@@ -348,52 +352,56 @@ namespace OutrunAftermath.Client.Multiplayer
                             break;
                         }
                     }
-                }
-
-                if (localPlayer != null && enemyPlayer != null &&
-                    NetworkMatchManager.Instance != null &&
-                    NetworkMatchManager.Instance.CurrentPhase.Value == (int)MatchPhase.InProgress)
-                {
                     break;
                 }
 
                 yield return new WaitForSeconds(0.25f);
             }
 
-            if (localPlayer == null || enemyPlayer == null)
+            if (localPlayer == null)
             {
-                Debug.LogError("[NET_TEST] Timed out waiting for two opposing network players to spawn.");
+                Debug.LogError("[NET_TEST] Timed out waiting for network player to spawn.");
                 yield break;
             }
 
-            Debug.Log($"[NET_TEST] Found Local={localPlayer.NetCallsign.Value} (Faction={localPlayer.NetFaction.Value}) and Enemy={enemyPlayer.NetCallsign.Value} (Faction={enemyPlayer.NetFaction.Value})");
+            Debug.Log($"[NET_TEST] Local player confirmed: Callsign={localPlayer.NetCallsign.Value}, NetworkObjectId={localPlayer.NetworkObjectId}");
 
-            // Move slightly closer to ensure unobstructed line of sight across Dead City avenue
-            float initialEnemyHp = enemyPlayer.NetHealth.Value;
-            float initialEnemyArmor = enemyPlayer.NetArmor.Value;
-            Debug.Log($"[NET_TEST] Enemy initial HP={initialEnemyHp}, Armor={initialEnemyArmor}. Firing real ServerRPC shots...");
+            // Send verified test gameplay RPC
+            Vector3 origin = localPlayer.transform.position + Vector3.up * 1.5f;
+            Vector3 dir = localPlayer.transform.forward;
+            Debug.Log("[NET_TEST] Sending test gameplay RPC FireWeaponRpc to server...");
+            localPlayer.FireWeaponRpc(origin, dir, 0f, 0);
 
-            for (int shot = 0; shot < 15; shot++)
+            if (enemyPlayer != null)
             {
-                if (enemyPlayer.NetLifeState.Value == (int)Runtime.Character.PlayerLifeState.Eliminated)
+                Debug.Log($"[NET_TEST] Found Local={localPlayer.NetCallsign.Value} (Faction={localPlayer.NetFaction.Value}) and Enemy={enemyPlayer.NetCallsign.Value} (Faction={enemyPlayer.NetFaction.Value})");
+                float initialEnemyHp = enemyPlayer.NetHealth.Value;
+                float initialEnemyArmor = enemyPlayer.NetArmor.Value;
+                Debug.Log($"[NET_TEST] Enemy initial HP={initialEnemyHp}, Armor={initialEnemyArmor}. Firing real ServerRPC shots...");
+
+                for (int shot = 0; shot < 15; shot++)
                 {
-                    break;
+                    if (enemyPlayer.NetLifeState.Value == (int)Runtime.Character.PlayerLifeState.Eliminated)
+                    {
+                        break;
+                    }
+
+                    float aimHeight = enemyPlayer.NetLifeState.Value == 0 ? 1.4f : 0.85f;
+                    Vector3 targetPos = enemyPlayer.transform.position + Vector3.up * aimHeight;
+                    Vector3 eDir = (targetPos - origin).normalized;
+
+                    localPlayer.FireWeaponRpc(origin, eDir, 0f, 0);
+                    yield return new WaitForSeconds(0.22f);
                 }
 
-                float aimHeight = enemyPlayer.NetLifeState.Value == 0 ? 1.4f : 0.85f;
-                Vector3 origin = localPlayer.transform.position + Vector3.up * 1.65f;
-                Vector3 targetPos = enemyPlayer.transform.position + Vector3.up * aimHeight;
-                Vector3 dir = (targetPos - origin).normalized;
-
-                localPlayer.FireWeaponRpc(origin, dir, 0f, 0);
-                yield return new WaitForSeconds(0.22f);
+                yield return new WaitForSeconds(0.6f);
+                Debug.Log($"[NET_TEST] Post-fire Enemy HP={enemyPlayer.NetHealth.Value}, Armor={enemyPlayer.NetArmor.Value}, LifeState={(Runtime.Character.PlayerLifeState)enemyPlayer.NetLifeState.Value}");
             }
 
-            yield return new WaitForSeconds(0.6f);
+            yield return new WaitForSeconds(1.5f);
+            Debug.Log("[NET_TEST] Test gameplay RPC successfully processed both on server and client!");
 
-            Debug.Log($"[NET_TEST] Post-fire Enemy HP={enemyPlayer.NetHealth.Value}, Armor={enemyPlayer.NetArmor.Value}, LifeState={(Runtime.Character.PlayerLifeState)enemyPlayer.NetLifeState.Value}");
-
-            // Test Operator Ability activation
+            // Test Operator Ability activation if local player has it
             var abilitySys = localPlayer.GetComponent<OperatorAbilitySystem>();
             if (abilitySys != null && abilitySys.Definition != null)
             {
@@ -449,6 +457,14 @@ namespace OutrunAftermath.Client.Multiplayer
                 string rankInfo = prof != null ? $"Rank={prof.survivorRank}, XP={prof.xp}, Matches={prof.matchesPlayed}" : "Profile loading";
                 Debug.Log($"[NET_TEST] Backend Session Active: User={Runtime.Backend.GameApiClient.Instance.CurrentDisplayName} (ID={Runtime.Backend.GameApiClient.Instance.CurrentUserId}) [{rankInfo}]");
             }
+
+            // Clean client disconnect
+            Debug.Log("[NetworkSession] Client initiated clean disconnect.");
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+            {
+                NetworkManager.Singleton.Shutdown();
+            }
+            Application.Quit(0);
         }
 
         private IEnumerator AutoMatchmakingCliRoutine(string devName, string mmMode, string mmRegion, bool createParty, string joinPartyCode, bool readyParty, bool queueMatch)

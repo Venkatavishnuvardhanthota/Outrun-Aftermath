@@ -210,6 +210,8 @@ namespace OutrunAftermath.Client.Multiplayer
         {
             if (!IsServer || _players.ContainsKey(clientId)) return;
 
+            Debug.Log($"[NetworkMatchManager] Server received client connection callback for ClientId={clientId}");
+
             if (playerPrefab == null)
             {
                 // Fallback lookup from NetworkManager prefab list
@@ -258,7 +260,7 @@ namespace OutrunAftermath.Client.Multiplayer
             RecountTeamsServer();
 
             string factionName = assignedFaction == 0 ? "ROGUE" : "SENTINEL";
-            Debug.Log($"[NetworkMatchManager] Spawned client {clientId} as {callsign} ({operatorId.ToUpper()} // {factionName}) at {spawnPos}");
+            Debug.Log($"[NetworkMatchManager] Spawned NetworkPlayer for client {clientId} as {callsign} ({operatorId.ToUpper()} // {factionName}) at {spawnPos}");
             BroadcastFeedRpc($"{callsign} deployed as {operatorId.ToUpper()} ({factionName})");
 
             if (ActiveGameMode.Value == 1) // Convoy Operations Mode
@@ -283,6 +285,7 @@ namespace OutrunAftermath.Client.Multiplayer
         private void HandleClientDisconnected(ulong clientId)
         {
             if (!IsServer) return;
+            Debug.Log($"[NetworkMatchManager] Server received client disconnect callback for ClientId={clientId}");
 
             if (_players.TryGetValue(clientId, out var player))
             {
@@ -291,6 +294,17 @@ namespace OutrunAftermath.Client.Multiplayer
                 RecountTeamsServer();
                 Debug.Log($"[NetworkMatchManager] Client {clientId} ({name}) disconnected.");
                 BroadcastFeedRpc($"{name} disconnected");
+
+                // In headless batchmode testing, auto-close cleanly when client disconnects
+                if (Application.isBatchMode && _players.Count == 0 && NetworkSessionController.Instance != null && NetworkSessionController.Instance.AutoQuitSeconds > 0)
+                {
+                    Debug.Log("[NetworkSession] All clients disconnected. Dedicated server shutting down cleanly.");
+                    if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+                    {
+                        NetworkManager.Singleton.Shutdown();
+                    }
+                    Application.Quit(0);
+                }
             }
         }
 

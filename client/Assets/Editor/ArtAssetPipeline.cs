@@ -90,6 +90,8 @@ namespace OutrunAftermath.Client.Editor
 
             // Props & Weapons
             CreatePrefabFromObj("PF_Weapon_Vanguard_AssaultRifle", "Assets/Art/Meshes/Props/Weapon_Vanguard_AssaultRifle.obj", matWeapon, ColliderType.None);
+            CreatePrefabFromObj("PF_Weapon_Breacher_Shotgun", "Assets/Art/Meshes/Props/Weapon_Breacher_Shotgun.obj", matWeapon, ColliderType.None);
+            CreatePrefabFromObj("PF_Weapon_Sidekick_Pistol", "Assets/Art/Meshes/Props/Weapon_Sidekick_Pistol.obj", matWeapon, ColliderType.None);
             CreatePrefabFromObj("PF_Prop_Barrier_Jersey", "Assets/Art/Meshes/Props/Prop_Barrier_Jersey.obj", matBarrier, ColliderType.Box);
             CreatePrefabFromObj("PF_Prop_ShippingContainer_20ft", "Assets/Art/Meshes/Props/Prop_ShippingContainer_20ft.obj", matCorrugated, ColliderType.Box);
             CreatePrefabFromObj("PF_Prop_StreetLight_Broken", "Assets/Art/Meshes/Props/Prop_StreetLight_Broken.obj", matCorrugated, ColliderType.Box);
@@ -278,6 +280,64 @@ namespace OutrunAftermath.Client.Editor
             {
                 Object.DestroyImmediate(go);
             }
+        }
+
+        [MenuItem("Outrun/Capture Sector 4 Screenshot")]
+        public static void CaptureSector4Screenshot()
+        {
+            Debug.Log("[ArtAssetPipeline] Capturing high-resolution Sector 4 screenshot...");
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene("Assets/Scenes/Main.unity");
+
+            // Ensure MapEnvironmentDirector generates Sector 4
+            var director = Object.FindAnyObjectByType<MapEnvironmentDirector>();
+            if (director == null)
+            {
+                var dirGo = new GameObject("MapEnvironmentDirector");
+                director = dirGo.AddComponent<MapEnvironmentDirector>();
+            }
+            director.LoadMap("deadcity", WeatherCondition.Clear);
+
+            // Create temporary camera looking at the main intersection, bank, vehicle wrecks, and street
+            var camGo = new GameObject("ScreenshotCamera");
+            var cam = camGo.AddComponent<Camera>();
+            camGo.transform.position = new Vector3(-8f, 7f, -14f);
+            camGo.transform.rotation = Quaternion.Euler(18f, 25f, 0f);
+            cam.fieldOfView = 65f;
+            cam.nearClipPlane = 0.3f;
+            cam.farClipPlane = 500f;
+
+            // Render to texture
+            int width = 1920;
+            int height = 1080;
+            var rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
+            cam.targetTexture = rt;
+            cam.Render();
+
+            RenderTexture.active = rt;
+            var tex = new Texture2D(width, height, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+            tex.Apply();
+            RenderTexture.active = null;
+
+            byte[] bytes = tex.EncodeToPNG();
+            string outPath = Path.Combine(Directory.GetCurrentDirectory(), "screenshot_phase_b1_deadcity.png");
+            File.WriteAllBytes(outPath, bytes);
+            Debug.Log($"[ArtAssetPipeline] Screenshot captured successfully: {outPath} ({bytes.Length} bytes)");
+
+            string brainArtifact = @"C:\Users\vishn\.gemini\antigravity\brain\4dca56ca-91c2-47c5-bfb3-fb99b4b8a1c5\screenshot_phase_b1_deadcity.png";
+            try
+            {
+                File.WriteAllBytes(brainArtifact, bytes);
+                Debug.Log($"[ArtAssetPipeline] Artifact mirrored to: {brainArtifact}");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[ArtAssetPipeline] Could not mirror to artifact: {ex.Message}");
+            }
+
+            Object.DestroyImmediate(tex);
+            Object.DestroyImmediate(rt);
+            Object.DestroyImmediate(camGo);
         }
     }
 }

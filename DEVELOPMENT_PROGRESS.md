@@ -906,5 +906,34 @@ Phase A: Complete Project Audit, Baseline Checkpoint & Corrective Development Ro
 
 ### Next phase
 
+Phase B.1: Independent Visual Foundation Audit & Corrective Fixes — Multi-tier URP quality assets, dynamic weapon visuals, non-silent asset validation, and 10-stage multiplayer E2E verification.
+
+---
+
+## Phase B.1 — 2026-11-16 (Independent Visual Foundation Audit & Corrective Fixes)
+
+### Completed features
+
+- **Independent Model Quality Audit**:
+  - Scripted inspection of all 16 Wavefront OBJ meshes in `Assets/Art/Meshes/` measuring vertex, face, normal, and UV counts.
+  - Formally differentiated prototype compound-box architectural blockouts from production-grade DCC assets. Documented in `KNOWN_ISSUES.md` and `docs/ASSET_REGISTER.md` without fabricating polygon counts or claiming box assemblies are AAA finished models.
+- **Fail-Fast Asset Validation Engine (`MapEnvironmentDirector.cs`)**:
+  - Implemented `StrictAssetValidationMode` and `-strict-assets` command line argument.
+  - Eliminated silent primitive fallbacks: replaced silent cube/cylinder fallbacks with structured `AssetValidationReport` logging and explicit `MissingReferenceException` when required prefabs are missing.
+  - Runtime verification verified 16/16 required prefabs loaded successfully with zero missing references.
+- **Multi-Tier URP Quality Architecture**:
+  - Overhauled `URPSetupPipeline.cs` to author 6 discrete URP Pipeline Assets and Renderers (`URP_Quality_{VeryLow,Low,Medium,High,VeryHigh,Ultra}.asset` and `URP_Renderer_{tier}.asset`) bound directly to Unity `QualitySettings.asset`.
+  - Configured tailored shadow distances (20m to 120m), cascade counts (1 to 4), SSAO activation, MSAA levels (Off, 2x, 4x, 8x), render scales (0.75 to 1.0), and LOD bias adjustments (0.4 to 2.0).
+- **Dynamic 3-Weapon Visual System**:
+  - Authored Wavefront OBJ meshes and materials for Breacher-12 Shotgun (`Weapon_Breacher_Shotgun.obj`) and Sidekick-9 Pistol (`Weapon_Sidekick_Pistol.obj`).
+  - Added prefab generation in `ArtAssetPipeline.cs` producing `PF_Weapon_Breacher_Shotgun.prefab` and `PF_Weapon_Sidekick_Pistol.prefab`.
+  - Updated `WeaponSystem.cs` to manage runtime visual swapping across slots 1, 2, and 3 (`Vanguard-4`, `Breacher-12`, `Sidekick-9`) with custom ADS offsets, rest positions, and muzzle flash anchors, while preserving all server-authoritative combat, damage, recoil, and networking logic.
+- **Repaired 10-Stage Multiplayer E2E Verification**:
+  - Upgraded `run_e2e_production_test.ps1` Stage 3 to verify all 10 distinct networking stages: Dedicated Server spawn, NGO init, UDP socket listening (netstat/log), Client connect, Server connection callback, Server player spawn, Client player replication, Server-authoritative `FireWeaponRpc` execution and `PlayShotEffectsRpc` receipt, Client clean disconnect, and Server clean shutdown.
+  - Updated `NetworkMatchManager.cs` to trigger a clean exit upon client disconnection in headless batchmode.
+
+### Next phase
+
 Phase C: Character Foundation — Rigged Operators REX (Rogue Assault) and TRACE (Sentinel Tracker) with modular gear, weapon attachment sockets, third-person and first-person presentations, and complete 13-state animation controller system.
+
 
