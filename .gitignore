@@ -1,35 +1,76 @@
-# Secrets
+# =========================================================
+# OUTRUN: AFTERMATH — Master Git Ignore Configuration
+# =========================================================
+
+# Secrets & Credentials
 .env
 *.pfx
 *.pem
+*.key
 appsettings.*.local.json
 **/secrets.json
+*.keystore
+*.userkeystore
+*.jks
 
-# OS
+# Operating System Files
 Thumbs.db
 Desktop.ini
 .DS_Store
+.DS_Store?
+ehthumbs.db
+[Nn]et[Hh]ood
+[Tt]rash-*
+$RECYCLE.BIN/
 
-# IDE
+# IDE & Editor Files
 .vs/
 .idea/
+.consulo/
 *.user
 *.suo
 *.userprefs
+*.userosv
+*.sln.docstates
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.freebuff/
 
-# .NET
-bin/
-obj/
+# .NET & Backend Builds
+**/bin/
+**/obj/
+**/publish/
+**/TestResults/
+coverage/
+*.pdb
 *.dll
 !client/Assets/Plugins/*.dll
-*.pdb
-TestResults/
-coverage/
 
-# Logs
+# Databases & Runtime State
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+postgres-data/
+redis-data/
+api-data/
+
+# Logs & Diagnostics
 *.log
+*.log.*
+client/build_standalone.log
+client/build_android.log
+e2e_*.log
+test_*.log
+sysinfo.txt
+CrashReports/
+client/CrashReports/
 
-# Unity
+# Unity Root & Client Subfolder Exclusions
 [Ll]ibrary/
 [Tt]emp/
 [Oo]bj/
@@ -37,23 +78,9 @@ coverage/
 [Bb]uilds/
 [Ll]ogs/
 [Uu]ser[Ss]ettings/
-MemoryCaptures/
-Recordings/
-*.pidb.meta
-*.pdb.meta
-*.mdb.meta
-CrashReports/
-sysinfo.txt
-*.apk
-*.aab
-*.unitypackage
-*.app
-InitTestScene*.unity*
+[Mm]emory[Cc]aptures/
+[Rr]ecordings/
 
-# Logs
-*.log
-
-# Unity generated
 client/[Ll]ibrary/
 client/[Tt]emp/
 client/[Oo]bj/
@@ -61,10 +88,29 @@ client/[Bb]uild/
 client/[Bb]uilds/
 client/[Ll]ogs/
 client/[Uu]ser[Ss]ettings/
+client/[Mm]emory[Cc]aptures/
+client/[Rr]ecordings/
 
-# Node (tooling)
+# Unity IDE Generated Project Files
+client/*.csproj
+client/*.unityproj
+client/*.sln
+client/*.pidb
+client/*.booproj
+client/*.svd
+
+# Unity Metadata / Package Artifacts
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+*.apk
+*.aab
+*.unitypackage
+*.app
+InitTestScene*.unity*
+AssetStoreTools*
+ExportedObj/
+
+# Node Tooling
 node_modules/
 
-# Docker volumes
-postgres-data/
-redis-data/
