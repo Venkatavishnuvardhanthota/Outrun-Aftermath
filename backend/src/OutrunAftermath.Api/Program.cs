@@ -351,6 +351,17 @@ app.MapPost("/internal/matches/complete", async (CompleteMatchRequest req, HttpC
         return Results.Unauthorized();
     }
 
+    // Phase 9: Cryptographic match signature validation
+    if (http.Request.Headers.TryGetValue("X-Match-Signature", out var sigGot) && !string.IsNullOrWhiteSpace(sigGot))
+    {
+        int totalKills = req.Players.Sum(p => p.Kills);
+        int duration = (int)(DateTime.UtcNow - req.StartedAtUtc).TotalSeconds;
+        if (!OutrunAftermath.Simulation.AntiCheat.MatchResultSigner.VerifySignature(req.MatchId.ToString(), req.WinnerFaction ?? "Draw", totalKills, duration, sigGot.ToString(), expected))
+        {
+            return Results.BadRequest(new { error = "Invalid or tampered match cryptographic signature." });
+        }
+    }
+
     var existing = await db.Matches.FirstOrDefaultAsync(m => m.Id == req.MatchId, ct);
     if (existing?.EndedAtUtc is not null)
     {

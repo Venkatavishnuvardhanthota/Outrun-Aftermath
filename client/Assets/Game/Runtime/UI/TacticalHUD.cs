@@ -599,6 +599,7 @@ namespace OutrunAftermath.Client.Runtime.UI
             txt.fontSize = fontSize;
             txt.alignment = alignment;
             txt.color = color;
+            txt.raycastTarget = false;
             return txt;
         }
 

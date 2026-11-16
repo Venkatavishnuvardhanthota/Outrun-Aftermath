@@ -480,7 +480,12 @@ namespace OutrunAftermath.Client.Multiplayer
                 });
             }
 
-            _ = Runtime.Backend.GameApiClient.Instance.CompleteMatchServerAsync(payload);
+            int totalKills = 0;
+            foreach (var p in payload.players) totalKills += p.kills;
+            int durationSeconds = (int)(System.DateTime.UtcNow - _matchStartTimeUtc).TotalSeconds;
+            string sig = OutrunAftermath.Simulation.AntiCheat.MatchResultSigner.ComputeSignature(payload.matchId, payload.winnerFaction, totalKills, durationSeconds, "DEV_MATCH_SERVER_KEY_CHANGE");
+
+            _ = Runtime.Backend.GameApiClient.Instance.CompleteMatchServerAsync(payload, "DEV_MATCH_SERVER_KEY_CHANGE", sig);
             BroadcastFeedRpc("MATCH XP & STATS PERSISTED VIA BACKEND");
         }
 

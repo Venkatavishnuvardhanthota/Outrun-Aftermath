@@ -10,6 +10,7 @@ using OutrunAftermath.Client.Runtime.Combat;
 using OutrunAftermath.Client.Runtime.Abilities;
 using OutrunAftermath.Client.Runtime.Input;
 using OutrunAftermath.Client.Runtime.UI;
+using OutrunAftermath.Simulation.AntiCheat;
 
 namespace OutrunAftermath.Client.Multiplayer
 {
@@ -60,6 +61,13 @@ namespace OutrunAftermath.Client.Multiplayer
         private bool _lastHitWasHeadshot;
         private int _antiCheatFlags;
         private CameraPerspective _lastAppliedPerspective = (CameraPerspective)(-1);
+
+        // Phase 9: Telemetry & Security Hardening
+        private Vector3 _lastAimDirection = Vector3.forward;
+        private float _lastAimTimestamp;
+        private readonly PacketSequenceTracker _packetTracker = new PacketSequenceTracker(64);
+        private uint _clientSequenceCounter;
+        private float _nextClientHeartbeatTime;
 
         public ulong LastAttackerClientId => _lastAttackerClientId;
 
@@ -421,6 +429,14 @@ namespace OutrunAftermath.Client.Multiplayer
                 Cursor.lockState = locked ? CursorLockMode.None : CursorLockMode.Locked;
                 Cursor.visible = locked;
             }
+
+            // Phase 9: Client heartbeat packet sequence transmission
+            if (IsOwner && Time.time >= _nextClientHeartbeatTime)
+            {
+                _nextClientHeartbeatTime = Time.time + 1.0f;
+                _clientSequenceCounter++;
+                HeartbeatServerRpc(_clientSequenceCounter, Time.time);
+            }
         }
 
         private void ServerTickValidation()
@@ -432,19 +448,22 @@ namespace OutrunAftermath.Client.Multiplayer
                 NetReviveProgress.Value = _health.ReviveProgress;
             }
 
-            // Anti-cheat movement displacement monitor
-            float maxDistPerSec = 14.0f; // Sprint/slide + latency tolerance
-            float allowedStep = maxDistPerSec * Mathf.Max(Time.deltaTime, 0.02f) + 2.5f;
+            // Anti-cheat movement displacement monitor with authoritative server snap-back
+            float maxDistPerSec = SpeedLimits.AbsoluteMaxDisplacementPerSec;
+            float dt = Mathf.Max(Time.deltaTime, 0.02f);
+            float allowedStep = maxDistPerSec * dt + 2.5f;
             float dist = Vector3.Distance(transform.position, _lastServerValidatedPos);
             if (dist > allowedStep && _health.State != PlayerLifeState.Eliminated)
             {
                 _antiCheatFlags++;
-                if (_antiCheatFlags % 5 == 1)
-                {
-                    Debug.LogWarning($"[AntiCheat] High displacement ({dist:F2}m) detected for client {OwnerClientId}");
-                }
+                Debug.LogWarning($"[AntiCheat:SecurityViolation] Teleport/Speed anomaly for Client {OwnerClientId}: displacement {dist:F2}m > max {allowedStep:F2}m. Reverting position.");
+                transform.position = _lastServerValidatedPos;
+                CorrectPositionClientRpc(_lastServerValidatedPos);
             }
-            _lastServerValidatedPos = transform.position;
+            else
+            {
+                _lastServerValidatedPos = transform.position;
+            }
         }
 
         private void HandleLocalFireRequest(Ray aimRay, float spreadDeg, int slotIndex)
@@ -482,6 +501,19 @@ namespace OutrunAftermath.Client.Multiplayer
             Vector3 normDir = direction.sqrMagnitude > 0.0001f ? direction.normalized : transform.forward;
             float clampedSpread = Mathf.Clamp(clientSpreadDeg, 0f, weapon.maxSpread);
 
+            // Server anti-cheat: aim-snap rotational velocity analysis
+            float aimDt = Time.time - _lastAimTimestamp;
+            Vec3 prevAim = new Vec3(_lastAimDirection.x, _lastAimDirection.y, _lastAimDirection.z);
+            Vec3 currAim = new Vec3(normDir.x, normDir.y, normDir.z);
+            bool isAimSnap = AimBotDetector.IsSuspiciousSnap(prevAim, currAim, aimDt, out float angularVel);
+            if (isAimSnap)
+            {
+                _antiCheatFlags++;
+                Debug.LogWarning($"[AntiCheat:AimSnap] Suspicious aim snap ({angularVel:F0} deg/s) detected from Client {OwnerClientId}. Headshot bonus stripped.");
+            }
+            _lastAimDirection = normDir;
+            _lastAimTimestamp = Time.time;
+
             bool anyHit = false;
             bool anyHeadshot = false;
             Vector3 firstTracerEnd = origin + normDir * weapon.range;
@@ -496,6 +528,7 @@ namespace OutrunAftermath.Client.Multiplayer
                     if (i == 0) firstTracerEnd = hit.point;
 
                     bool isHeadshot = hit.collider.name.ToLower().Contains("head");
+                    if (isHeadshot && isAimSnap) isHeadshot = false; // Strip headshot bonus on suspicious aim snap
                     float dmg = isHeadshot ? weapon.damage * weapon.headshotMultiplier : weapon.damage;
                     float falloff = 1f - Mathf.Clamp01(hit.distance / weapon.range) * 0.45f;
                     dmg *= falloff;
@@ -811,6 +844,29 @@ namespace OutrunAftermath.Client.Multiplayer
             if (_weapons != null)
             {
                 _weapons.SetGunRigVisible(isFps);
+            }
+        }
+
+        [Rpc(SendTo.Owner)]
+        private void CorrectPositionClientRpc(Vector3 correctedPosition)
+        {
+            if (_motor != null)
+            {
+                _motor.Teleport(correctedPosition);
+            }
+            else
+            {
+                transform.position = correctedPosition;
+            }
+        }
+
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+        private void HeartbeatServerRpc(uint sequenceId, float clientTime)
+        {
+            if (!_packetTracker.ValidateAndAccept(sequenceId))
+            {
+                _antiCheatFlags++;
+                Debug.LogWarning($"[AntiCheat:ReplayDetected] Client {OwnerClientId} sent duplicate or expired packet sequence {sequenceId}. Rejected.");
             }
         }
     }

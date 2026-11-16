@@ -2,6 +2,39 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [1.1.0] - 2026-11-16 - Phase 9: Anti-Cheat, Match Telemetry & Security Hardening
+
+### Added
+- **UI Interaction & Button Raycast Fix**:
+  - Configured `activeInputHandler: 2` (Both) in `ProjectSettings.asset`, enabling both the new Input System and legacy input simultaneously.
+  - Initialized runtime `EventSystem` with `InputSystemUIInputModule.AssignDefaultActions()` for guaranteed mouse click and touch responsiveness.
+  - Disabled `raycastTarget` on child text labels and transparent container panels across `LobbyConnectionUI`, `SettingsModalUI`, and `TacticalHUD`.
+  - Added visual hover highlights, pressed feedback colors, and acoustic click feedback on all tactical buttons.
+- **Dedicated Authentication Terminal Modal (`AuthModalUI` / Lobby)**:
+  - Interactive modal dialog with Tab 0: "OPERATOR SIGN IN" (Callsign/Email and masked password) and Tab 1: "RECRUIT NEW OPERATOR" (Callsign, Email, Password).
+  - Quick Guest / Dev pilot one-click authentication.
+  - Real-time authentication status feedback and token persistence.
+- **Enhanced Tactical Lobby & Environmental Selectors**:
+  - Interactive Map Selector cycling through all 7 simulation catalog maps: `Dead City`, `Dustlands`, `Rust Harbor`, `Iron Mountain`, `Scrapyard Prime`, `Forgotten Dam`, and `Neon District`.
+  - Weather Condition Selector cycling through all 5 dynamic weather states: `Clear`, `Sandstorm`, `ToxicRain`, `Overcast`, and `Night`.
+  - Cinematic `LobbyCameraDrift` component smoothly orbiting the 3D scene in the background.
+  - Direct `[OFFLINE PRACTICE]` button that immediately builds the selected map/weather and deploys the player into solo combat practice with full weapons and vehicles without requiring an active backend connection.
+- **Server-Side Movement & Speed-Cap Enforcement**:
+  - Added `SpeedLimits` and authoritative displacement validation in `NetworkPlayerController.cs`.
+  - Detects teleportation hacks or impossible velocity spikes (>14.0 m/s); automatically reverts server position and invokes `CorrectPositionClientRpc` to clamp the client's local transform and motor.
+- **Anti-Aimbot Telemetry & Aim Snap Detection**:
+  - `AimBotDetector` analyzing rotational angular velocity deltas per millisecond.
+  - Flags unnatural sub-frame aim flicks (>1800 deg/sec in <25ms) and strips critical headshot damage multipliers from suspicious shots.
+- **Monotonic Packet Sequencing & Replay Attack Defense**:
+  - `PacketSequenceTracker` enforcing sliding sequence windows; rejects duplicate or replayed RPC commands.
+  - Client heartbeat watchdog transmitting periodic sequence counters to the authoritative host.
+- **Cryptographic Match Result Signing (Anti-Tamper)**:
+  - `MatchResultSigner` using HMAC-SHA256 with shared server secrets to sign match completion payloads.
+  - Backend API endpoint `/internal/matches/complete` validates `X-Match-Signature` headers, preventing forged match results, manipulated kill counts, or illegal XP rewards.
+- **Security Auditing & Test Suite**:
+  - Added 9 unit tests in `AntiCheatTests.cs` (76 total simulation tests passing).
+  - Added API integration test in `ApiTests.cs` validating rejected forged signatures (12 API tests passing, 88 total tests passing).
+
 ## [1.0.0] - 2026-11-16 - Phase 8: Polish, Cross-Platform Controls & Optimization
 
 ### Added

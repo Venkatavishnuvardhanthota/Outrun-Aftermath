@@ -50,6 +50,16 @@ namespace OutrunAftermath.Client
         {
             Debug.Log("[OUTRUN: AFTERMATH] Bootstrapping Core Engine...");
 
+            // 0. Ensure EventSystem is initialized for UI
+            if (SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null &&
+                FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>() == null)
+            {
+                var esGo = new GameObject("EventSystem");
+                esGo.AddComponent<UnityEngine.EventSystems.EventSystem>();
+                var inputModule = esGo.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                inputModule.AssignDefaultActions();
+            }
+
             // 0. Ensure GameApiClient is initialized
             if (FindAnyObjectByType<Runtime.Backend.GameApiClient>() == null)
             {

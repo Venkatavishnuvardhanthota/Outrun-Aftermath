@@ -50,6 +50,15 @@ namespace OutrunAftermath.Client.Runtime.Character
         public Vector3 Velocity => _velocity;
         public float CurrentSpeed => new Vector2(_velocity.x, _velocity.z).magnitude;
 
+        public void Teleport(Vector3 targetPosition)
+        {
+            if (_controller != null) _controller.enabled = false;
+            transform.position = targetPosition;
+            _velocity = Vector3.zero;
+            _verticalVelocity = 0f;
+            if (_controller != null) _controller.enabled = true;
+        }
+
         public void Initialize(CameraRig cameraRig)
         {
             _controller = GetComponent<CharacterController>();

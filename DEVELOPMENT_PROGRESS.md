@@ -689,3 +689,76 @@ Phase 8: Polish, Cross-Platform Controls & Optimization (mobile touch HUD contro
 ### Next phase
 
 Phase 9: Anti-Cheat, Match Telemetry & Security Hardening (server-side movement speed cap verification, aim-angle snap rate detection, heartbeat packet sequence tracking, encrypted match results, and automated exploit auditing).
+
+## Phase 9 — 2026-11-16 (anti-cheat, match telemetry & security hardening)
+
+### Completed features
+
+- **UI Interaction & Raycast Responsiveness Fix**:
+  - Configured `activeInputHandler: 2` (Both) in `ProjectSettings.asset`, enabling both the new Input System and legacy input simultaneously.
+  - Dynamically initialized `EventSystem` with `InputSystemUIInputModule.AssignDefaultActions()` at frame 0.
+  - Disabled `raycastTarget` on child text labels and transparent container panels across `LobbyConnectionUI`, `SettingsModalUI`, and `TacticalHUD`.
+  - Added visual hover highlights, pressed feedback colors, and acoustic click feedback on all tactical buttons.
+- **Dedicated Authentication Terminal Modal (`AuthModalUI` / Lobby)**:
+  - Interactive modal dialog with Tab 0: "OPERATOR SIGN IN" (Callsign/Email and masked password) and Tab 1: "RECRUIT NEW OPERATOR" (Callsign, Email, Password).
+  - Quick Guest / Dev pilot one-click authentication.
+  - Real-time authentication status feedback and token persistence.
+- **Enhanced Tactical Lobby & Environmental Selectors**:
+  - Interactive Map Selector cycling through all 7 simulation catalog maps: `Dead City`, `Dustlands`, `Rust Harbor`, `Iron Mountain`, `Scrapyard Prime`, `Forgotten Dam`, and `Neon District`.
+  - Weather Condition Selector cycling through all 5 dynamic weather states: `Clear`, `Sandstorm`, `ToxicRain`, `Overcast`, and `Night`.
+  - Cinematic `LobbyCameraDrift` component smoothly orbiting the 3D scene in the background.
+  - Direct `[OFFLINE PRACTICE]` button that immediately builds the selected map/weather and deploys the player into solo combat practice with full weapons and vehicles without requiring an active backend connection.
+- **Server-Side Movement & Speed-Cap Enforcement**:
+  - Added `SpeedLimits` and authoritative displacement validation in `NetworkPlayerController.cs`.
+  - Detects teleportation hacks or impossible velocity spikes (>14.0 m/s); automatically reverts server position and invokes `CorrectPositionClientRpc` to clamp the client's local transform and motor.
+- **Anti-Aimbot Telemetry & Aim Snap Detection**:
+  - `AimBotDetector` analyzing rotational angular velocity deltas per millisecond.
+  - Flags unnatural sub-frame aim flicks (>1800 deg/sec in <25ms) and strips critical headshot damage multipliers from suspicious shots.
+- **Monotonic Packet Sequencing & Replay Attack Defense**:
+  - `PacketSequenceTracker` enforcing sliding sequence windows; rejects duplicate or replayed RPC commands.
+  - Client heartbeat watchdog transmitting periodic sequence counters to the authoritative host.
+- **Cryptographic Match Result Signing (Anti-Tamper)**:
+  - `MatchResultSigner` using HMAC-SHA256 with shared server secrets to sign match completion payloads.
+  - Backend API endpoint `/internal/matches/complete` validates `X-Match-Signature` headers, preventing forged match results, manipulated kill counts, or illegal XP rewards.
+- **Multi-Target Simulation Library Compilation**:
+  - Updated `OutrunAftermath.Simulation.csproj` to multi-target `<TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>`, ensuring 100% native BCL compatibility in Unity 6 and .NET 8.
+
+### Files created
+
+- `shared/OutrunAftermath.Simulation/AntiCheat/SecurityHardening.cs`
+- `shared/OutrunAftermath.Simulation.Tests/AntiCheatTests.cs`
+- `run_phase9_test.ps1`
+
+### Files modified
+
+- `backend/src/OutrunAftermath.Api/Program.cs` (HMAC-SHA256 signature validation on /internal/matches/complete)
+- `backend/tests/OutrunAftermath.Api.Tests/ApiTests.cs` (added cryptographic signature verification test)
+- `client/Assets/Game/Core/GameBootstrap.cs` (headless-safe EventSystem initialization with default actions)
+- `client/Assets/Game/Multiplayer/LobbyConnectionUI.cs` (integrated AuthModal, map/weather cycling, button raycasts, click sounds, and camera drift)
+- `client/Assets/Game/Multiplayer/NetworkMatchManager.cs` (cryptographic HMAC-SHA256 signature generation on match report)
+- `client/Assets/Game/Multiplayer/NetworkPlayerController.cs` (speed-cap displacement rollback, aim-snap telemetry, packet heartbeat)
+- `client/Assets/Game/Multiplayer/NetworkSessionController.cs` (headless-safe EventSystem with default actions)
+- `client/Assets/Game/Runtime/Backend/GameApiClient.cs` (signature header support on CompleteMatchServerAsync)
+- `client/Assets/Game/Runtime/Character/CharacterMotor.cs` (added Teleport method for position snap-back)
+- `client/Assets/Game/Runtime/UI/SettingsModalUI.cs` (disabled raycastTarget on child text)
+- `client/Assets/Game/Runtime/UI/TacticalHUD.cs` (disabled raycastTarget on child text)
+- `client/Assets/Plugins/OutrunAftermath.Simulation.dll` (updated netstandard2.1 release build)
+- `client/Assets/Scenes/Main.unity` (scene hierarchy updates)
+- `client/ProjectSettings/ProjectSettings.asset` (activeInputHandler: 2)
+- `shared/OutrunAftermath.Simulation/OutrunAftermath.Simulation.csproj` (multi-targeting netstandard2.1 and net8.0)
+
+### Tests executed
+
+1. **Simulation & API Test Suite (`dotnet test backend/OutrunAftermath.sln`)**:
+   - Exit code `0`: All 88 tests passed (76 simulation tests + 12 API tests).
+2. **Unity 6 Standalone Windows Build (`run_build.ps1`)**:
+   - Exit code `0`: Output `client/Builds/Windows/OutrunAftermath.exe` (104,523,241 bytes).
+3. **End-to-End Multi-Process Verification (`run_phase9_test.ps1`)**:
+   - Backend API initialized healthy on `http://127.0.0.1:5000`.
+   - Dedicated server launched on `dustlands` map with `Sandstorm` weather.
+   - Client joined, received Netcode replication, and verified synchronized security telemetry.
+   - 100% checks passed.
+
+### Next phase
+
+Phase 10: Production Release, Packaging & Launch Operations (multi-platform deployment scripts, final verification, and golden master delivery).

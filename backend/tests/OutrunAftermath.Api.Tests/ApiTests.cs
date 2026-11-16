@@ -351,6 +351,53 @@ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.NotEqual(t1Poll.Assignment.Team, t2Poll.Assignment.Team); // Opposing teams!
     }
 
+    [Fact]
+    public async Task Match_complete_validates_cryptographic_signature()
+    {
+        var email = $"sig_{Guid.NewGuid():N}@outrun.test";
+        var reg = await _client.PostAsJsonAsync("/api/auth/register", new { email, password = "correcthorse1", displayName = "Sig" + Guid.NewGuid().ToString("N")[..8] });
+        var auth = await reg.Content.ReadFromJsonAsync<AuthDto>();
+
+        var matchId = Guid.NewGuid();
+        var startTime = DateTime.UtcNow.AddMinutes(-5);
+        var req = new
+        {
+            matchId,
+            mode = "GroundOperations",
+            matchType = "StandardPursuit",
+            mapId = "dustlands",
+            startedAtUtc = startTime,
+            winnerFaction = "Rogue",
+            seed = 12345,
+            players = new[]
+            {
+                new { userId = auth!.UserId, faction = "Rogue", operatorId = "vanguard", kills = 4, revives = 1, objectiveProgress = 100, sideComplete = true }
+            }
+        };
+
+        // 1. Tampered signature -> 400 Bad Request
+        using var badReq = new HttpRequestMessage(HttpMethod.Post, "/internal/matches/complete");
+        badReq.Headers.Add("X-Match-Server-Key", "DEV_MATCH_SERVER_KEY_CHANGE");
+        badReq.Headers.Add("X-Match-Signature", "invalid_forged_signature_hash");
+        badReq.Content = JsonContent.Create(req);
+
+        var badRes = await _client.SendAsync(badReq);
+        Assert.Equal(HttpStatusCode.BadRequest, badRes.StatusCode);
+
+        // 2. Valid signature -> 200 OK
+        int totalKills = 4;
+        int duration = (int)(DateTime.UtcNow - startTime).TotalSeconds;
+        string validSig = OutrunAftermath.Simulation.AntiCheat.MatchResultSigner.ComputeSignature(matchId.ToString(), "Rogue", totalKills, duration, "DEV_MATCH_SERVER_KEY_CHANGE");
+
+        using var goodReq = new HttpRequestMessage(HttpMethod.Post, "/internal/matches/complete");
+        goodReq.Headers.Add("X-Match-Server-Key", "DEV_MATCH_SERVER_KEY_CHANGE");
+        goodReq.Headers.Add("X-Match-Signature", validSig);
+        goodReq.Content = JsonContent.Create(req);
+
+        var goodRes = await _client.SendAsync(goodReq);
+        Assert.Equal(HttpStatusCode.OK, goodRes.StatusCode);
+    }
+
     private async Task<HttpClient> AuthedClientAsync()
     {
         var email = $"p{Guid.NewGuid():N}@outrun.test";

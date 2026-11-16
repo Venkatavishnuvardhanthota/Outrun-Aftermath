@@ -844,7 +844,7 @@ namespace OutrunAftermath.Client.Runtime.Backend
 
         #region Match Completion Reporting (Server-Side)
 
-        public async Task<(bool ok, string message)> CompleteMatchServerAsync(CompleteMatchRequestDto matchData, string serverKey = "DEV_MATCH_SERVER_KEY_CHANGE")
+        public async Task<(bool ok, string message)> CompleteMatchServerAsync(CompleteMatchRequestDto matchData, string serverKey = "DEV_MATCH_SERVER_KEY_CHANGE", string signature = null)
         {
             string url = $"{BaseUrl}/internal/matches/complete";
             string payload = JsonUtility.ToJson(matchData);
@@ -855,6 +855,10 @@ namespace OutrunAftermath.Client.Runtime.Backend
             req.downloadHandler = new DownloadHandlerBuffer();
             req.SetRequestHeader("Content-Type", "application/json");
             req.SetRequestHeader("X-Match-Server-Key", serverKey);
+            if (!string.IsNullOrEmpty(signature))
+            {
+                req.SetRequestHeader("X-Match-Signature", signature);
+            }
 
             var op = req.SendWebRequest();
             while (!op.isDone) await Task.Yield();

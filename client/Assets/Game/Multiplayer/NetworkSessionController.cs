@@ -517,7 +517,8 @@ namespace OutrunAftermath.Client.Multiplayer
             {
                 var esGo = new GameObject("EventSystem");
                 esGo.AddComponent<EventSystem>();
-                esGo.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                var inputModule = esGo.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                inputModule.AssignDefaultActions();
             }
         }
     }

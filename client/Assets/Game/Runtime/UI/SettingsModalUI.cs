@@ -338,6 +338,7 @@ namespace OutrunAftermath.Client.Runtime.UI
             txt.fontStyle = FontStyle.Bold;
             txt.alignment = TextAnchor.MiddleCenter;
             txt.color = Color.white;
+            txt.raycastTarget = false;
 
             return go;
         }
