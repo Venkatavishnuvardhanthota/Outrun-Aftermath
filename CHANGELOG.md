@@ -2,6 +2,34 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [1.4.2] - 2026-11-17 - Phase C.1.1: Character Verification and Visual Refinement
+
+### Added
+- **Watertight Continuous 2-Manifold Humanoid Mesh (`SK_Humanoid_Operator.asset`)**:
+  - Genuinely continuous, closed, watertight 2-manifold surface eliminating all disconnected body segments.
+  - Verified with 894 vertices, 1,784 triangles, 1 connected component, 0 boundary edges, 0 non-manifold edges.
+  - Verified 6-joint flexion deformation (shoulder, elbow, wrist, hip, knee, ankle) without volume collapse or NaN coordinates.
+- **Operator REX Visual & Equipment Quality Refinement**:
+  - Replaced repetitive diagonal canvas stripes with calibrated charcoal/carbon steel palette and localized burnt amber chevron/visor accents.
+  - 12 regenerated Wavefront OBJ equipment models: contoured domed combat helmet with ARC rails and NVG bracket, SAPI swimmer-cut ceramic plate carrier with triple bungee mag pouches and radio, articulated deltoid pauldrons, 3-day breach rucksack with bottom bedroll, molded Kydex sidearm holster, and tactical gloves with molded knuckle guards.
+  - Corrected URP MaskMap channel packing (R: Metallic, G: AO, B: Detail, A: Smoothness) with calibrated dielectric and metal values.
+- **Categorized In-Engine Validation Gate (`CharacterValidationPipeline.cs`)**:
+  - Upgraded validation with discrete categorization across Geometry, Skinning, Structural Assets, Animator, Playback, Materials, Weapon Switching, Perspective, Multiplayer Netcode, and DCC Boundary Review.
+  - Automated report `character_validation_report.json` passes with status **PASS** (0 errors, 0 warnings).
+- **22-Screenshot In-Engine Visual Evidence Suite (`CaptureCharacterVisuals.cs`)**:
+  - Mode A (Static Close-Ups & Diagnostics): Front, Back, Side, First-Person, Third-Person, Weapon Switch, Head/Helmet, Upper Equipment, Hands/Gloves, Lower Equipment, Mesh Wireframe, 25-Bone Skeleton Hierarchy, Skin-Weight Heatmap.
+  - Mode B (Live Runtime Animation Playback): Idle, Walk, Run, Crouch, Aim & Fire, Reload, Hit Reaction, Downed / Death.
+  - Multiplayer Proxy: Remote proxy operator rendering in full third-person with socketed rifle and overhead HUD nametag.
+- **External DCC Artist Pipeline Documentation (`docs/CHARACTER_PIPELINE.md`)**:
+  - Established formal technical specification for external FBX character artists (Blender/Maya/ZBrush/Marvelous Designer/Substance).
+  - Defined 25-bone hierarchy naming, meter scale, vertex budgets (LOD0: 18k–25k tris, LOD1: 8k–12k, LOD2: 3k–5k), 4-bone influences, and URP PBR texture packing.
+
+### Changed
+- `Operator_HitReaction.anim`: Authored 21 skeletal rotational curves across Hips, Spine, Chest, UpperChest, Neck/Head, LeftUpperArm, RightUpperArm.
+- `NetworkPlayerController.cs`: Added `SynchronizeRemoteAnimationParameters()` to explicitly expose NetVar-driven animation updates for remote proxies.
+
+---
+
 ## [1.4.1] - 2026-11-17 - Phase C.1: Character Quality and Animation Remediation
 
 ### Added

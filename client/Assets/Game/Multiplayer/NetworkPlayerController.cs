@@ -439,20 +439,25 @@ namespace OutrunAftermath.Client.Multiplayer
                 }
 
                 // Phase C.1: Update remote proxy animation parameters from synchronized network variables
-                if (_visualController != null)
-                {
-                    bool isReviving = NetLifeState.Value == (int)PlayerLifeState.BeingRevived;
-                    _visualController.UpdateRemoteAnimationParameters(
-                        NetMoveSpeed.Value,
-                        NetIsGrounded.Value,
-                        NetIsCrouched.Value,
-                        NetIsAiming.Value,
-                        NetIsReloading.Value,
-                        NetActiveSlot.Value,
-                        NetLifeState.Value,
-                        isReviving
-                    );
-                }
+                SynchronizeRemoteAnimationParameters();
+            }
+        }
+
+        public void SynchronizeRemoteAnimationParameters()
+        {
+            if (_visualController != null)
+            {
+                bool isReviving = NetLifeState.Value == (int)PlayerLifeState.BeingRevived;
+                _visualController.UpdateRemoteAnimationParameters(
+                    NetMoveSpeed.Value,
+                    NetIsGrounded.Value,
+                    NetIsCrouched.Value,
+                    NetIsAiming.Value,
+                    NetIsReloading.Value,
+                    NetActiveSlot.Value,
+                    NetLifeState.Value,
+                    isReviving
+                );
             }
         }
 

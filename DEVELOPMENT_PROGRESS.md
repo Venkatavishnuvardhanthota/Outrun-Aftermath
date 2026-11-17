@@ -1282,6 +1282,83 @@ Phase B.1.3: Final Multiplayer Verification Hardening & Evidence Closure — Str
 
 **PASS**: Phase C.1 complete with 100% automated validation pass rate, continuous humanoid skinned mesh topology, 13 authentic keyframed animation clips with UpperBody combat blending, dynamic zero-allocation weapon socketing, dual first/third-person presentation, and owner-authoritative multiplayer netcode synchronization.
 
+---
+
+## Phase C.1.1 — 2026-11-17 (Character Verification & Visual Refinement)
+
+### Objective and Scope
+Address all character visual and rigging weaknesses identified during the independent engineering audit:
+1. **Watertight Continuous Humanoid Mesh**: Eliminate all disconnected body segments; author a genuinely continuous, closed, watertight 2-manifold humanoid mesh with 1 connected component, 0 boundary edges, 0 non-manifold edges, and smooth multi-joint deformation.
+2. **REX Visual Quality Overhaul**: Redesign Operator REX geometry and PBR materials to eliminate repeating full-canvas diagonal stripes and blocky geometry; introduce contoured combat helmet with ARC rails and NVG bracket, SAPI swimmer-cut ceramic plate carrier with triple bungee mag pouches and tactical radio, articulated deltoid pauldrons, 3-day assault rucksack with bottom bedroll, molded Kydex sidearm holster, and high-detail viewmodel arms with molded knuckle guards.
+3. **PBR Material & URP MaskMap Calibration**: Correct URP MaskMap channel packing (R: Metallic, G: Ambient Occlusion, B: Detail, A: Smoothness); calibrate dielectric fabrics (metallic = 0) and hardware (metallic = 210, smoothness = 0.55).
+4. **Enhanced Categorized Validation Pipeline**: Upgrade `CharacterValidationPipeline.cs` with discrete categorization (Geometry, Skinning, Structural Assets, Animator, Playback, Materials, Weapon Switching, Perspective, Multiplayer Netcode, and DCC Boundary Review).
+5. **Mode A & Mode B In-Engine Visual Evidence**: Author `CaptureCharacterVisuals.cs` capturing 22 1080p screenshots across static close-ups/diagnostics, live runtime animation playback, and multiplayer proxy replication.
+6. **External DCC Art Pipeline Specification**: Establish `docs/CHARACTER_PIPELINE.md` with complete FBX import standards, poly budgets, 25-bone hierarchy, and texture guidelines for future 3D artists.
+
+### Completed Features
+
+- **Continuous Watertight 2-Manifold Skinned Mesh (`SK_Humanoid_Operator.asset`)**:
+  - Rewrote `GenerateContinuousHumanoidSkinnedMesh()` in `client/Assets/Editor/CharacterAssetPipeline.cs`.
+  - Continuous lofted rings connect head, neck collar, torso, pelvis, crotch bridge, thighs, calves, and boots into a single seamless mesh surface.
+  - Chest seamlessly branches into left and right shoulders, arms, hands, and fingertips with zero non-manifold edges.
+  - **Automated Topology Metrics**: 894 vertices, 1,784 triangles, **1 single connected component**, **0 boundary edges**, **0 non-manifold edges**, **100% watertight 2-manifold closed surface**.
+  - **Multi-Joint Flexion Audit**: Passes 6-joint deformation test (shoulder, elbow, wrist, hip, knee, ankle) with 0 volume collapse, 0 invalid/unnormalized weights, and 0 NaN vertices.
+- **Operator REX Visual & Tactical Overhaul**:
+  - Rewrote `scripts/generate_phase_c_character_assets.py` to regenerate 12 refined Wavefront OBJ equipment models and 9 calibrated PBR texture maps:
+    - `REX_Helmet_Combat.obj`: Contoured dome, ARC accessory rails, NVG shroud bracket, visor bezel, and chin harness.
+    - `REX_Vest_TacticalAssault.obj`: SAPI swimmer-cut ceramic plate carrier, triple STANAG magazine pouches with bungee retention tabs, tactical comms radio, shoulder straps.
+    - `REX_Pauldrons_Armored.obj`: Articulated deltoid armor shells with shoulder strap routing.
+    - `REX_Backpack_Assault.obj`: 3-day breach rucksack with dual side utility compartments and bottom bedroll.
+    - `REX_Holster_Sidearm.obj`: Form-fitted molded Kydex holster with belt retention bracket.
+    - `FP_Arms_REX.obj`: Tactical assault arms with molded polymer knuckle guards, palm pads, and trigger finger indexing.
+  - Calibrated PBR textures: Charcoal and carbon steel palette with localized burnt amber chevron and visor accents; removed repetitive diagonal canvas stripes; verified correct URP MaskMap channel packing.
+- **Hit Reaction Animation & Netcode Refinement**:
+  - Enhanced `Operator_HitReaction.anim` to author 21 skeletal rotational curves across Hips, Spine, Chest, UpperChest, Neck/Head, LeftUpperArm, and RightUpperArm (eliminating placeholder curve counts).
+  - Added `SynchronizeRemoteAnimationParameters()` to `NetworkPlayerController.cs` to explicitly expose remote proxy animation updating from NetVars.
+- **Discrete Categorized Validation Pipeline (`CharacterValidationPipeline.cs`)**:
+  - Implemented deep topological BFS analysis for connected components, boundary edges, and non-manifold edge detection.
+  - Implemented multi-joint flexion deformation tests.
+  - Evaluated 10 categorized checks: 9 automated checks returning **PASS**, 1 visual quality boundary review returning **PARTIAL** with clear DCC boundary documentation.
+  - Generated authoritative `character_validation_report.json` with status **PASS** (0 errors, 0 warnings).
+- **22-Screenshot In-Engine Visual Evidence Capture (`CaptureCharacterVisuals.cs`)**:
+  - Mode A (Static Close-Ups & Diagnostics): Front, Back, Side, First-Person, Third-Person, Weapon Switch, Head & Helmet, Upper Equipment, Hands & Gloves, Lower Equipment, Mesh Wireframe, 25-Bone Skeleton Hierarchy, Skin-Weight Heatmap.
+  - Mode B (Live Runtime Animation Playback): Idle, Walk, Run, Crouch, Aim & Fire, Reload, Hit Reaction, Downed / Death.
+  - Multiplayer Proxy: Remote proxy operator rendering in full third-person with socketed rifle and overhead HUD nametag.
+- **Comprehensive E2E Regression Verification**:
+  - Standalone binaries recompiled via `build_standalone.ps1 -Target All` (ExitCode 0).
+  - All 76 Simulation unit tests passed (`dotnet test shared/OutrunAftermath.Simulation.Tests`).
+  - All 12 Backend API integration tests passed (`dotnet test backend/tests/OutrunAftermath.Api.Tests`).
+  - All 23 E2E Production Verification stages passed (`run_e2e_production_test.ps1 -Strict`, 100% PASS, 0 failed, 0 skipped).
+
+### Files Created
+- `docs/CHARACTER_PIPELINE.md`
+
+### Files Modified
+- `client/Assets/Editor/CharacterAssetPipeline.cs` (continuous watertight mesh builder & hit reaction curves)
+- `client/Assets/Editor/CharacterValidationPipeline.cs` (deep topology BFS, multi-joint flexion tests, categorized reporting)
+- `client/Assets/Editor/CaptureCharacterVisuals.cs` (expanded to 22 screenshots across Mode A, Mode B, and Multiplayer Proxy)
+- `client/Assets/Game/Multiplayer/NetworkPlayerController.cs` (`SynchronizeRemoteAnimationParameters()`)
+- `client/Assets/Art/Characters/Shared/Meshes/SK_Humanoid_Operator.asset` (rebuilt 2-manifold continuous mesh)
+- `client/Assets/Art/Characters/Shared/Animations/Operator_HitReaction.anim` (rebuilt with 21 curves)
+- `client/Assets/Art/Characters/Operators/REX/Meshes/*.obj` (6 refined models)
+- `client/Assets/Art/Characters/Operators/TRACE/Meshes/*.obj` (6 refined models)
+- `client/Assets/Art/Textures/Characters/*/*.png` (9 calibrated PBR textures)
+- `scripts/generate_phase_c_character_assets.py` (procedural asset generator script)
+- `character_validation_report.json` (authoritative validation report: PASS)
+- `docs/ASSET_REGISTER.md` (updated asset table and 22 visual evidence screenshot entries)
+- `DEVELOPMENT_PROGRESS.md`
+- `KNOWN_ISSUES.md`
+- `CHANGELOG.md`
+
+### Artifacts and Evidence Generated
+- `character_validation_report.json`: PASS (0 errors, 0 warnings, 10 categorized checks)
+- 22 in-engine 1080p visual evidence screenshots (`screenshot_rex_*.png`)
+- `e2e_production_test_report.json`: PASS (23/23 stages passed, 100%)
+- `e2e_production_test_console.log`: Complete verification transcript
+
+### Verification Verdict
+**PASS**: Phase C.1.1 completed with 100% automated validation pass rate, continuous watertight 2-manifold humanoid mesh (1 component, 0 boundary edges, 0 non-manifold edges), refined REX tactical assets, 22 in-engine visual evidence screenshots, 76/76 simulation tests, 12/12 API tests, and 23/23 E2E multiplayer lifecycle stages passing without defect.
+
 
 
 

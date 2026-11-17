@@ -303,7 +303,7 @@ namespace OutrunAftermath.Client.Editor
         }
 
         // ==============================================================================
-        // C.1.1 CONTINUOUS ANATOMICAL HUMANOID MESH GENERATOR
+        // C.1.1 CONTINUOUS ANATOMICAL HUMANOID MESH GENERATOR (100% Watertight 1-Component)
         // ==============================================================================
 
         private static Mesh GenerateContinuousHumanoidSkinnedMesh(Transform[] bones, Transform root)
@@ -315,430 +315,311 @@ namespace OutrunAftermath.Client.Editor
             var weights = new List<BoneWeight>();
             var triangles = new List<int>();
 
-            // -------------------------------------------------------------
-            // A. HEAD & NECK (Anatomical cranium, face, jaw & neck)
-            // -------------------------------------------------------------
-            int headRadial = 16;
-            int headRings = 9;
-            float headCenterY = 1.66f;
-            float headRadiusX = 0.11f;
-            float headRadiusY = 0.14f;
-            float headRadiusZ = 0.13f;
-
-            int headStartIdx = verts.Count;
-
-            // Top pole of head
-            verts.Add(new Vector3(0f, headCenterY + headRadiusY, 0f));
-            normals.Add(Vector3.up);
-            uvs.Add(new Vector2(0.5f, 0.98f));
-            weights.Add(new BoneWeight { boneIndex0 = 6, weight0 = 1.0f });
-
-            for (int r = 1; r < headRings; r++)
+            int AddVertex(Vector3 pos, Vector3 norm, Vector2 uv, int b0, float w0, int b1 = 0, float w1 = 0f)
             {
-                float phi = Mathf.PI * r / headRings;
-                float ringY = headCenterY + headRadiusY * Mathf.Cos(phi);
-                float sinPhi = Mathf.Sin(phi);
-
-                for (int i = 0; i < headRadial; i++)
+                verts.Add(pos);
+                normals.Add(norm);
+                uvs.Add(uv);
+                weights.Add(new BoneWeight
                 {
-                    float theta = 2f * Mathf.PI * i / headRadial;
-                    float rx = headRadiusX * sinPhi * Mathf.Cos(theta);
-                    float rz = headRadiusZ * sinPhi * Mathf.Sin(theta);
+                    boneIndex0 = b0,
+                    weight0 = Mathf.Clamp01(w0),
+                    boneIndex1 = b1,
+                    weight1 = Mathf.Clamp01(w1)
+                });
+                return verts.Count - 1;
+            }
 
-                    // Slight jaw narrowing on lower rings
-                    if (ringY < headCenterY && Mathf.Sin(theta) > 0f)
-                    {
-                        rx *= 0.85f;
-                    }
+            void AddTriangle(int i0, int i1, int i2)
+            {
+                triangles.Add(i0);
+                triangles.Add(i1);
+                triangles.Add(i2);
+            }
 
-                    Vector3 pos = new Vector3(rx, ringY, rz);
-                    Vector3 norm = (pos - new Vector3(0f, headCenterY, 0f)).normalized;
+            void AddQuad(int i0, int i1, int i2, int i3)
+            {
+                triangles.Add(i0);
+                triangles.Add(i1);
+                triangles.Add(i2);
 
-                    verts.Add(pos);
-                    normals.Add(norm);
-                    uvs.Add(new Vector2((float)i / headRadial, 1f - (float)r / headRings));
+                triangles.Add(i0);
+                triangles.Add(i2);
+                triangles.Add(i3);
+            }
 
-                    float neckBlend = Mathf.Clamp01((1.58f - ringY) / 0.12f);
-                    weights.Add(new BoneWeight
-                    {
-                        boneIndex0 = 6, // Head
-                        weight0 = 1f - neckBlend * 0.4f,
-                        boneIndex1 = 5, // Neck
-                        weight1 = neckBlend * 0.4f
-                    });
+            void StitchRings(int[] ringA, int[] ringB, int[] skipIndices = null)
+            {
+                int n = ringA.Length;
+                var skip = skipIndices != null ? new HashSet<int>(skipIndices) : null;
+                for (int i = 0; i < n; i++)
+                {
+                    if (skip != null && skip.Contains(i)) continue;
+                    int next = (i + 1) % n;
+                    AddQuad(ringA[i], ringA[next], ringB[next], ringB[i]);
                 }
             }
 
-            // Head Triangles (top pole fan)
-            for (int i = 0; i < headRadial; i++)
+            const int nBody = 16;
+
+            // 1. HEAD & NECK (Continuous cranium, jaw, throat, and collar)
+            int headTop = AddVertex(new Vector3(0f, 1.78f, 0f), Vector3.up, new Vector2(0.5f, 1.0f), 6, 1.0f);
+
+            var headLevels = new (float y, float rx, float rz, int b0, float w0, int b1, float w1)[]
             {
-                int next = (i + 1) % headRadial;
-                triangles.Add(headStartIdx);
-                triangles.Add(headStartIdx + 1 + i);
-                triangles.Add(headStartIdx + 1 + next);
-            }
-
-            // Head Ring quads
-            for (int r = 0; r < headRings - 2; r++)
-            {
-                int rowA = headStartIdx + 1 + r * headRadial;
-                int rowB = headStartIdx + 1 + (r + 1) * headRadial;
-                for (int i = 0; i < headRadial; i++)
-                {
-                    int next = (i + 1) % headRadial;
-                    triangles.Add(rowA + i);
-                    triangles.Add(rowB + i);
-                    triangles.Add(rowB + next);
-
-                    triangles.Add(rowA + i);
-                    triangles.Add(rowB + next);
-                    triangles.Add(rowA + next);
-                }
-            }
-
-            // Neck Cylinder (connecting jaw to upper chest)
-            int neckStartIdx = verts.Count;
-            int neckRings = 4;
-            for (int r = 0; r < neckRings; r++)
-            {
-                float t = (float)r / (neckRings - 1);
-                float y = Mathf.Lerp(1.52f, 1.44f, t);
-                float rad = Mathf.Lerp(0.065f, 0.085f, t);
-
-                for (int i = 0; i < headRadial; i++)
-                {
-                    float angle = 2f * Mathf.PI * i / headRadial;
-                    Vector3 pos = new Vector3(Mathf.Cos(angle) * rad, y, Mathf.Sin(angle) * rad);
-                    verts.Add(pos);
-                    normals.Add(new Vector3(Mathf.Cos(angle), 0.1f, Mathf.Sin(angle)).normalized);
-                    uvs.Add(new Vector2((float)i / headRadial, 0.85f - t * 0.08f));
-
-                    weights.Add(new BoneWeight
-                    {
-                        boneIndex0 = 5, // Neck
-                        weight0 = 1f - t * 0.6f,
-                        boneIndex1 = 4, // UpperChest
-                        weight1 = t * 0.6f
-                    });
-                }
-            }
-
-            for (int r = 0; r < neckRings - 1; r++)
-            {
-                int rowA = neckStartIdx + r * headRadial;
-                int rowB = neckStartIdx + (r + 1) * headRadial;
-                for (int i = 0; i < headRadial; i++)
-                {
-                    int next = (i + 1) % headRadial;
-                    triangles.Add(rowA + i);
-                    triangles.Add(rowB + i);
-                    triangles.Add(rowB + next);
-
-                    triangles.Add(rowA + i);
-                    triangles.Add(rowB + next);
-                    triangles.Add(rowA + next);
-                }
-            }
-
-            // -------------------------------------------------------------
-            // B. TORSO (Continuous UpperChest -> Chest -> Spine -> Hips)
-            // -------------------------------------------------------------
-            int torsoRadial = 16;
-            var torsoProfiles = new (float y, float rx, float rz, int bone0, int bone1, float w0)[]
-            {
-                (1.44f, 0.13f, 0.10f, 4, 3, 0.85f), // Neck junction
-                (1.39f, 0.22f, 0.13f, 4, 3, 0.80f), // Clavicles / Shoulder tops
-                (1.32f, 0.20f, 0.14f, 4, 3, 0.60f), // Pectorals / Upper Chest
-                (1.24f, 0.19f, 0.13f, 3, 2, 0.75f), // Mid-Chest / Ribcage
-                (1.15f, 0.17f, 0.12f, 3, 2, 0.45f), // Lower Ribs
-                (1.06f, 0.155f, 0.11f, 2, 1, 0.70f), // Waist Taper
-                (0.97f, 0.165f, 0.12f, 2, 1, 0.40f), // Abdomen / Navel
-                (0.91f, 0.18f, 0.13f, 1, 2, 0.85f), // Iliac Crest / Pelvic top
-                (0.84f, 0.18f, 0.14f, 1, 17, 0.85f), // Pelvic Bowl
-                (0.77f, 0.16f, 0.12f, 1, 17, 0.90f), // Lower Pelvis
-                (0.72f, 0.14f, 0.10f, 1, 21, 0.95f)  // Crotch closure
+                (1.76f, 0.055f, 0.065f, 6, 1.0f,  5, 0.0f),
+                (1.73f, 0.082f, 0.095f, 6, 1.0f,  5, 0.0f),
+                (1.69f, 0.105f, 0.118f, 6, 1.0f,  5, 0.0f),
+                (1.65f, 0.112f, 0.125f, 6, 1.0f,  5, 0.0f),
+                (1.61f, 0.110f, 0.124f, 6, 0.95f, 5, 0.05f),
+                (1.57f, 0.102f, 0.118f, 6, 0.85f, 5, 0.15f),
+                (1.53f, 0.090f, 0.105f, 6, 0.70f, 5, 0.30f),
+                (1.49f, 0.080f, 0.090f, 6, 0.50f, 5, 0.50f), // Jaw
+                (1.45f, 0.075f, 0.082f, 5, 0.80f, 4, 0.20f), // Upper neck
+                (1.42f, 0.078f, 0.085f, 5, 0.60f, 4, 0.40f), // Mid neck
+                (1.39f, 0.088f, 0.094f, 4, 0.80f, 5, 0.20f)  // Collar ring
             };
 
-            int torsoStartIdx = verts.Count;
-            for (int r = 0; r < torsoProfiles.Length; r++)
+            var headRings = new List<int[]>();
+            for (int r = 0; r < headLevels.Length; r++)
             {
-                var prof = torsoProfiles[r];
-                float vCoord = 0.75f - (float)r / (torsoProfiles.Length - 1) * 0.35f;
-
-                for (int i = 0; i < torsoRadial; i++)
+                var lvl = headLevels[r];
+                int[] ring = new int[nBody];
+                for (int i = 0; i < nBody; i++)
                 {
-                    float angle = 2f * Mathf.PI * i / torsoRadial;
-                    float x = Mathf.Cos(angle) * prof.rx;
-                    float z = Mathf.Sin(angle) * prof.rz;
-
-                    Vector3 pos = new Vector3(x, prof.y, z);
-                    Vector3 norm = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)).normalized;
-
-                    verts.Add(pos);
-                    normals.Add(norm);
-                    uvs.Add(new Vector2((float)i / torsoRadial, vCoord));
-
-                    weights.Add(new BoneWeight
-                    {
-                        boneIndex0 = prof.bone0,
-                        weight0 = prof.w0,
-                        boneIndex1 = prof.bone1,
-                        weight1 = 1f - prof.w0
-                    });
+                    float theta = 2.0f * Mathf.PI * i / nBody;
+                    float vx = lvl.rx * Mathf.Cos(theta);
+                    float vz = lvl.rz * Mathf.Sin(theta);
+                    Vector3 pos = new Vector3(vx, lvl.y, vz);
+                    Vector3 norm = new Vector3(Mathf.Cos(theta), 0.2f, Mathf.Sin(theta)).normalized;
+                    Vector2 uv = new Vector2((float)i / nBody, (lvl.y - 1.0f) / 0.8f);
+                    ring[i] = AddVertex(pos, norm, uv, lvl.b0, lvl.w0, lvl.b1, lvl.w1);
                 }
+                headRings.Add(ring);
             }
 
-            // Torso Quads
-            for (int r = 0; r < torsoProfiles.Length - 1; r++)
+            // Top pole fan
+            for (int i = 0; i < nBody; i++)
             {
-                int rowA = torsoStartIdx + r * torsoRadial;
-                int rowB = torsoStartIdx + (r + 1) * torsoRadial;
-                for (int i = 0; i < torsoRadial; i++)
-                {
-                    int next = (i + 1) % torsoRadial;
-                    triangles.Add(rowA + i);
-                    triangles.Add(rowB + i);
-                    triangles.Add(rowB + next);
+                int next = (i + 1) % nBody;
+                AddTriangle(headTop, headRings[0][i], headRings[0][next]);
+            }
 
-                    triangles.Add(rowA + i);
-                    triangles.Add(rowB + next);
-                    triangles.Add(rowA + next);
+            for (int r = 0; r < headRings.Count - 1; r++)
+            {
+                StitchRings(headRings[r], headRings[r + 1]);
+            }
+
+            int[] collarRing = headRings[headRings.Count - 1];
+
+            // 2. TORSO (Continuous UpperChest, Pectorals, Ribs, Waist, Abdomen, Pelvis)
+            var torsoLevels = new (float y, float rx, float rz, int b0, float w0, int b1, float w1)[]
+            {
+                (1.36f, 0.210f, 0.130f, 4, 0.90f, 3,  0.10f), // Ring 0: Clavicles / Shoulders
+                (1.31f, 0.205f, 0.142f, 4, 0.70f, 3,  0.30f), // Ring 1: Pectorals
+                (1.26f, 0.198f, 0.140f, 3, 0.90f, 4,  0.10f), // Ring 2: Mid-chest
+                (1.21f, 0.190f, 0.135f, 3, 0.75f, 2,  0.25f), // Ring 3
+                (1.16f, 0.180f, 0.128f, 3, 0.55f, 2,  0.45f), // Ring 4: Lower ribs
+                (1.11f, 0.168f, 0.120f, 2, 0.80f, 3,  0.20f), // Ring 5: Mid ribs
+                (1.06f, 0.160f, 0.115f, 2, 0.90f, 1,  0.10f), // Ring 6: Waist taper
+                (1.01f, 0.162f, 0.118f, 2, 0.70f, 1,  0.30f), // Ring 7
+                (0.96f, 0.168f, 0.124f, 2, 0.40f, 1,  0.60f), // Ring 8: Navel / Abdomen
+                (0.91f, 0.176f, 0.132f, 1, 0.80f, 2,  0.20f), // Ring 9: Iliac crest
+                (0.86f, 0.182f, 0.140f, 1, 0.90f, 17, 0.10f), // Ring 10: Pelvis upper
+                (0.81f, 0.180f, 0.135f, 1, 0.95f, 17, 0.05f), // Ring 11: Pelvis mid
+                (0.76f, 0.168f, 0.122f, 1, 0.98f, 17, 0.02f), // Ring 12: Pelvis lower
+                (0.72f, 0.150f, 0.110f, 1, 1.0f,  0,  0.0f)   // Ring 13: Crotch level
+            };
+
+            var torsoRings = new List<int[]>();
+            int[] prevTorsoRing = collarRing;
+            for (int r = 0; r < torsoLevels.Length; r++)
+            {
+                var lvl = torsoLevels[r];
+                int[] ring = new int[nBody];
+                for (int i = 0; i < nBody; i++)
+                {
+                    float theta = 2.0f * Mathf.PI * i / nBody;
+                    float vx = lvl.rx * Mathf.Cos(theta);
+                    float vz = lvl.rz * Mathf.Sin(theta);
+                    Vector3 pos = new Vector3(vx, lvl.y, vz);
+                    Vector3 norm = new Vector3(Mathf.Cos(theta), 0f, Mathf.Sin(theta)).normalized;
+                    Vector2 uv = new Vector2((float)i / nBody, (lvl.y - 0.7f) / 0.8f);
+                    ring[i] = AddVertex(pos, norm, uv, lvl.b0, lvl.w0, lvl.b1, lvl.w1);
                 }
-            }
 
-            // Torso bottom cap (crotch)
-            int crotchCenterIdx = verts.Count;
-            verts.Add(new Vector3(0f, 0.71f, 0f));
-            normals.Add(Vector3.down);
-            uvs.Add(new Vector2(0.5f, 0.40f));
-            weights.Add(new BoneWeight { boneIndex0 = 1, weight0 = 1.0f });
-
-            int bottomRingStart = torsoStartIdx + (torsoProfiles.Length - 1) * torsoRadial;
-            for (int i = 0; i < torsoRadial; i++)
-            {
-                int next = (i + 1) % torsoRadial;
-                triangles.Add(crotchCenterIdx);
-                triangles.Add(bottomRingStart + next);
-                triangles.Add(bottomRingStart + i);
-            }
-
-            // -------------------------------------------------------------
-            // C. ARMS (Left & Right - Continuous Deltoid to Fingertips)
-            // -------------------------------------------------------------
-            void AddArm(bool isLeft)
-            {
-                float sign = isLeft ? -1f : 1f;
-                int armRadial = 12;
-
-                int clavicleBone = isLeft ? 7 : 12;
-                int upperArmBone = isLeft ? 8 : 13;
-                int lowerArmBone = isLeft ? 9 : 14;
-                int handBone = isLeft ? 10 : 15;
-                int fingerBone = isLeft ? 11 : 16;
-
-                var armProfiles = new (float x, float radY, float radZ, int b0, int b1, float w0)[]
+                // Skip quads where left and right armholes open!
+                if (r == 1)
                 {
-                    (sign * 0.18f, 0.080f, 0.080f, clavicleBone, upperArmBone, 0.40f), // Shoulder / Deltoid root
-                    (sign * 0.26f, 0.068f, 0.068f, upperArmBone, clavicleBone, 0.85f), // Bicep peak
-                    (sign * 0.35f, 0.062f, 0.062f, upperArmBone, lowerArmBone, 0.90f), // Mid upper arm
-                    (sign * 0.43f, 0.055f, 0.055f, upperArmBone, lowerArmBone, 0.65f), // Pre-elbow
-                    (sign * 0.48f, 0.052f, 0.052f, upperArmBone, lowerArmBone, 0.50f), // Elbow joint
-                    (sign * 0.53f, 0.054f, 0.054f, lowerArmBone, upperArmBone, 0.70f), // Post-elbow
-                    (sign * 0.60f, 0.055f, 0.055f, lowerArmBone, handBone,     0.90f), // Forearm belly
-                    (sign * 0.67f, 0.048f, 0.048f, lowerArmBone, handBone,     0.80f), // Distal forearm
-                    (sign * 0.71f, 0.040f, 0.040f, lowerArmBone, handBone,     0.45f), // Wrist
-                    (sign * 0.75f, 0.030f, 0.045f, handBone, fingerBone,       0.85f), // Palm base
-                    (sign * 0.79f, 0.024f, 0.042f, handBone, fingerBone,       0.50f), // Knuckles
-                    (sign * 0.83f, 0.018f, 0.036f, fingerBone, handBone,       0.90f)  // Fingertips
+                    StitchRings(prevTorsoRing, ring, new[] { 7, 8, 15, 0 });
+                }
+                else
+                {
+                    StitchRings(prevTorsoRing, ring);
+                }
+
+                prevTorsoRing = ring;
+                torsoRings.Add(ring);
+            }
+
+            int[] pelvisBottom = torsoRings[torsoRings.Count - 1];
+
+            // 3. LEGS & BOOTS (Continuous Pelvis to Thigh, Knee, Calf, Ankle, and Boot)
+            int crotchMid = AddVertex(new Vector3(0f, 0.70f, 0f), Vector3.down, new Vector2(0.5f, 0.35f), 1, 1.0f);
+
+            int[] leftHip = new[]
+            {
+                pelvisBottom[4], pelvisBottom[5], pelvisBottom[6], pelvisBottom[7],
+                pelvisBottom[8], pelvisBottom[9], pelvisBottom[10], pelvisBottom[11],
+                pelvisBottom[12], crotchMid
+            };
+
+            int[] rightHip = new[]
+            {
+                pelvisBottom[12], pelvisBottom[13], pelvisBottom[14], pelvisBottom[15],
+                pelvisBottom[0], pelvisBottom[1], pelvisBottom[2], pelvisBottom[3],
+                pelvisBottom[4], crotchMid
+            };
+
+            void BuildContinuousLeg(int[] hipRing, bool isLeft)
+            {
+                float sign = isLeft ? -1.0f : 1.0f;
+                float legCx = sign * 0.11f;
+                int nLeg = hipRing.Length; // 10 vertices
+                int thighB = isLeft ? 17 : 21;
+                int calfB = isLeft ? 18 : 22;
+                int footB = isLeft ? 19 : 23;
+                int toeB = isLeft ? 20 : 24;
+
+                var legLevels = new (float y, float rx, float rz, float zo, int b0, float w0, int b1, float w1)[]
+                {
+                    (0.68f, 0.090f, 0.090f, 0.0f,   thighB, 0.90f, 1,      0.10f),
+                    (0.64f, 0.086f, 0.086f, 0.0f,   thighB, 0.95f, calfB,  0.05f),
+                    (0.59f, 0.080f, 0.080f, 0.0f,   thighB, 0.90f, calfB,  0.10f),
+                    (0.54f, 0.075f, 0.075f, 0.0f,   thighB, 0.80f, calfB,  0.20f),
+                    (0.49f, 0.070f, 0.070f, 0.0f,   thighB, 0.65f, calfB,  0.35f), // Supra-patella
+                    (0.46f, 0.067f, 0.068f, 0.01f,  thighB, 0.55f, calfB,  0.45f), // Patella upper
+                    (0.44f, 0.066f, 0.069f, 0.015f, thighB, 0.45f, calfB,  0.55f), // Patella apex
+                    (0.41f, 0.067f, 0.067f, 0.0f,   calfB,  0.70f, thighB, 0.30f), // Infra-patella
+                    (0.36f, 0.072f, 0.072f, 0.0f,   calfB,  0.95f, footB,  0.05f), // Gastrocnemius
+                    (0.30f, 0.070f, 0.070f, 0.0f,   calfB,  0.95f, footB,  0.05f),
+                    (0.24f, 0.064f, 0.064f, 0.0f,   calfB,  0.88f, footB,  0.12f),
+                    (0.18f, 0.056f, 0.056f, 0.0f,   calfB,  0.72f, footB,  0.28f),
+                    (0.13f, 0.048f, 0.048f, 0.0f,   footB,  0.70f, calfB,  0.30f), // Ankle
+                    (0.09f, 0.046f, 0.065f, 0.02f,  footB,  0.88f, toeB,   0.12f), // Heel rise
+                    (0.05f, 0.046f, 0.085f, 0.05f,  footB,  0.92f, toeB,   0.08f), // Foot arch / sole
+                    (0.02f, 0.044f, 0.070f, 0.11f,  toeB,   0.88f, footB,  0.12f)  // Forefoot
                 };
 
-                int armStartIdx = verts.Count;
-                for (int r = 0; r < armProfiles.Length; r++)
+                int[] prevLegRing = hipRing;
+                for (int r = 0; r < legLevels.Length; r++)
                 {
-                    var prof = armProfiles[r];
-                    float uCoord = isLeft ? 0.15f + (float)r / armProfiles.Length * 0.25f : 0.60f + (float)r / armProfiles.Length * 0.25f;
-
-                    for (int i = 0; i < armRadial; i++)
+                    var lvl = legLevels[r];
+                    int[] ring = new int[nLeg];
+                    for (int i = 0; i < nLeg; i++)
                     {
-                        float angle = 2f * Mathf.PI * i / armRadial;
-                        float y = 1.39f + Mathf.Cos(angle) * prof.radY;
-                        float z = Mathf.Sin(angle) * prof.radZ;
-
-                        Vector3 pos = new Vector3(prof.x, y, z);
-                        Vector3 norm = new Vector3(0f, Mathf.Cos(angle), Mathf.Sin(angle)).normalized;
-
-                        verts.Add(pos);
-                        normals.Add(norm);
-                        uvs.Add(new Vector2(uCoord, (float)i / armRadial));
-
-                        weights.Add(new BoneWeight
-                        {
-                            boneIndex0 = prof.b0,
-                            weight0 = prof.w0,
-                            boneIndex1 = prof.b1,
-                            weight1 = 1f - prof.w0
-                        });
+                        float theta = 2.0f * Mathf.PI * i / nLeg;
+                        float vx = legCx + lvl.rx * Mathf.Cos(theta);
+                        float vz = lvl.zo + lvl.rz * Mathf.Sin(theta);
+                        Vector3 pos = new Vector3(vx, lvl.y, vz);
+                        Vector3 norm = new Vector3(Mathf.Cos(theta), 0f, Mathf.Sin(theta)).normalized;
+                        Vector2 uv = new Vector2((isLeft ? 0.2f : 0.6f) + (float)i / nLeg * 0.2f, lvl.y / 0.8f);
+                        ring[i] = AddVertex(pos, norm, uv, lvl.b0, lvl.w0, lvl.b1, lvl.w1);
                     }
+                    StitchRings(prevLegRing, ring);
+                    prevLegRing = ring;
                 }
 
-                // Arm Quads
-                for (int r = 0; r < armProfiles.Length - 1; r++)
+                // Toe cap pole
+                int toeTip = AddVertex(new Vector3(legCx, 0.02f, 0.175f), Vector3.forward, new Vector2(isLeft ? 0.3f : 0.7f, 0.02f), toeB, 1.0f);
+                for (int i = 0; i < nLeg; i++)
                 {
-                    int rowA = armStartIdx + r * armRadial;
-                    int rowB = armStartIdx + (r + 1) * armRadial;
-                    for (int i = 0; i < armRadial; i++)
+                    int next = (i + 1) % nLeg;
+                    AddTriangle(toeTip, prevLegRing[i], prevLegRing[next]);
+                }
+            }
+
+            BuildContinuousLeg(leftHip, true);
+            BuildContinuousLeg(rightHip, false);
+
+            // 4. ARMS & HANDS (Continuous Shoulder to Deltoid, Bicep, Elbow, Forearm, Wrist, Glove)
+            int[] leftArmhole = new[]
+            {
+                torsoRings[0][7], torsoRings[0][8], torsoRings[0][9],
+                torsoRings[1][9], torsoRings[1][8], torsoRings[1][7]
+            };
+
+            int[] rightArmhole = new[]
+            {
+                torsoRings[0][15], torsoRings[0][0], torsoRings[0][1],
+                torsoRings[1][1], torsoRings[1][0], torsoRings[1][15]
+            };
+
+            void BuildContinuousArm(int[] armhole, bool isLeft)
+            {
+                float sign = isLeft ? -1.0f : 1.0f;
+                int nArm = armhole.Length; // 6 vertices
+                int clavB = isLeft ? 7 : 12;
+                int upB = isLeft ? 8 : 13;
+                int lowB = isLeft ? 9 : 14;
+                int handB = isLeft ? 10 : 15;
+                int fingB = isLeft ? 11 : 16;
+
+                var armLevels = new (float x, float ry, float rz, int b0, float w0, int b1, float w1)[]
+                {
+                    (sign * 0.22f, 0.076f, 0.076f, clavB, 0.40f, upB,   0.60f), // Deltoid root
+                    (sign * 0.26f, 0.072f, 0.072f, upB,   0.80f, clavB, 0.20f),
+                    (sign * 0.31f, 0.068f, 0.068f, upB,   0.90f, clavB, 0.10f), // Bicep peak
+                    (sign * 0.37f, 0.064f, 0.064f, upB,   0.95f, lowB,  0.05f),
+                    (sign * 0.42f, 0.058f, 0.058f, upB,   0.75f, lowB,  0.25f), // Pre-elbow
+                    (sign * 0.45f, 0.054f, 0.054f, upB,   0.55f, lowB,  0.45f), // Elbow flexion
+                    (sign * 0.48f, 0.053f, 0.053f, lowB,  0.65f, upB,   0.35f), // Elbow crease
+                    (sign * 0.52f, 0.055f, 0.055f, lowB,  0.85f, upB,   0.15f), // Post-elbow
+                    (sign * 0.59f, 0.056f, 0.056f, lowB,  0.95f, handB, 0.05f), // Forearm belly
+                    (sign * 0.65f, 0.050f, 0.050f, lowB,  0.85f, handB, 0.15f),
+                    (sign * 0.70f, 0.042f, 0.042f, handB, 0.60f, lowB,  0.40f), // Wrist cuff
+                    (sign * 0.74f, 0.036f, 0.044f, handB, 0.85f, fingB, 0.15f), // Palm base
+                    (sign * 0.79f, 0.026f, 0.042f, fingB, 0.55f, handB, 0.45f), // Knuckle bar
+                    (sign * 0.83f, 0.018f, 0.034f, fingB, 0.90f, handB, 0.10f)  // Fingertips
+                };
+
+                int[] prevArmRing = armhole;
+                for (int r = 0; r < armLevels.Length; r++)
+                {
+                    var lvl = armLevels[r];
+                    int[] ring = new int[nArm];
+                    for (int i = 0; i < nArm; i++)
                     {
-                        int next = (i + 1) % armRadial;
-                        if (isLeft)
-                        {
-                            triangles.Add(rowA + i);
-                            triangles.Add(rowB + i);
-                            triangles.Add(rowB + next);
-
-                            triangles.Add(rowA + i);
-                            triangles.Add(rowB + next);
-                            triangles.Add(rowA + next);
-                        }
-                        else
-                        {
-                            triangles.Add(rowA + i);
-                            triangles.Add(rowB + next);
-                            triangles.Add(rowB + i);
-
-                            triangles.Add(rowA + i);
-                            triangles.Add(rowA + next);
-                            triangles.Add(rowB + next);
-                        }
+                        float theta = 2.0f * Mathf.PI * i / nArm;
+                        float vy = 1.36f + lvl.ry * Mathf.Cos(theta);
+                        float vz = lvl.rz * Mathf.Sin(theta);
+                        Vector3 pos = new Vector3(lvl.x, vy, vz);
+                        Vector3 norm = new Vector3(sign * 0.2f, Mathf.Cos(theta), Mathf.Sin(theta)).normalized;
+                        Vector2 uv = new Vector2(0.2f + (float)i / nArm * 0.2f, Mathf.Abs(lvl.x) / 0.8f);
+                        ring[i] = AddVertex(pos, norm, uv, lvl.b0, lvl.w0, lvl.b1, lvl.w1);
                     }
+                    StitchRings(prevArmRing, ring);
+                    prevArmRing = ring;
                 }
 
-                // Fingertips cap
-                int tipCapIdx = verts.Count;
-                verts.Add(new Vector3(sign * 0.84f, 1.39f, 0f));
-                normals.Add(new Vector3(sign, 0f, 0f));
-                uvs.Add(new Vector2(isLeft ? 0.40f : 0.85f, 0.5f));
-                weights.Add(new BoneWeight { boneIndex0 = fingerBone, weight0 = 1.0f });
-
-                int armEndRing = armStartIdx + (armProfiles.Length - 1) * armRadial;
-                for (int i = 0; i < armRadial; i++)
+                // Fingertip cap pole
+                int tipPole = AddVertex(new Vector3(sign * 0.85f, 1.36f, 0f), new Vector3(sign, 0f, 0f), new Vector2(isLeft ? 0.4f : 0.8f, 0.5f), fingB, 1.0f);
+                for (int i = 0; i < nArm; i++)
                 {
-                    int next = (i + 1) % armRadial;
+                    int next = (i + 1) % nArm;
                     if (isLeft)
                     {
-                        triangles.Add(tipCapIdx);
-                        triangles.Add(armEndRing + i);
-                        triangles.Add(armEndRing + next);
+                        AddTriangle(tipPole, prevArmRing[i], prevArmRing[next]);
                     }
                     else
                     {
-                        triangles.Add(tipCapIdx);
-                        triangles.Add(armEndRing + next);
-                        triangles.Add(armEndRing + i);
+                        AddTriangle(tipPole, prevArmRing[next], prevArmRing[i]);
                     }
                 }
             }
 
-            AddArm(true);  // Left Arm
-            AddArm(false); // Right Arm
-
-            // -------------------------------------------------------------
-            // D. LEGS (Left & Right - Continuous Hip to Toes)
-            // -------------------------------------------------------------
-            void AddLeg(bool isLeft)
-            {
-                float sign = isLeft ? -1f : 1f;
-                int legRadial = 12;
-
-                int thighBone = isLeft ? 17 : 21;
-                int calfBone = isLeft ? 18 : 22;
-                int footBone = isLeft ? 19 : 23;
-                int toeBone = isLeft ? 20 : 24;
-
-                var legProfiles = new (float y, float rx, float rz, float zOffset, int b0, int b1, float w0)[]
-                {
-                    (0.86f, 0.095f, 0.095f, 0.0f,  1,         thighBone, 0.35f), // Hip socket root
-                    (0.76f, 0.088f, 0.088f, 0.0f,  thighBone, 1,         0.85f), // Upper thigh
-                    (0.66f, 0.082f, 0.082f, 0.0f,  thighBone, calfBone,  0.95f), // Mid thigh
-                    (0.56f, 0.074f, 0.074f, 0.0f,  thighBone, calfBone,  0.75f), // Lower thigh
-                    (0.50f, 0.068f, 0.068f, 0.0f,  thighBone, calfBone,  0.60f), // Supra-knee
-                    (0.46f, 0.065f, 0.065f, 0.0f,  thighBone, calfBone,  0.50f), // Knee joint
-                    (0.42f, 0.066f, 0.066f, 0.0f,  calfBone,  thighBone, 0.65f), // Infra-knee
-                    (0.34f, 0.070f, 0.070f, 0.0f,  calfBone,  footBone,  0.95f), // Calf muscle belly
-                    (0.24f, 0.062f, 0.062f, 0.0f,  calfBone,  footBone,  0.85f), // Mid calf
-                    (0.16f, 0.052f, 0.052f, 0.0f,  calfBone,  footBone,  0.65f), // Lower calf
-                    (0.10f, 0.046f, 0.046f, 0.0f,  footBone,  calfBone,  0.70f), // Ankle
-                    (0.05f, 0.045f, 0.085f, 0.04f, footBone,  toeBone,   0.85f), // Foot arch / Heel
-                    (0.02f, 0.042f, 0.065f, 0.10f, toeBone,   footBone,  0.80f)  // Toe box
-                };
-
-                int legStartIdx = verts.Count;
-                float legCenterX = sign * 0.12f;
-
-                for (int r = 0; r < legProfiles.Length; r++)
-                {
-                    var prof = legProfiles[r];
-                    float vCoord = 0.40f - (float)r / legProfiles.Length * 0.38f;
-
-                    for (int i = 0; i < legRadial; i++)
-                    {
-                        float angle = 2f * Mathf.PI * i / legRadial;
-                        float x = legCenterX + Mathf.Cos(angle) * prof.rx;
-                        float z = prof.zOffset + Mathf.Sin(angle) * prof.rz;
-
-                        Vector3 pos = new Vector3(x, prof.y, z);
-                        Vector3 norm = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)).normalized;
-
-                        verts.Add(pos);
-                        normals.Add(norm);
-                        uvs.Add(new Vector2(isLeft ? 0.15f + (float)i / legRadial * 0.3f : 0.55f + (float)i / legRadial * 0.3f, vCoord));
-
-                        weights.Add(new BoneWeight
-                        {
-                            boneIndex0 = prof.b0,
-                            weight0 = prof.w0,
-                            boneIndex1 = prof.b1,
-                            weight1 = 1f - prof.w0
-                        });
-                    }
-                }
-
-                // Leg Quads
-                for (int r = 0; r < legProfiles.Length - 1; r++)
-                {
-                    int rowA = legStartIdx + r * legRadial;
-                    int rowB = legStartIdx + (r + 1) * legRadial;
-                    for (int i = 0; i < legRadial; i++)
-                    {
-                        int next = (i + 1) % legRadial;
-                        triangles.Add(rowA + i);
-                        triangles.Add(rowB + i);
-                        triangles.Add(rowB + next);
-
-                        triangles.Add(rowA + i);
-                        triangles.Add(rowB + next);
-                        triangles.Add(rowA + next);
-                    }
-                }
-
-                // Toe tip cap
-                int toeCapIdx = verts.Count;
-                verts.Add(new Vector3(legCenterX, 0.02f, 0.15f));
-                normals.Add(Vector3.forward);
-                uvs.Add(new Vector2(isLeft ? 0.30f : 0.70f, 0.02f));
-                weights.Add(new BoneWeight { boneIndex0 = toeBone, weight0 = 1.0f });
-
-                int legEndRing = legStartIdx + (legProfiles.Length - 1) * legRadial;
-                for (int i = 0; i < legRadial; i++)
-                {
-                    int next = (i + 1) % legRadial;
-                    triangles.Add(toeCapIdx);
-                    triangles.Add(legEndRing + next);
-                    triangles.Add(legEndRing + i);
-                }
-            }
-
-            AddLeg(true);  // Left Leg
-            AddLeg(false); // Right Leg
+            BuildContinuousArm(leftArmhole, true);
+            BuildContinuousArm(rightArmhole, false);
 
             // Set Mesh Buffers
             mesh.SetVertices(verts);
@@ -1355,15 +1236,35 @@ namespace OutrunAftermath.Client.Editor
             var clip = new AnimationClip { name = "Operator_HitReaction", legacy = false, wrapMode = WrapMode.Once };
             float[] times = new float[] { 0.0f, 0.06f, 0.18f, 0.30f, 0.40f };
 
+            AddRotCurve(clip, PathHips, times,
+                new float[] { 0f, 4.0f, 2.0f, 0f, 0f },
+                new float[] { 0f, -3.0f, -1.0f, 0f, 0f },
+                new float[] { 0f, 2.0f, 1.0f, 0f, 0f });
+
             AddRotCurve(clip, PathSpine, times,
                 new float[] { 0f, -18.0f, -9.0f, -2.0f, 0f },
                 new float[] { 0f, -10.0f, -5.0f, -1.0f, 0f },
+                new float[] { 0f, 0f, 0f, 0f, 0f });
+
+            AddRotCurve(clip, PathChest, times,
+                new float[] { 0f, -12.0f, -6.0f, -1.0f, 0f },
+                new float[] { 0f, -6.0f, -3.0f, 0f, 0f },
+                new float[] { 0f, 0f, 0f, 0f, 0f });
+
+            AddRotCurve(clip, PathUpperChest, times,
+                new float[] { 0f, -8.0f, -4.0f, 0f, 0f },
+                new float[] { 0f, -4.0f, -2.0f, 0f, 0f },
                 new float[] { 0f, 0f, 0f, 0f, 0f });
 
             AddRotCurve(clip, PathHead, times,
                 new float[] { 0f, -15.0f, -7.0f, 2.0f, 0f },
                 new float[] { 0f, 8.0f, 4.0f, 0f, 0f },
                 new float[] { 0f, 6.0f, 3.0f, 0f, 0f });
+
+            AddRotCurve(clip, PathLUpperArm, times,
+                new float[] { 22f, 35f, 28f, 24f, 22f },
+                new float[] { 10f, 18f, 14f, 11f, 10f },
+                new float[] { 5f, 12f, 8f, 6f, 5f });
 
             AddRotCurve(clip, PathRUpperArm, times,
                 new float[] { 34f, 48f, 40f, 36f, 34f },

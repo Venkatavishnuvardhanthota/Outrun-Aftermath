@@ -158,46 +158,56 @@ All 9 sockets are authored and anchored to anatomical bone transforms:
 
 | Asset Name | Category | File Location | Materials | Description / Attachment Socket |
 |---|---|---|---|---|
-| `SK_Humanoid_Operator` | Skinned Mesh | `Assets/Art/Characters/Shared/Meshes/SK_Humanoid_Operator.asset` | `M_Operator_Shared_Underlayer` | Continuous anatomical humanoid base body with 25 bone skinning weights (974 verts, 1,824 tris) |
+| `SK_Humanoid_Operator` | Skinned Mesh | `Assets/Art/Characters/Shared/Meshes/SK_Humanoid_Operator.asset` | `M_Operator_Shared_Underlayer` | Watertight continuous anatomical humanoid mesh (894 verts, 1,784 tris, 1 component, 0 boundary edges, 0 non-manifold edges, 25 bones, valid multi-joint flexion) |
 | `OperatorHumanoidAvatar` | Humanoid Avatar | `Assets/Art/Characters/Shared/Skeletons/OperatorHumanoidAvatar.asset` | N/A | Validated Unity Humanoid Avatar for Mecanim animation retargeting |
 | `OperatorAnimatorController`| Animator | `Assets/Art/Characters/Shared/Animations/OperatorAnimatorController.controller` | N/A | 13-state 2-layer state machine with UpperBody combat mask |
 | `M_Operator_Shared_Underlayer` | Material | `Assets/Art/Characters/Shared/Materials/M_Operator_Shared_Underlayer.mat` | URP Lit | Ballistic ripstop tactical undersuit (Dark Slate / Charcoal) |
-| `M_Operator_REX_Assault` | Material | `Assets/Art/Characters/Operators/REX/Materials/M_Operator_REX_Assault.mat` | URP Lit | Heavy ballistic assault plating, carbon steel, burnt amber accents |
+| `M_Operator_REX_Assault` | Material | `Assets/Art/Characters/Operators/REX/Materials/M_Operator_REX_Assault.mat` | URP Lit | Heavy ballistic assault plating, carbon steel, calibrated burnt amber accents |
 | `M_Operator_TRACE_Recon` | Material | `Assets/Art/Characters/Operators/TRACE/Materials/M_Operator_TRACE_Recon.mat` | URP Lit | Lightweight composite harness, optical sensors, matte navy & cyan accents |
-| `REX_Helmet_Combat` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/REX_Helmet_Combat.obj` | `M_Operator_REX_Assault` | Enclosed ballistic helmet with amber HUD visor (HelmetAttachmentSocket) |
-| `REX_Vest_TacticalAssault` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/REX_Vest_TacticalAssault.obj` | `M_Operator_REX_Assault` | Heavy ceramic trauma plate carrier with mag pouches (Chest bone) |
+| `REX_Helmet_Combat` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/REX_Helmet_Combat.obj` | `M_Operator_REX_Assault` | Contoured domed helmet with ARC rails, NVG shroud, visor, and chin harness (HelmetAttachmentSocket) |
+| `REX_Vest_TacticalAssault` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/REX_Vest_TacticalAssault.obj` | `M_Operator_REX_Assault` | SAPI swimmer-cut ceramic plate carrier with triple mag pouches and radio (Chest bone) |
 | `REX_Pauldrons_Armored` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/REX_Pauldrons_Armored.obj` | `M_Operator_REX_Assault` | Articulated composite shoulder armor (ShoulderLeft/RightSocket) |
-| `REX_Backpack_Assault` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/REX_Backpack_Assault.obj` | `M_Operator_REX_Assault` | 3-day tactical breach rucksack (BackpackSocket) |
-| `REX_Holster_Sidearm` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/REX_Holster_Sidearm.obj` | `M_Operator_REX_Assault` | Kydex drop-leg tactical sidearm holster (SecondaryWeaponHolster) |
-| `FP_Arms_REX` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/FP_Arms_REX.obj` | `M_Operator_REX_Assault` | First-person viewmodel tactical assault arms with tactical gloves |
+| `REX_Backpack_Assault` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/REX_Backpack_Assault.obj` | `M_Operator_REX_Assault` | 3-day tactical breach rucksack with bottom mat roll (BackpackSocket) |
+| `REX_Holster_Sidearm` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/REX_Holster_Sidearm.obj` | `M_Operator_REX_Assault` | Molded Kydex drop-leg tactical sidearm holster (SecondaryWeaponHolster) |
+| `FP_Arms_REX` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/FP_Arms_REX.obj` | `M_Operator_REX_Assault` | First-person viewmodel tactical assault arms with molded knuckle guards and palm pads |
 | `TRACE_Headset_ReconComms` | 3D Mesh | `Assets/Art/Characters/Operators/TRACE/Meshes/TRACE_Headset_ReconComms.obj` | `M_Operator_TRACE_Recon` | Integrated comms headset with sensor boom & night visor (HelmetAttachmentSocket) |
 | `TRACE_Harness_ReconChest` | 3D Mesh | `Assets/Art/Characters/Operators/TRACE/Meshes/TRACE_Harness_ReconChest.obj` | `M_Operator_TRACE_Recon` | Lightweight MOLLE recon chest rig with scanner battery packs (Chest bone) |
 | `TRACE_Backpack_ReconComms` | 3D Mesh | `Assets/Art/Characters/Operators/TRACE/Meshes/TRACE_Backpack_ReconComms.obj` | `M_Operator_TRACE_Recon` | Tactical telemetry antenna pack (BackpackSocket) |
 | `TRACE_Pouches_UtilityLeg` | 3D Mesh | `Assets/Art/Characters/Operators/TRACE/Meshes/TRACE_Pouches_UtilityLeg.obj` | `M_Operator_TRACE_Recon` | Utility leg pouch for field analysis kits (LeftThigh bone) |
 | `TRACE_Holster_Recon` | 3D Mesh | `Assets/Art/Characters/Operators/TRACE/Meshes/TRACE_Holster_Recon.obj` | `M_Operator_TRACE_Recon` | Quick-draw recon sidearm holster (SecondaryWeaponHolster) |
 | `FP_Arms_TRACE` | 3D Mesh | `Assets/Art/Characters/Operators/TRACE/Meshes/FP_Arms_TRACE.obj` | `M_Operator_TRACE_Recon` | First-person viewmodel recon arms with tactical watch & fingerless grips |
-| `PF_Operator_REX` | Prefab | `Assets/Art/Characters/Operators/REX/Prefabs/PF_Operator_REX.prefab` | Multi | Complete game-ready REX operator prefab (9 sockets, 8 renderers, FP+TP) |
-| `PF_Operator_TRACE` | Prefab | `Assets/Art/Characters/Operators/TRACE/Prefabs/PF_Operator_TRACE.prefab` | Multi | Complete game-ready TRACE operator prefab (9 sockets, 8 renderers, FP+TP) |
+| `PF_Operator_REX` | Prefab | `Assets/Art/Characters/Operators/REX/Prefabs/PF_Operator_REX.prefab` | Multi | Complete game-ready REX operator prefab (9 sockets, 9 renderers, FP+TP) |
+| `PF_Operator_TRACE` | Prefab | `Assets/Art/Characters/Operators/TRACE/Prefabs/PF_Operator_TRACE.prefab` | Multi | Complete game-ready TRACE operator prefab (9 sockets, 9 renderers, FP+TP) |
 
 ---
 
-## 5. Verified In-Engine Visual Evidence (Phase C.1)
+## 5. Verified In-Engine Visual Evidence (Phase C.1.1)
 
-The following 12 1080p in-engine screenshots were captured directly in the Unity LTS 6000.6.9f1 editor using `CaptureCharacterVisuals.CaptureBatchMode`:
+The following 22 1080p in-engine screenshots were captured directly in the Unity LTS 6000.6.9f1 editor using `CaptureCharacterVisuals.CaptureBatchMode`, validating Mode A (detailed static close-ups and diagnostics), Mode B (live Animator runtime playback over time), and networked multiplayer proxy replication:
 
-| Image File | Description | Resolution | Viewpoint & Technical Features |
-|---|---|---|---|
-| `screenshot_rex_front.png` | REX Operator Front View | 1920x1080 | Full-body frontal profile showing continuous anatomical mesh, helmet HUD visor, tactical plate carrier, and rifle ready. |
-| `screenshot_rex_back.png` | REX Operator Back View | 1920x1080 | Rear silhouette showing 3-day assault rucksack, slung weapon holster position, and armored pauldrons. |
-| `screenshot_rex_side.png` | REX Operator Side View | 1920x1080 | Side profile showing knee and elbow crease anatomy, drop-leg sidearm holster, and helmet silhouette. |
-| `screenshot_rex_thirdperson.png` | REX Third-Person View | 1920x1080 | Over-the-shoulder tactical combat camera framing operator back, shoulder armor, and forward sightline. |
-| `screenshot_rex_firstperson.png` | REX First-Person View | 1920x1080 | First-person viewmodel arms with tactical assault gloves and active weapon aiming down sightline. |
-| `screenshot_rex_weapon_switch.png` | REX Weapon Switching | 1920x1080 | Demonstrates Breacher-12 shotgun in right hand socket, and primary Vanguard-4 rifle slung on back holster. |
-| `screenshot_rex_idle.png` | REX Idle State | 1920x1080 | Relaxed combat posture with continuous torso breathing motion and weight distribution across legs. |
-| `screenshot_rex_walk.png` | REX Walk / Run Stride | 1920x1080 | Dynamic stride pose showing knee articulation, pelvic translation, and counter-balancing arm movement. |
-| `screenshot_rex_aim_fire.png` | REX Aim & Fire State | 1920x1080 | Weapon recoil pose with shoulder stock compression, barrel climb, and torso bracing. |
-| `screenshot_rex_crouch.png` | REX Crouch Stance | 1920x1080 | Tactical crouch showing deep knee bend, compressed hip position, and tight combat profile. |
-| `screenshot_rex_reload.png` | REX Reload State | 1920x1080 | Support hand indexing fresh magazine into rifle receiver with left arm articulation. |
-| `screenshot_rex_downed_death.png` | REX Downed / Death State | 1920x1080 | Prone casualty collapse pose showing fallen operator on terrain with limp limb articulation. |
+| Image File | Category | Description | Resolution | Viewpoint & Technical Features |
+|---|---|---|---|---|
+| `screenshot_rex_front.png` | Standard | REX Front View (Full Body) | 1920x1080 | Full-body frontal profile showing continuous watertight mesh, helmet visor, plate carrier, and rifle ready. |
+| `screenshot_rex_back.png` | Standard | REX Back View (Full Body) | 1920x1080 | Rear silhouette showing 3-day assault rucksack with bottom mat roll, slung holster, and armored pauldrons. |
+| `screenshot_rex_side.png` | Standard | REX Side View (Profile) | 1920x1080 | Side profile showing knee and elbow crease anatomy, drop-leg Kydex holster, and contoured helmet shell. |
+| `screenshot_rex_thirdperson.png` | Perspective | REX Third-Person View | 1920x1080 | Over-the-shoulder tactical combat camera framing operator back, shoulder armor, and forward sightline. |
+| `screenshot_rex_firstperson.png` | Perspective | REX First-Person View | 1920x1080 | First-person viewmodel arms with molded knuckle guards and active weapon aiming down sightline with 0 clipping. |
+| `screenshot_rex_weapon_switch.png` | Mechanics | REX Weapon Switching | 1920x1080 | Breacher-12 shotgun in hand socket, and primary Vanguard-4 rifle slung on back holster with 0 duplicates. |
+| `screenshot_rex_head_helmet.png` | Mode A Close-Up | REX Head & Combat Helmet | 1920x1080 | Domed shell, ARC rails, NVG shroud, visor, and chin harness. |
+| `screenshot_rex_upper_equipment.png` | Mode A Close-Up | REX Upper Body Equipment | 1920x1080 | SAPI swimmer-cut ceramic plate carrier, triple mag pouches with bungee tabs, radio, shoulder straps. |
+| `screenshot_rex_hands_gloves.png` | Mode A Close-Up | REX Hands & Gloves | 1920x1080 | Molded knuckle guards, palm pads, and trigger finger indexing weapon receiver. |
+| `screenshot_rex_lower_equipment.png` | Mode A Close-Up | REX Lower Body Equipment | 1920x1080 | Contoured trousers, reinforced knee pads, and combat boots with defined tread soles and laces. |
+| `screenshot_rex_wireframe.png` | Diagnostic | REX Mesh Wireframe Overlay | 1920x1080 | Diagnostic topology overlay showing continuous 2-manifold edge flow, 1 component, 0 boundary edges. |
+| `screenshot_rex_skeleton.png` | Diagnostic | REX 25-Bone Hierarchy | 1920x1080 | Diagnostic joint spheres and connecting bone rods showing complete anatomical skeleton hierarchy. |
+| `screenshot_rex_skin_weights.png` | Diagnostic | REX Skin-Weight Heatmap | 1920x1080 | Vertex color visualization of multi-bone skinning weight distribution across 25 bones. |
+| `screenshot_rex_idle.png` | Mode B Playback | REX Idle State | 1920x1080 | Relaxed combat posture with continuous torso breathing motion and weight distribution across legs. |
+| `screenshot_rex_walk.png` | Mode B Playback | REX Walk Cycle | 1920x1080 | Dynamic stride pose showing knee articulation, pelvic translation, and counter-balancing arm movement. |
+| `screenshot_rex_run.png` | Mode B Playback | REX Run Cycle | 1920x1080 | Athletic forward lean, arm swing, and knee drive during rapid relocation. |
+| `screenshot_rex_crouch.png` | Mode B Playback | REX Crouch Stance | 1920x1080 | Tactical crouch showing deep knee bend, compressed hip position, and tight combat profile. |
+| `screenshot_rex_aim_fire.png` | Mode B Playback | REX Aim & Fire State | 1920x1080 | Weapon recoil impulse with shoulder stock compression, barrel climb, and torso bracing. |
+| `screenshot_rex_reload.png` | Mode B Playback | REX Reload State | 1920x1080 | Left hand indexing fresh magazine into rifle receiver with left arm articulation. |
+| `screenshot_rex_hit_reaction.png` | Mode B Playback | REX Hit Reaction State | 1920x1080 | Upper torso twist, head snap, and shoulder flinch absorbing incoming ballistic impact. |
+| `screenshot_rex_downed_death.png` | Mode B Playback | REX Downed / Death State | 1920x1080 | Prone casualty collapse pose showing fallen operator on terrain with limp limb articulation. |
+| `screenshot_rex_multiplayer_proxy.png` | Multiplayer | REX Remote Client Proxy | 1920x1080 | Remote teammate operator rendering in full third-person with socketed weapon and overhead HUD nametag. |
 
 

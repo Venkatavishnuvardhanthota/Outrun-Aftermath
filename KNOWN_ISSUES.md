@@ -89,10 +89,16 @@
    - **Dynamic Zero-Allocation Weapon Socketing**: Dynamic parenting in `UpdateSocketedWeaponVisuals()` without duplicate allocations across rapid weapon switching.
    - **Dual First/Third-Person Presentation**: High-detail viewmodel arms in FPS, `ShadowCastingMode.ShadowsOnly` local culling, `ShadowCastingMode.On` for TPS/remote.
    - **Multiplayer Netcode Replication**: Owner-writable `NetworkVariable`s (`NetMoveSpeed`, `NetIsGrounded`, `NetIsCrouched`, `NetIsAiming`, `NetIsReloading`, `NetActiveSlot`) with remote proxy sync in `Update()`, `ClientTriggerHitReactionRpc()`, and weapon fired sync.
-15. **Vehicle Articulation**:
+15. **Phase C.1.1 Complete: Character Verification and Visual Refinement**:
+   - **Watertight 2-Manifold Mesh**: `SK_Humanoid_Operator.asset` rewritten as a continuous lofted mesh with 894 vertices, 1,784 triangles, 1 connected component, 0 boundary edges, 0 non-manifold edges, and 6-joint flexion deformation verification.
+   - **REX Tactical Equipment & PBR Calibration**: Procedural assets upgraded to eliminate repetitive diagonal stripes and simple stacked boxes; domed helmet with ARC rails/NVG shroud, SAPI plate carrier with triple bungee mag pouches, and molded knuckle gloves. Corrected URP MaskMap channel packing and dielectric calibration.
+   - **Categorized Validation Gate**: `CharacterValidationPipeline.cs` upgraded with discrete categorized checks (Geometry, Skinning, Structural Assets, Animator, Playback, Materials, Weapon Switching, Perspective, Multiplayer Netcode, and DCC Boundary Review), returning status **PASS** (0 errors, 0 warnings).
+   - **22-Screenshot Evidence Suite**: `CaptureCharacterVisuals.cs` captures Mode A close-ups and diagnostics (wireframe, skeleton, skin-weight heatmap), Mode B runtime animation playback states, and multiplayer proxy replication.
+   - **DCC Asset Pipeline Documentation**: Established `docs/CHARACTER_PIPELINE.md` specifying the 25-bone hierarchy, FBX import settings, poly budgets, and texture standards for external artists.
+16. **Vehicle Articulation**:
    - Vehicles utilize rigid compound hierarchies and arcade physics rather than fully articulated skeletal suspension meshes (scheduled for future vehicle visual upgrade phase).
-16. Voice chat vendor not selected; no voice chat in any build.
-17. Aim assist, mobile HUD, and touch controls are specified but unimplemented (Phase 8).
+17. Voice chat vendor not selected; no voice chat in any build.
+18. Aim assist, mobile HUD, and touch controls are specified but unimplemented (Phase 8).
 
 ## Systems
 
