@@ -339,5 +339,131 @@ namespace OutrunAftermath.Client.Editor
             Object.DestroyImmediate(rt);
             Object.DestroyImmediate(camGo);
         }
+
+        [MenuItem("Outrun/Capture First-Person Weapon Screenshots")]
+        public static void CaptureAllWeaponsFirstPersonScreenshots()
+        {
+            Debug.Log("[ArtAssetPipeline] Capturing 1080p First-Person Weapon Screenshots in Sector 4...");
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene("Assets/Scenes/Main.unity");
+
+            // Ensure MapEnvironmentDirector generates Sector 4 Dead City
+            var director = Object.FindAnyObjectByType<MapEnvironmentDirector>();
+            if (director == null)
+            {
+                var dirGo = new GameObject("MapEnvironmentDirector");
+                director = dirGo.AddComponent<MapEnvironmentDirector>();
+            }
+            director.LoadMap("deadcity", WeatherCondition.Clear);
+
+            // Setup First-Person Operator Camera looking at Avenue, Cover, and Bank facade
+            var camGo = new GameObject("FirstPersonCamera");
+            var cam = camGo.AddComponent<Camera>();
+            camGo.transform.position = new Vector3(-1f, 1.7f, 2f);
+            camGo.transform.rotation = Quaternion.Euler(3f, -22f, 0f);
+            cam.fieldOfView = 65f;
+            cam.nearClipPlane = 0.05f;
+            cam.farClipPlane = 500f;
+
+            int width = 1920;
+            int height = 1080;
+            var rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
+            cam.targetTexture = rt;
+
+            string artifactDir = @"C:\Users\vishn\.gemini\antigravity\brain\4dca56ca-91c2-47c5-bfb3-fb99b4b8a1c5";
+
+            void CaptureView(string filename, GameObject weaponInstance, Vector3 localPos, Quaternion localRot)
+            {
+                if (weaponInstance != null)
+                {
+                    weaponInstance.transform.SetParent(camGo.transform, false);
+                    weaponInstance.transform.localPosition = localPos;
+                    weaponInstance.transform.localRotation = localRot;
+                    weaponInstance.SetActive(true);
+                }
+
+                cam.Render();
+
+                RenderTexture.active = rt;
+                var tex = new Texture2D(width, height, TextureFormat.RGB24, false);
+                tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+                tex.Apply();
+                RenderTexture.active = null;
+
+                byte[] bytes = tex.EncodeToPNG();
+                string projectPath = Path.Combine(Directory.GetCurrentDirectory(), filename);
+                File.WriteAllBytes(projectPath, bytes);
+                Debug.Log($"[ArtAssetPipeline] Captured {filename}: {projectPath} ({bytes.Length} bytes)");
+
+                try
+                {
+                    string artPath = Path.Combine(artifactDir, filename);
+                    File.WriteAllBytes(artPath, bytes);
+                    Debug.Log($"[ArtAssetPipeline] Mirrored to artifact: {artPath}");
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"[ArtAssetPipeline] Could not mirror {filename} to artifact: {ex.Message}");
+                }
+
+                Object.DestroyImmediate(tex);
+
+                if (weaponInstance != null)
+                {
+                    weaponInstance.SetActive(false);
+                    Object.DestroyImmediate(weaponInstance);
+                }
+            }
+
+            // Load Weapon Prefabs from Resources
+            var pfVanguard = Resources.Load<GameObject>("Art/Prefabs/PF_Weapon_Vanguard_AssaultRifle");
+            var pfBreacher = Resources.Load<GameObject>("Art/Prefabs/PF_Weapon_Breacher_Shotgun");
+            var pfSidekick = Resources.Load<GameObject>("Art/Prefabs/PF_Weapon_Sidekick_Pistol");
+
+            // 1. Vanguard-4 Assault Rifle (Hip / First-Person)
+            if (pfVanguard != null)
+            {
+                var inst = Object.Instantiate(pfVanguard);
+                CaptureView("screenshot_sector4_vanguard4_fps.png", inst, new Vector3(0.24f, -0.22f, 0.48f), Quaternion.identity);
+            }
+
+            // 2. Vanguard-4 Assault Rifle (ADS / Iron Sights)
+            if (pfVanguard != null)
+            {
+                var inst = Object.Instantiate(pfVanguard);
+                CaptureView("screenshot_sector4_vanguard4_ads.png", inst, new Vector3(0f, -0.14f, 0.32f), Quaternion.identity);
+            }
+
+            // 3. Breacher-12 Shotgun (Hip / First-Person)
+            if (pfBreacher != null)
+            {
+                var inst = Object.Instantiate(pfBreacher);
+                CaptureView("screenshot_sector4_breacher12_fps.png", inst, new Vector3(0.25f, -0.24f, 0.45f), Quaternion.identity);
+            }
+
+            // 4. Sidekick-9 Pistol (Hip / First-Person)
+            if (pfSidekick != null)
+            {
+                var inst = Object.Instantiate(pfSidekick);
+                CaptureView("screenshot_sector4_sidekick9_fps.png", inst, new Vector3(0.18f, -0.18f, 0.40f), Quaternion.identity);
+            }
+
+            Object.DestroyImmediate(rt);
+            Object.DestroyImmediate(camGo);
+            Debug.Log("[ArtAssetPipeline] All 4 First-Person weapon screenshots captured successfully!");
+        }
+
+        public static void CaptureAllWeaponsFirstPersonScreenshotsBatchMode()
+        {
+            try
+            {
+                CaptureAllWeaponsFirstPersonScreenshots();
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[ArtAssetPipeline] Batch screenshot capture failed: {ex}");
+                EditorApplication.Exit(1);
+            }
+        }
     }
 }

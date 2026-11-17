@@ -58,19 +58,24 @@
 9. **Phase B & B.1 Model Quality Audit (Blockout vs Production 3D DCC Models)**:
    - The 16 OBJ models in `Assets/Art/Meshes/` (Roads, Buildings, Props, Debris, Vehicles, and Weapons) are programmatic compound-box and cylinder blockouts generated via Python (`scripts/generate_phase_b_assets.py`). They establish proper world-space proportions, pivot origins, PBR material assignments, and collision hulls.
    - **Quality Audit Finding**: While these models fully replace Unity primitive capsules and flat cubes, they are *architectural blockout / prototype models*. They do not feature sculpted bevels, baked high-to-low poly normal details, or non-overlapping bespoke UV unwraps. For final AAA production quality, professional 3D DCC artist assets (Blender/Maya/Substance) must replace these blockouts.
-10. **Character & Vehicle Animation Rigs**:
+10. **Phase B.1.1 Verification Closure**:
+   - Weapon and environment missing-prefab paths now strictly fail fast (`FileNotFoundException` / `MissingReferenceException`) in strict validation mode (`-strict-assets`, `-strict-weapons`), with zero silent primitive geometry created.
+   - Development fallback visuals in `WeaponSystem.cs` are visually tagged with bright red alert materials and `[DEV_FALLBACK]` identifiers.
+   - 6-tier URP profile uniqueness and serialized settings are confirmed through automated batchmode reflection (`urp_quality_validation.json`).
+   - Headless dedicated server and client multiplayer exchange verified across all 12 discrete lifecycle stages with clean zero exit codes (`e2e_production_test_report.json`).
+11. **Character & Vehicle Animation Rigs**:
    - Player operators and vehicles currently utilize rigid modular compound hierarchies rather than skinned, bone-weighted skeletal meshes with Mecanim humanoid controllers and articulated suspension.
-11. Voice chat vendor not selected; no voice chat in any build.
-12. Aim assist, mobile HUD, and touch controls are specified but unimplemented (Phase 8).
+12. Voice chat vendor not selected; no voice chat in any build.
+13. Aim assist, mobile HUD, and touch controls are specified but unimplemented (Phase 8).
 
 ## Systems
 
-11. Matchmaking state is in-process memory. It cannot serve more than one API instance, and it
+14. Matchmaking state is in-process memory. It cannot serve more than one API instance, and it
     is lost on restart. Production needs Redis or a durable queue.
-12. The public queue does not allocate real game servers; there is no orchestrator yet.
-13. `NetworkPlayerController` uses direct NGO combat math in Phase 2 rather than calling
+15. The public queue does not allocate real game servers; there is no orchestrator yet.
+16. `NetworkPlayerController` uses direct NGO combat math in Phase 2 rather than calling
     `shared/OutrunAftermath.Simulation` directly (integration scheduled for Phase 3).
-14. Room join does not yet enforce team capacity, readiness, or lobby-host transfer.
-15. Rewards are validated for duplicates by match id, but the internal completion endpoint uses
+17. Room join does not yet enforce team capacity, readiness, or lobby-host transfer.
+18. Rewards are validated for duplicates by match id, but the internal completion endpoint uses
     a shared static key from configuration rather than per-server signed credentials.
-16. No profiler data exists. No frame-rate, memory, or device claims can be made.
+19. No profiler data exists. No frame-rate, memory, or device claims can be made.

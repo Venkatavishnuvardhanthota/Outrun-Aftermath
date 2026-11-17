@@ -76,6 +76,45 @@ namespace OutrunAftermath.Client.Runtime.Combat
         public event Action<Ray, float, int> OnNetworkFireRequested; // baseRay, spreadDeg, slotIndex
 
         public bool IsNetworkManaged { get; set; }
+        public static bool StrictVisualValidationMode { get; set; } = false;
+
+        public static readonly string[] RequiredWeaponPrefabs = new string[]
+        {
+            "PF_Weapon_Vanguard_AssaultRifle",
+            "PF_Weapon_Breacher_Shotgun",
+            "PF_Weapon_Sidekick_Pistol"
+        };
+
+        public static bool ValidateAllWeaponPrefabs(out string failureReason)
+        {
+            foreach (var prefabName in RequiredWeaponPrefabs)
+            {
+                var prefab = Resources.Load<GameObject>($"Art/Prefabs/{prefabName}");
+                if (prefab == null)
+                {
+                    failureReason = $"Missing weapon prefab in Resources: 'Art/Prefabs/{prefabName}'";
+                    return false;
+                }
+
+                var mf = prefab.GetComponentInChildren<MeshFilter>();
+                if (mf == null || mf.sharedMesh == null)
+                {
+                    failureReason = $"Weapon prefab '{prefabName}' is missing a valid MeshFilter or Mesh.";
+                    return false;
+                }
+
+                var mr = prefab.GetComponentInChildren<Renderer>();
+                if (mr == null || mr.sharedMaterial == null)
+                {
+                    failureReason = $"Weapon prefab '{prefabName}' is missing a valid Renderer or Material.";
+                    return false;
+                }
+            }
+
+            failureReason = null;
+            return true;
+        }
+
         public IReadOnlyList<WeaponData> Loadout => loadout;
         public int ActiveSlotIndex => activeSlotIndex;
         public WeaponData CurrentWeapon => (loadout.Count > 0 && activeSlotIndex < loadout.Count) ? loadout[activeSlotIndex] : null;
@@ -88,6 +127,17 @@ namespace OutrunAftermath.Client.Runtime.Combat
         private void Awake()
         {
             EnsureDefaultLoadout();
+
+            string[] args = System.Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i].Equals("-strict-assets", StringComparison.OrdinalIgnoreCase) ||
+                    args[i].Equals("-strict-weapons", StringComparison.OrdinalIgnoreCase))
+                {
+                    StrictVisualValidationMode = true;
+                    Debug.Log("[WeaponSystem] Strict Visual Validation Mode ENABLED via command line flag.");
+                }
+            }
         }
 
         public void Initialize(CameraRig cameraRig, CharacterMotor motor, PlayerHealth health)
@@ -256,8 +306,15 @@ namespace OutrunAftermath.Client.Runtime.Combat
                 }
                 else
                 {
-                    Debug.LogWarning($"[WeaponSystem] Missing prefab 'Art/Prefabs/{prefabName}' for weapon '{weaponId}'. Creating explicit URP Lit fallback.");
-                    visualGo = CreateFallbackGunVisual(slotIndex, weaponId, out var muzzle);
+                    if (StrictVisualValidationMode)
+                    {
+                        string errMsg = $"[WeaponSystem][STRICT ASSET FAILURE] Required weapon visual prefab 'Art/Prefabs/{prefabName}' for weapon '{weaponId}' was not found in Resources! Primitive fallbacks are strictly prohibited in production and strict validation mode.";
+                        Debug.LogError(errMsg);
+                        throw new System.IO.FileNotFoundException(errMsg);
+                    }
+
+                    Debug.LogWarning($"[WeaponSystem][DEV FALLBACK WARNING] Missing production weapon prefab 'Art/Prefabs/{prefabName}' for weapon '{weaponId}'. Primitive blockout geometry will ONLY be rendered in development mode.");
+                    visualGo = CreateDevFallbackGunVisual(slotIndex, weaponId, out var muzzle);
                     _weaponVisualInstances[slotIndex] = visualGo;
                     _weaponMuzzlePoints[slotIndex] = muzzle;
                 }
@@ -274,18 +331,28 @@ namespace OutrunAftermath.Client.Runtime.Combat
             }
         }
 
-        private GameObject CreateFallbackGunVisual(int slotIndex, string weaponId, out Transform muzzle)
+        /// <summary>
+        /// DEVELOPMENT-ONLY fallback gun visual.
+        /// Throws in strict validation mode. Never executed in production builds.
+        /// Visibly tagged with [DEV_FALLBACK] banner in hierarchy.
+        /// </summary>
+        private GameObject CreateDevFallbackGunVisual(int slotIndex, string weaponId, out Transform muzzle)
         {
-            var fallbackRoot = new GameObject($"Fallback_{weaponId}_Visual");
+            if (StrictVisualValidationMode)
+            {
+                throw new System.InvalidOperationException($"[WeaponSystem] Attempted to create primitive fallback for '{weaponId}' while StrictVisualValidationMode is active.");
+            }
+
+            var fallbackRoot = new GameObject($"[DEV_FALLBACK]_{weaponId}_Visual");
             fallbackRoot.transform.SetParent(gunRoot);
             fallbackRoot.transform.localPosition = Vector3.zero;
             fallbackRoot.transform.localRotation = Quaternion.identity;
 
             var litShader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard") ?? Shader.Find("Unlit/Color");
-            var gunMat = new Material(litShader) { color = new Color(0.2f, 0.22f, 0.24f) };
+            var gunMat = new Material(litShader) { color = new Color(0.85f, 0.25f, 0.25f) };
 
             var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            body.name = "Body";
+            body.name = "DEV_FALLBACK_Body";
             body.transform.SetParent(fallbackRoot.transform);
             body.transform.localPosition = new Vector3(0f, 0f, 0.15f);
             body.transform.localScale = new Vector3(0.06f, 0.10f, 0.35f);
@@ -294,7 +361,7 @@ namespace OutrunAftermath.Client.Runtime.Combat
             body.GetComponent<Renderer>().material = gunMat;
 
             var barrel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            barrel.name = "Barrel";
+            barrel.name = "DEV_FALLBACK_Barrel";
             barrel.transform.SetParent(fallbackRoot.transform);
             barrel.transform.localPosition = new Vector3(0f, 0.02f, 0.38f);
             barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);

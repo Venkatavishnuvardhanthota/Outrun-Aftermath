@@ -87,3 +87,18 @@ This register maintains an authoritative, audit-compliant inventory of all 3D ge
 | `PF_Weapon_Breacher_Shotgun` | Prefab | `ArtAssetPipeline` | Project Original | `Assets/Resources/Art/Prefabs/PF_Weapon_Breacher_Shotgun.prefab` | MeshFilter + MeshRenderer + Muzzle Point | `M_Weapon_TacticalSteel` | `Weapon_Breacher_Shotgun.obj` |
 | `PF_Weapon_Sidekick_Pistol` | Prefab | `ArtAssetPipeline` | Project Original | `Assets/Resources/Art/Prefabs/PF_Weapon_Sidekick_Pistol.prefab` | MeshFilter + MeshRenderer + Muzzle Point | `M_Weapon_TacticalSteel` | `Weapon_Sidekick_Pistol.obj` |
 | `DeadCity_AtmosphereFX` | Particle System | Procedural Subsystem | Project Original | Spawned at runtime by `MapEnvironmentDirector` | ParticleSystem, Box Volume (65x10x95), Rate: 25/s, Max: 200 | URP Particles Unlit | Atmospheric wind drift & ash |
+
+---
+
+## 3. Verified In-Engine Visual Evidence (Phase B.1.1)
+
+The following 1080p in-game screenshots were captured directly inside the Unity LTS 6000.6.9f1 client in Dead City Sector 4 using `ArtAssetPipeline.CaptureAllWeaponsFirstPersonScreenshotsBatchMode`:
+
+| Image File | Description | Resolution | Viewpoint & Assets Framed |
+|---|---|---|---|
+| `screenshot_sector4_vanguard4_fps.png` | Vanguard-4 Assault Rifle (First-Person Hip) | 1920x1080 | Operator hands with Vanguard-4 rifle, looking down Dead City Avenue toward the multi-story bank ruins, broken streetlight, and Jersey barricades. |
+| `screenshot_sector4_vanguard4_ads.png` | Vanguard-4 Assault Rifle (First-Person ADS) | 1920x1080 | Iron sights and barrel aligned directly on screen centerline, demonstrating precision aim geometry down the combat corridor. |
+| `screenshot_sector4_breacher12_fps.png` | Breacher-12 Tactical Shotgun (First-Person Hip) | 1920x1080 | Tactical rest with Breacher-12 shotgun showing barrel, pump action, receiver, and tactical stock against Sector 4 urban ruins. |
+| `screenshot_sector4_sidekick9_fps.png` | Sidekick-9 Combat Pistol (First-Person Hip) | 1920x1080 | Sidearm rest with Sidekick-9 pistol showing slide, grip, and iron sights framing the avenue barricades and bank facade. |
+| `screenshot_phase_b1_deadcity.png` | Sector 4 Dead City Wide Vista | 1920x1080 | Elevated tactical overview of Sector 4 showing asphalt avenue, bomb crater, bank ruins, rusted fuel barrels, and wrecked sedan. |
+

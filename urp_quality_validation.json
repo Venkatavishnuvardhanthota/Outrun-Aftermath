@@ -1,0 +1,13 @@
+{
+  "auditStatus": "PASSED",
+  "uniquePipelineAssets": 6,
+  "uniqueRenderers": 6,
+  "tiers": [
+    "Tier [0: Very Low] => Asset: 'URP_Quality_VeryLow' | Renderer: 'URP_Renderer_VeryLow' | ShadowDist: 20m (Exp: 20m, Match: True) | Cascades: 1 (Exp: 1, Match: True) | SSAO: False (Exp: False, Match: True) | MSAA: 1 | RenderScale: 0.75 (Exp: 0.75, Match: True)",
+    "Tier [1: Low] => Asset: 'URP_Quality_Low' | Renderer: 'URP_Renderer_Low' | ShadowDist: 35m (Exp: 35m, Match: True) | Cascades: 2 (Exp: 2, Match: True) | SSAO: False (Exp: False, Match: True) | MSAA: 2 | RenderScale: 0.85 (Exp: 0.85, Match: True)",
+    "Tier [2: Medium] => Asset: 'URP_Quality_Medium' | Renderer: 'URP_Renderer_Medium' | ShadowDist: 50m (Exp: 50m, Match: True) | Cascades: 3 (Exp: 3, Match: True) | SSAO: True (Exp: True, Match: True) | MSAA: 2 | RenderScale: 1.00 (Exp: 1.00, Match: True)",
+    "Tier [3: High] => Asset: 'URP_Quality_High' | Renderer: 'URP_Renderer_High' | ShadowDist: 75m (Exp: 75m, Match: True) | Cascades: 4 (Exp: 4, Match: True) | SSAO: True (Exp: True, Match: True) | MSAA: 4 | RenderScale: 1.00 (Exp: 1.00, Match: True)",
+    "Tier [4: Very High] => Asset: 'URP_Quality_VeryHigh' | Renderer: 'URP_Renderer_VeryHigh' | ShadowDist: 95m (Exp: 95m, Match: True) | Cascades: 4 (Exp: 4, Match: True) | SSAO: True (Exp: True, Match: True) | MSAA: 4 | RenderScale: 1.00 (Exp: 1.00, Match: True)",
+    "Tier [5: Ultra] => Asset: 'URP_Quality_Ultra' | Renderer: 'URP_Renderer_Ultra' | ShadowDist: 120m (Exp: 120m, Match: True) | Cascades: 4 (Exp: 4, Match: True) | SSAO: True (Exp: True, Match: True) | MSAA: 8 | RenderScale: 1.00 (Exp: 1.00, Match: True)"
+  ]
+}

@@ -443,25 +443,171 @@ namespace OutrunAftermath.Client.Editor
 
         public static void VerifyURPConfiguration()
         {
-            var defaultPipeline = GraphicsSettings.defaultRenderPipeline;
-            Debug.Log($"[URP_VERIFY] GraphicsSettings.defaultRenderPipeline: {(defaultPipeline != null ? defaultPipeline.name : "NULL")}");
+            ValidateSixURPProfiles(failOnError: false);
+        }
 
-            for (int i = 0; i < QualitySettings.names.Length; i++)
+        [MenuItem("Outrun/Audit & Validate 6-Tier URP Configuration")]
+        public static bool ValidateSixURPProfiles(bool failOnError = false)
+        {
+            Debug.Log("==================================================================");
+            Debug.Log("[URP_AUDIT] BEGINNING RIGOROUS 6-TIER URP & QUALITY AUDIT...");
+            Debug.Log("==================================================================");
+
+            bool allPassed = true;
+            var distinctAssetPaths = new System.Collections.Generic.HashSet<string>();
+            var distinctRendererPaths = new System.Collections.Generic.HashSet<string>();
+            var auditResults = new System.Collections.Generic.List<string>();
+
+            if (QualitySettings.names.Length < 6)
             {
-                QualitySettings.SetQualityLevel(i, false);
-                var qRp = QualitySettings.renderPipeline;
-                Debug.Log($"[URP_VERIFY] Quality tier [{i}: {QualitySettings.names[i]}] => Asset: {(qRp != null ? qRp.name : "NULL")}, LODBias: {QualitySettings.lodBias:F2}, MipmapLimit: {QualitySettings.globalTextureMipmapLimit}, ParticleBudget: {QualitySettings.particleRaycastBudget}");
+                string err = $"[URP_AUDIT_FAIL] QualitySettings has fewer than 6 quality tiers! Found: {QualitySettings.names.Length}";
+                Debug.LogError(err);
+                if (failOnError) throw new InvalidOperationException(err);
+                return false;
             }
 
-            var vol = AssetDatabase.LoadAssetAtPath<VolumeProfile>(VolumeProfilePath);
-            if (vol != null)
+            int originalQuality = QualitySettings.GetQualityLevel();
+
+            try
             {
-                Debug.Log($"[URP_VERIFY] VolumeProfile has {vol.components.Count} components.");
-                foreach (var comp in vol.components)
+                for (int i = 0; i < 6; i++)
                 {
-                    Debug.Log($"[URP_VERIFY]   - Component: {comp.GetType().Name} (active: {comp.active})");
+                    QualitySettings.SetQualityLevel(i, false);
+                    string tierName = QualitySettings.names[i];
+                    var assignedRp = QualitySettings.renderPipeline as UniversalRenderPipelineAsset;
+
+                    if (assignedRp == null)
+                    {
+                        Debug.LogError($"[URP_AUDIT_FAIL] Tier [{i}: {tierName}] has NO assigned URP Pipeline Asset!");
+                        allPassed = false;
+                        continue;
+                    }
+
+                    string assetPath = AssetDatabase.GetAssetPath(assignedRp);
+                    distinctAssetPaths.Add(assetPath);
+
+                    // Read Serialized Properties of UniversalRenderPipelineAsset
+                    var urpSo = new SerializedObject(assignedRp);
+                    float serShadowDist = urpSo.FindProperty("m_ShadowDistance")?.floatValue ?? assignedRp.shadowDistance;
+                    int serCascades = urpSo.FindProperty("m_ShadowCascadeCount")?.intValue ?? assignedRp.shadowCascadeCount;
+                    int serMsaa = urpSo.FindProperty("m_MSAA")?.intValue ?? (int)assignedRp.msaaSampleCount;
+                    float serRenderScale = urpSo.FindProperty("m_RenderScale")?.floatValue ?? assignedRp.renderScale;
+
+                    // Read Renderer Asset
+                    ScriptableRendererData rendererData = null;
+                    var rendListProp = urpSo.FindProperty("m_RendererDataList");
+                    if (rendListProp != null && rendListProp.arraySize > 0)
+                    {
+                        rendererData = rendListProp.GetArrayElementAtIndex(0).objectReferenceValue as ScriptableRendererData;
+                    }
+
+                    if (rendererData == null)
+                    {
+                        Debug.LogError($"[URP_AUDIT_FAIL] Tier [{i}: {tierName}] asset '{assignedRp.name}' has NO valid ScriptableRendererData attached!");
+                        allPassed = false;
+                        continue;
+                    }
+
+                    string rendPath = AssetDatabase.GetAssetPath(rendererData);
+                    distinctRendererPaths.Add(rendPath);
+
+                    // Check SSAO Renderer Feature in rendererData
+                    bool ssaoFound = false;
+                    foreach (var feat in rendererData.rendererFeatures)
+                    {
+                        if (feat != null && feat.GetType().Name.Contains("ScreenSpaceAmbientOcclusion") && feat.isActive)
+                        {
+                            ssaoFound = true;
+                            break;
+                        }
+                    }
+
+                    var expectedConfig = TierConfigs[i];
+                    bool nameOk = assignedRp.name.Contains(expectedConfig.Name);
+                    bool shadowDistOk = Mathf.Approximately(serShadowDist, expectedConfig.ShadowDistance);
+                    bool cascadesOk = (serCascades == expectedConfig.ShadowCascades);
+                    bool ssaoOk = (ssaoFound == expectedConfig.EnableSSAO);
+                    bool renderScaleOk = Mathf.Approximately(serRenderScale, expectedConfig.RenderScale);
+
+                    string tierResult = $"Tier [{i}: {tierName}] => Asset: '{assignedRp.name}' | Renderer: '{rendererData.name}' | ShadowDist: {serShadowDist}m (Exp: {expectedConfig.ShadowDistance}m, Match: {shadowDistOk}) | Cascades: {serCascades} (Exp: {expectedConfig.ShadowCascades}, Match: {cascadesOk}) | SSAO: {ssaoFound} (Exp: {expectedConfig.EnableSSAO}, Match: {ssaoOk}) | MSAA: {serMsaa} | RenderScale: {serRenderScale:F2} (Exp: {expectedConfig.RenderScale:F2}, Match: {renderScaleOk})";
+
+                    if (nameOk && shadowDistOk && cascadesOk && ssaoOk && renderScaleOk)
+                    {
+                        Debug.Log($"[URP_AUDIT_PASS] {tierResult}");
+                    }
+                    else
+                    {
+                        Debug.LogError($"[URP_AUDIT_FAIL] Discrepancy detected! {tierResult}");
+                        allPassed = false;
+                    }
+
+                    auditResults.Add(tierResult);
                 }
+
+                // Check Uniqueness: all 6 tiers must reference 6 DISTINCT pipeline assets and renderers
+                if (distinctAssetPaths.Count < 6)
+                {
+                    Debug.LogError($"[URP_AUDIT_FAIL] Assets are NOT distinct across tiers! Expected 6 unique assets, found: {distinctAssetPaths.Count}");
+                    allPassed = false;
+                }
+                else
+                {
+                    Debug.Log($"[URP_AUDIT_PASS] All 6 quality tiers reference 6 discrete, dedicated URP Pipeline Assets.");
+                }
+
+                if (distinctRendererPaths.Count < 6)
+                {
+                    Debug.LogError($"[URP_AUDIT_FAIL] Renderers are NOT distinct across tiers! Expected 6 unique renderers, found: {distinctRendererPaths.Count}");
+                    allPassed = false;
+                }
+                else
+                {
+                    Debug.Log($"[URP_AUDIT_PASS] All 6 quality tiers reference 6 discrete, dedicated ScriptableRendererData assets.");
+                }
+
+                // Write machine-readable JSON report
+                string jsonReportPath = Path.Combine(Directory.GetCurrentDirectory(), "urp_quality_validation.json");
+                string rootReportPath = Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory())?.FullName ?? Directory.GetCurrentDirectory(), "urp_quality_validation.json");
+                string brainArtifact = @"C:\Users\vishn\.gemini\antigravity\brain\4dca56ca-91c2-47c5-bfb3-fb99b4b8a1c5\urp_quality_validation.json";
+
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine("{");
+                sb.AppendLine($"  \"auditStatus\": \"{(allPassed ? "PASSED" : "FAILED")}\",");
+                sb.AppendLine($"  \"uniquePipelineAssets\": {distinctAssetPaths.Count},");
+                sb.AppendLine($"  \"uniqueRenderers\": {distinctRendererPaths.Count},");
+                sb.AppendLine("  \"tiers\": [");
+                for (int t = 0; t < auditResults.Count; t++)
+                {
+                    sb.Append("    \"").Append(auditResults[t].Replace("\"", "\\\"")).Append("\"");
+                    if (t < auditResults.Count - 1) sb.Append(",");
+                    sb.AppendLine();
+                }
+                sb.AppendLine("  ]");
+                sb.AppendLine("}");
+
+                string jsonContent = sb.ToString();
+                File.WriteAllText(jsonReportPath, jsonContent);
+                try { File.WriteAllText(rootReportPath, jsonContent); } catch { }
+                try { File.WriteAllText(brainArtifact, jsonContent); } catch { }
+                Debug.Log($"[URP_AUDIT] Report written to: {jsonReportPath} and {rootReportPath}");
+
+                if (!allPassed && failOnError)
+                {
+                    throw new InvalidOperationException("[URP_AUDIT] 6-Tier URP verification failed due to configuration discrepancies.");
+                }
+
+                return allPassed;
             }
+            finally
+            {
+                QualitySettings.SetQualityLevel(originalQuality, false);
+            }
+        }
+
+        public static void ValidateSixURPProfilesBatchMode()
+        {
+            bool ok = ValidateSixURPProfiles(failOnError: false);
+            EditorApplication.Exit(ok ? 0 : 1);
         }
     }
 }

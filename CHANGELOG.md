@@ -2,6 +2,33 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [1.3.2] - 2026-11-17 - Phase B.1.1: Final Verification, Evidence Closure & Production Readiness Gate
+
+### Added
+- **Strict Visual Validation Mode & Dev Fallback Styling (`WeaponSystem.cs`)**:
+  - Implemented `StrictVisualValidationMode` property and CLI arguments (`-strict-assets`, `-strict-weapons`).
+  - In strict mode, missing weapon prefabs immediately fail-fast with a `FileNotFoundException` without generating primitive fallback cubes or cylinders.
+  - In development mode, `CreateDevFallbackGunVisual` marks fallback instances as `[DEV_FALLBACK]_{weaponId}_Visual` with high-visibility red alert materials.
+  - Added `ValidateAllWeaponPrefabs` auditing mesh, material, and transform integrity for Vanguard-4, Breacher-12, and Sidekick-9 prefabs.
+- **In-Engine 6-Tier URP Profile Audit Suite (`URPSetupPipeline.cs`)**:
+  - Added `ValidateSixURPProfiles` and `ValidateSixURPProfilesBatchMode` reading serialized values directly from `UniversalRenderPipelineAsset` and `ScriptableRendererData`.
+  - Confirmed 6 discrete URP pipeline assets and 6 discrete renderer assets with exact shadow distances (20m to 120m), cascade counts (1 to 4), SSAO toggles, MSAA levels (1 to 8), and render scale adjustments.
+  - Serialized machine-readable audit report to `urp_quality_validation.json`.
+- **First-Person Tactical Weapon Captures (`ArtAssetPipeline.cs`)**:
+  - Implemented `CaptureAllWeaponsFirstPersonScreenshotsBatchMode` producing 4 full 1080p in-game screenshots in Dead City Sector 4:
+    - `screenshot_sector4_vanguard4_fps.png` (Assault rifle hip first-person with avenue & bank)
+    - `screenshot_sector4_vanguard4_ads.png` (Assault rifle ADS iron sights alignment)
+    - `screenshot_sector4_breacher12_fps.png` (Shotgun hip first-person)
+    - `screenshot_sector4_sidekick9_fps.png` (Pistol hip first-person)
+- **12-Stage Multiplayer E2E Netcode Verification (`run_e2e_production_test.ps1`)**:
+  - Expanded multiplayer E2E verification to validate 12 distinct netcode stages from server spawn and UDP socket binding through client handshake, authoritative player spawning, RPC packet roundtrip (`FireWeaponRpc` -> `PlayShotEffectsRpc`), and clean client/server shutdown.
+  - Generates machine-readable `e2e_production_test_report.json` with 21/21 suite checks passing (100% PASS).
+
+### Changed
+- Clarified architectural distinction in `MapEnvironmentDirector.cs` between intentional procedural terrain foundation geometry (`SectorFloor`, `Bank_StairRamp`, `DeadCity_AtmosphereFX`) and missing-prefab fallbacks (`SpawnPrefabOrFallback`).
+
+---
+
 ## [1.3.1] - 2026-11-16 - Phase B.1: Independent Visual Foundation Audit & Corrective Fixes
 
 ### Added

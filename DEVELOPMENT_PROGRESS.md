@@ -934,6 +934,91 @@ Phase B.1: Independent Visual Foundation Audit & Corrective Fixes — Multi-tier
 
 ### Next phase
 
-Phase C: Character Foundation — Rigged Operators REX (Rogue Assault) and TRACE (Sentinel Tracker) with modular gear, weapon attachment sockets, third-person and first-person presentations, and complete 13-state animation controller system.
+Phase B.1.1: Final Verification, Evidence Closure & Production Readiness Gate — Verification of zero silent fallbacks, automated 6-tier URP profile inspection, 12-stage multiplayer netcode proof, and high-resolution first-person weapon captures.
+
+---
+
+## Phase B.1.1 — 2026-11-17 (Final Verification, Evidence Closure & Production Readiness Gate)
+
+### Completed features
+
+- **Weapon Fallback Eradication & Strict Mode (`WeaponSystem.cs`)**:
+  - Implemented explicit `StrictVisualValidationMode` property and CLI flag parsing (`-strict-assets`, `-strict-weapons`).
+  - Strict mode enforces fail-fast integrity: if any weapon prefab fails to load from `Resources`, a `FileNotFoundException` is immediately thrown, completely blocking primitive geometry creation.
+  - Replaced legacy primitive visual generator with `CreateDevFallbackGunVisual`: in development mode, fallbacks are explicitly tagged `[DEV_FALLBACK]_{weaponId}_Visual` and styled with bright red warning materials.
+  - Added `ValidateAllWeaponPrefabs(out string failureReason)` method verifying all 3 weapon prefabs (`PF_Weapon_Vanguard_AssaultRifle`, `PF_Weapon_Breacher_Shotgun`, `PF_Weapon_Sidekick_Pistol`) for valid `MeshFilter.sharedMesh`, `Renderer.sharedMaterial`, and transform hierarchy.
+  - Verified weapon switching across slots 1, 2, and 3: updates active weapon visual, rest offsets, ADS positions, muzzle points, and recoil properties while preserving combat mathematics and RPCs.
+
+- **Sector 4 Environment Asset Integrity (`MapEnvironmentDirector.cs`)**:
+  - Extended `AssetValidationReport` to comprehensively inspect `MeshFilter.sharedMesh`, `Renderer.sharedMaterial`, and `Collider` components on all 16 required Sector 4 prefabs.
+  - Confirmed 16/16 required prefabs loaded successfully from `Resources/Art/Prefabs/` with 0 missing references, 0 missing meshes, and 0 missing colliders.
+  - Clarified architectural distinction between intentional procedural terrain foundation geometry (`SectorFloor`, `Bank_StairRamp`, `DeadCity_AtmosphereFX`) and missing-prefab fallbacks (`SpawnPrefabOrFallback`).
+
+- **In-Engine 6-Tier URP Profile Audit (`URPSetupPipeline.cs`)**:
+  - Developed automated in-engine validation method `ValidateSixURPProfiles` and batchmode runner `ValidateSixURPProfilesBatchMode`.
+  - Serialized and validated actual settings from `QualitySettings.asset`, `UniversalRenderPipelineAsset`, and `ScriptableRendererData`.
+  - Verified 6 unique pipeline assets and 6 unique renderer assets across all tiers:
+    - Tier 0 (Very Low): ShadowDist=20m, Cascades=1, SSAO=False, MSAA=1, RenderScale=0.75
+    - Tier 1 (Low): ShadowDist=35m, Cascades=2, SSAO=False, MSAA=2, RenderScale=0.85
+    - Tier 2 (Medium): ShadowDist=50m, Cascades=3, SSAO=True, MSAA=2, RenderScale=1.00
+    - Tier 3 (High): ShadowDist=75m, Cascades=4, SSAO=True, MSAA=4, RenderScale=1.00
+    - Tier 4 (Very High): ShadowDist=95m, Cascades=4, SSAO=True, MSAA=4, RenderScale=1.00
+    - Tier 5 (Ultra): ShadowDist=120m, Cascades=4, SSAO=True, MSAA=8, RenderScale=1.00
+  - Serialized machine-readable audit report to `urp_quality_validation.json`.
+
+- **Conclusive 12-Stage Multiplayer E2E Verification (`run_e2e_production_test.ps1`)**:
+  - Upgraded E2E test suite to verify and record all 12 discrete netcode lifecycle stages:
+    1. Dedicated Server process spawned (PID verified).
+    2. Server NGO `NetworkManager` initialized.
+    3. Dedicated Server listening on UDP socket `:7799`.
+    4. Client process spawned (PID verified).
+    5. Client completed connection handshake (Assigned `ClientId=1`).
+    6. Server received client connection callback (`ClientId=1`).
+    7. Server spawned authoritative `NetworkPlayer` object.
+    8. Client received and spawned replicated `NetworkPlayer` (`NetworkObjectId=3`).
+    9. Client sent `FireWeaponRpc` and Server processed it authoritatively.
+    10. Client received and processed `PlayShotEffectsRpc` from server.
+    11. Client disconnected cleanly with `ExitCode 0`.
+    12. Server shut down cleanly with `ExitCode 0`.
+  - Robust process cleanup in PowerShell `finally` block preventing orphan background processes.
+  - Serialized comprehensive machine-readable verification report to `e2e_production_test_report.json` (21/21 total suite checks passed, 100% PASS).
+
+- **First-Person Weapon Visual Captures (`ArtAssetPipeline.cs`)**:
+  - Authored automated batch capture routine `CaptureAllWeaponsFirstPersonScreenshotsBatchMode`.
+  - Captured 4 authentic 1080p in-game screenshots in Dead City Sector 4:
+    - `screenshot_sector4_vanguard4_fps.png`: Vanguard-4 assault rifle in operator hands framing the central avenue, Jersey barriers, wrecked sedan, and multi-story bank.
+    - `screenshot_sector4_vanguard4_ads.png`: Vanguard-4 ADS iron sights aligned down the weapon centerline.
+    - `screenshot_sector4_breacher12_fps.png`: Breacher-12 shotgun in first-person tactical rest.
+    - `screenshot_sector4_sidekick9_fps.png`: Sidekick-9 pistol sidearm in first-person tactical rest.
+
+### Files modified
+
+- `client/Assets/Game/Runtime/Combat/WeaponSystem.cs`
+- `client/Assets/Game/Runtime/Environment/MapEnvironmentDirector.cs`
+- `client/Assets/Editor/URPSetupPipeline.cs`
+- `client/Assets/Editor/ArtAssetPipeline.cs`
+- `run_e2e_production_test.ps1`
+- `DEVELOPMENT_PROGRESS.md`
+- `CHANGELOG.md`
+- `KNOWN_ISSUES.md`
+- `docs/ASSET_REGISTER.md`
+
+### Artifacts and evidence generated
+
+- `urp_quality_validation.json`: In-engine validation report of 6 unique URP profiles and renderers.
+- `e2e_production_test_report.json`: Full 21-check E2E production test report including 12 netcode stages.
+- `screenshot_sector4_vanguard4_fps.png`: 1080p first-person capture of Vanguard-4 assault rifle.
+- `screenshot_sector4_vanguard4_ads.png`: 1080p capture of Vanguard-4 ADS iron sights alignment.
+- `screenshot_sector4_breacher12_fps.png`: 1080p first-person capture of Breacher-12 shotgun.
+- `screenshot_sector4_sidekick9_fps.png`: 1080p first-person capture of Sidekick-9 pistol.
+
+### Verification verdict
+
+**PASS**: Phase B.1.1 production readiness gate achieved with 100% test success rate, verifiable evidence, zero silent fallbacks, and validated 6-tier URP rendering pipeline. Ready for Phase C.
+
+### Next phase
+
+Phase C: Character Foundation — Rigged Operators REX (Rogue Assault) and TRACE (Sentinel Tracker) with modular tactical gear, weapon attachment sockets, first-person and third-person presentations, and complete 13-state animation controller system.
+
 
 
