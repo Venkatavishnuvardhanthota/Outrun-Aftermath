@@ -1,0 +1,17 @@
+{
+  "auditStatus": "PASSED",
+  "sector4Prefabs": {
+    "totalChecked": 16,
+    "loadedCount": 16,
+    "missingCount": 0,
+    "invalidMeshCount": 0,
+    "missingColliderCount": 0,
+    "status": "PASSED"
+  },
+  "weaponPrefabs": {
+    "totalChecked": 3,
+    "valid": true,
+    "error": null,
+    "status": "PASSED"
+  }
+}

@@ -21,6 +21,7 @@ This register maintains an authoritative, audit-compliant inventory of all 3D ge
   - **Color Adjustments**: Post-Exposure +0.20 EV, Contrast +12.0, Saturation +8.0
   - **Vignette**: Intensity 0.25, Smoothness 0.35
 - **Asset Validation Engine**: `MapEnvironmentDirector.cs` enforces explicit runtime verification (`-strict-assets` CLI arg / `StrictAssetValidationMode = true`), validating all 16 Sector 4 prefabs and failing fast with `MissingReferenceException` rather than silent geometric degradation.
+- **In-Engine Asset & Weapon Audit Report (`asset_validation_report.json`)**: Phase B.1.2 automated audit via `ArtAssetPipeline.ValidateAllArtAssetsAndWeaponsBatchMode` verifies 16/16 Sector 4 environment prefabs and 3/3 tactical weapon prefabs (`PF_Weapon_Vanguard_AssaultRifle`, `PF_Weapon_Breacher_Shotgun`, `PF_Weapon_Sidekick_Pistol`) with 0 missing meshes, 0 invalid colliders, and full material assignments.
 
 ---
 

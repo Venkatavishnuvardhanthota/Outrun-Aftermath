@@ -465,5 +465,65 @@ namespace OutrunAftermath.Client.Editor
                 EditorApplication.Exit(1);
             }
         }
+
+        [MenuItem("Outrun/Validate Art Assets & Weapons")]
+        public static bool ValidateAllArtAssetsAndWeapons(out string reportJson)
+        {
+            Debug.Log("[ArtAssetPipeline] Starting comprehensive asset & weapon validation audit...");
+
+            // 1. Validate Sector 4 Prefabs
+            var envReport = MapEnvironmentDirector.ValidateRequiredAssets();
+
+            // 2. Validate Weapon Prefabs
+            bool weaponsOk = WeaponSystem.ValidateAllWeaponPrefabs(out string weaponError);
+
+            bool allPassed = envReport.AllRequiredLoaded && weaponsOk;
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("{");
+            sb.AppendLine($"  \"auditStatus\": \"{(allPassed ? "PASSED" : "FAILED")}\",");
+            sb.AppendLine($"  \"sector4Prefabs\": {{");
+            sb.AppendLine($"    \"totalChecked\": {envReport.TotalChecked},");
+            sb.AppendLine($"    \"loadedCount\": {envReport.LoadedCount},");
+            sb.AppendLine($"    \"missingCount\": {envReport.MissingCount},");
+            sb.AppendLine($"    \"invalidMeshCount\": {envReport.InvalidMeshCount},");
+            sb.AppendLine($"    \"missingColliderCount\": {envReport.MissingColliderCount},");
+            sb.AppendLine($"    \"status\": \"{(envReport.AllRequiredLoaded ? "PASSED" : "FAILED")}\"");
+            sb.AppendLine($"  }},");
+            sb.AppendLine($"  \"weaponPrefabs\": {{");
+            sb.AppendLine($"    \"totalChecked\": {WeaponSystem.RequiredWeaponPrefabs.Length},");
+            sb.AppendLine($"    \"valid\": {weaponsOk.ToString().ToLowerInvariant()},");
+            sb.AppendLine($"    \"error\": {(weaponError != null ? $"\"{weaponError}\"" : "null")},");
+            sb.AppendLine($"    \"status\": \"{(weaponsOk ? "PASSED" : "FAILED")}\"");
+            sb.AppendLine($"  }}");
+            sb.AppendLine("}");
+
+            reportJson = sb.ToString();
+
+            string jsonReportPath = Path.Combine(Directory.GetCurrentDirectory(), "asset_validation_report.json");
+            string rootReportPath = Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory())?.FullName ?? Directory.GetCurrentDirectory(), "asset_validation_report.json");
+            string brainArtifact = @"C:\Users\vishn\.gemini\antigravity\brain\4dca56ca-91c2-47c5-bfb3-fb99b4b8a1c5\asset_validation_report.json";
+
+            File.WriteAllText(jsonReportPath, reportJson);
+            try { File.WriteAllText(rootReportPath, reportJson); } catch { }
+            try { File.WriteAllText(brainArtifact, reportJson); } catch { }
+            Debug.Log($"[ArtAssetPipeline] Asset validation report saved to: {jsonReportPath} and {rootReportPath}");
+
+            return allPassed;
+        }
+
+        public static void ValidateAllArtAssetsAndWeaponsBatchMode()
+        {
+            try
+            {
+                bool ok = ValidateAllArtAssetsAndWeapons(out _);
+                EditorApplication.Exit(ok ? 0 : 1);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[ArtAssetPipeline] Batch asset validation failed: {ex}");
+                EditorApplication.Exit(1);
+            }
+        }
     }
 }

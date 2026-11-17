@@ -76,7 +76,24 @@ namespace OutrunAftermath.Client.Runtime.Combat
         public event Action<Ray, float, int> OnNetworkFireRequested; // baseRay, spreadDeg, slotIndex
 
         public bool IsNetworkManaged { get; set; }
-        public static bool StrictVisualValidationMode { get; set; } = false;
+        
+        private static bool _strictVisualValidationMode = false;
+        public static bool StrictVisualValidationMode
+        {
+            get => _strictVisualValidationMode;
+            set
+            {
+                _strictVisualValidationMode = value;
+                if (value)
+                {
+                    if (!ValidateAllWeaponPrefabs(out string reason))
+                    {
+                        Debug.LogError($"[WeaponSystem] Strict mode weapon validation failed: {reason}");
+                        throw new System.IO.FileNotFoundException($"[WeaponSystem] Strict mode weapon validation failed: {reason}");
+                    }
+                }
+            }
+        }
 
         public static readonly string[] RequiredWeaponPrefabs = new string[]
         {
@@ -138,6 +155,26 @@ namespace OutrunAftermath.Client.Runtime.Combat
                     Debug.Log("[WeaponSystem] Strict Visual Validation Mode ENABLED via command line flag.");
                 }
             }
+
+            // Actively validate weapon prefabs on startup
+            bool valid = ValidateAllWeaponPrefabs(out string failureReason);
+            if (valid)
+            {
+                Debug.Log("[WeaponSystem] All required weapon prefabs validated successfully in Resources.");
+            }
+            else
+            {
+                string warnMsg = $"[WeaponSystem] Weapon prefab validation discrepancy: {failureReason}";
+                if (StrictVisualValidationMode)
+                {
+                    Debug.LogError($"[WeaponSystem] STRICT VALIDATION FAILURE: {warnMsg}");
+                    throw new System.IO.FileNotFoundException(warnMsg);
+                }
+                else
+                {
+                    Debug.LogWarning(warnMsg);
+                }
+            }
         }
 
         public void Initialize(CameraRig cameraRig, CharacterMotor motor, PlayerHealth health)
@@ -147,6 +184,12 @@ namespace OutrunAftermath.Client.Runtime.Combat
             _health = health;
 
             EnsureDefaultLoadout();
+
+            if (!ValidateAllWeaponPrefabs(out string err) && StrictVisualValidationMode)
+            {
+                throw new System.IO.FileNotFoundException($"[WeaponSystem] Cannot initialize in strict mode: {err}");
+            }
+
             SetupVisualGunRig();
             EquipSlot(0);
         }

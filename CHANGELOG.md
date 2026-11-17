@@ -2,6 +2,25 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [1.3.3] - 2026-11-17 - Phase B.1.2: Final E2E Test Integrity & Validation Enforcement
+
+### Added
+- **Mandatory Binary Verification Gate (`run_e2e_production_test.ps1`)**:
+  - Enforced mandatory pre-flight checks for `OutrunAftermath_Server.exe` and `OutrunAftermath_Client.exe`. Missing binaries halt execution and log explicit failures (no silent skips).
+- **UDP Socket PID Ownership Verification**:
+  - Implemented socket ownership checks via `Get-NetUDPEndpoint` and `netstat -ano -p UDP` ensuring the UDP socket `:7799` is bound exclusively by the spawned dedicated server process PID.
+- **Two-Sided Complete RPC Roundtrip Enforcement**:
+  - Stage 9 requires two-sided evidence: client sending `FireWeaponRpc` and server processing it for that client ID.
+  - Stage 10 requires two-sided evidence: server processing and client confirming receipt of `PlayShotEffectsRpc`.
+- **Truthful Dynamic Test Reporting**:
+  - Eradicated all hardcoded `PASS` values from `e2e_production_test_report.json`.
+  - Added full execution transcript logging to `e2e_production_test_console.log`.
+- **Integrated Weapon Validation Execution**:
+  - Wired `WeaponSystem.ValidateAllWeaponPrefabs()` into `Awake()`, `Initialize()`, and `StrictVisualValidationMode` property setter.
+  - Added `ArtAssetPipeline.ValidateAllArtAssetsAndWeaponsBatchMode()` validating 16 Sector 4 prefabs and 3 weapon prefabs into `asset_validation_report.json`.
+
+---
+
 ## [1.3.2] - 2026-11-17 - Phase B.1.1: Final Verification, Evidence Closure & Production Readiness Gate
 
 ### Added

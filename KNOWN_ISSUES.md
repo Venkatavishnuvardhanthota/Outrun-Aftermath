@@ -63,10 +63,16 @@
    - Development fallback visuals in `WeaponSystem.cs` are visually tagged with bright red alert materials and `[DEV_FALLBACK]` identifiers.
    - 6-tier URP profile uniqueness and serialized settings are confirmed through automated batchmode reflection (`urp_quality_validation.json`).
    - Headless dedicated server and client multiplayer exchange verified across all 12 discrete lifecycle stages with clean zero exit codes (`e2e_production_test_report.json`).
-11. **Character & Vehicle Animation Rigs**:
+11. **Phase B.1.2 E2E Test Integrity & Validation Enforcement Closure**:
+   - Mandatory binary validation enforces dedicated server (`OutrunAftermath_Server.exe`) and client (`OutrunAftermath_Client.exe`) presence, recording exact file paths and PIDs.
+   - Explicit process lifecycle monitoring captures Boolean `WaitForExit()` returns, exit codes, and process termination state (`Graceful` vs `Forced`), strictly failing on timeouts.
+   - UDP socket ownership verification validates that local port `7799` is bound exclusively by the dedicated server PID via `Get-NetUDPEndpoint` and `netstat -ano -p UDP`.
+   - Two-sided RPC roundtrip verification enforces mutual proof: Stage 9 requires client `FireWeaponRpc` send confirmation and matching server processing; Stage 10 requires server shot processing and client `PlayShotEffectsRpc` receive confirmation.
+   - Dynamic JSON reporting eliminates all static strings; all 23 verification stages are computed dynamically (`e2e_production_test_report.json`), completing with 23/23 PASS (100%), 0 FAIL, 0 SKIPPED.
+12. **Character & Vehicle Animation Rigs**:
    - Player operators and vehicles currently utilize rigid modular compound hierarchies rather than skinned, bone-weighted skeletal meshes with Mecanim humanoid controllers and articulated suspension.
-12. Voice chat vendor not selected; no voice chat in any build.
-13. Aim assist, mobile HUD, and touch controls are specified but unimplemented (Phase 8).
+13. Voice chat vendor not selected; no voice chat in any build.
+14. Aim assist, mobile HUD, and touch controls are specified but unimplemented (Phase 8).
 
 ## Systems
 

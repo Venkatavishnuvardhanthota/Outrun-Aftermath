@@ -1018,7 +1018,62 @@ Phase B.1.1: Final Verification, Evidence Closure & Production Readiness Gate �
 
 ### Next phase
 
+Phase B.1.2: Final E2E Test Integrity & Validation Enforcement — Truthful dynamic reporting, mandatory executable gates, socket PID ownership verification, two-sided RPC roundtrip proof, and integrated startup weapon validation.
+
+---
+
+## Phase B.1.2 — 2026-11-17 (Final E2E Test Integrity & Validation Enforcement)
+
+### Completed features
+
+- **Mandatory Multiplayer Executable Validation (`run_e2e_production_test.ps1`)**:
+  - Removed silent skipping: pre-flight checks enforce existence of `OutrunAftermath_Server.exe` and `OutrunAftermath_Client.exe` (or validated universal executable fallback), logging explicit failures and halting if missing.
+  - Recorded exact resolved binary paths, process IDs, and launch arguments in test output and machine-readable report.
+- **Process Lifecycle & Timeout Integrity**:
+  - Captured Boolean return value from all `WaitForExit` calls (30s client session, 15s server shutdown).
+  - Prevented false clean shutdown claims: timeouts and forced kills are strictly flagged as FAILED.
+  - Classified cleanup mode as `Graceful` vs `Forced`. Verified server process termination before concluding test.
+- **Dedicated UDP Socket PID Ownership Verification**:
+  - Replaced generic port search with authoritative ownership verification using `Get-NetUDPEndpoint` and `netstat -ano -p UDP`.
+  - Confirmed UDP port `:7799` is bound exclusively by the spawned server process (`PID: 10600`), rejecting unauthorized socket usage.
+- **Two-Sided Complete RPC Roundtrip Enforcement**:
+  - Stage 9 requires two-sided proof: client logged sending `FireWeaponRpc` AND server logged processing it for that specific `ClientId`.
+  - Stage 10 requires two-sided proof: server processed request AND client confirmed receipt of `PlayShotEffectsRpc`.
+  - One-sided generic messages can no longer pass the verification gate.
+- **Truthful Dynamic JSON & Console Logging**:
+  - Eradicated all hardcoded `PASS` values from `e2e_production_test_report.json`.
+  - All report sections (API health, registration, JWT, profile, room creation, HMAC signing, tamper defense, 12 netcode stages, unit test counts) are derived from real execution results and exit codes.
+  - Added full console transcription to `e2e_production_test_console.log`.
+- **Integrated Weapon Validation Execution (`WeaponSystem.cs` & `ArtAssetPipeline.cs`)**:
+  - Integrated `ValidateAllWeaponPrefabs()` directly into `WeaponSystem.Awake()`, `Initialize()`, and `StrictVisualValidationMode` setter.
+  - Strict mode fails fast with `FileNotFoundException` if any of the 3 required weapon prefabs are missing or corrupted.
+  - Created automated batchmode runner `ArtAssetPipeline.ValidateAllArtAssetsAndWeaponsBatchMode()` validating 16 Sector 4 prefabs and 3 weapon prefabs, generating `asset_validation_report.json`.
+
+### Files modified
+
+- `client/Assets/Game/Runtime/Combat/WeaponSystem.cs`
+- `client/Assets/Editor/ArtAssetPipeline.cs`
+- `run_e2e_production_test.ps1`
+- `DEVELOPMENT_PROGRESS.md`
+- `CHANGELOG.md`
+- `KNOWN_ISSUES.md`
+- `docs/ASSET_REGISTER.md`
+
+### Artifacts and evidence generated
+
+- `e2e_production_test_report.json`: Dynamically derived 23-check production report (100% PASS, 0 failed, 0 skipped).
+- `e2e_production_test_console.log`: Complete raw transcript of test execution.
+- `asset_validation_report.json`: In-engine validation report confirming 16/16 Sector 4 prefabs and 3/3 weapon prefabs.
+- `urp_quality_validation.json`: In-engine verification of 6 discrete URP pipeline assets and 6 discrete renderers.
+
+### Verification verdict
+
+**PASS**: Phase B.1.2 complete with 100% test success rate, zero hardcoded values, proven process lifecycle and socket ownership, two-sided RPC roundtrips, and full standalone client/server builds.
+
+### Next phase
+
 Phase C: Character Foundation — Rigged Operators REX (Rogue Assault) and TRACE (Sentinel Tracker) with modular tactical gear, weapon attachment sockets, first-person and third-person presentations, and complete 13-state animation controller system.
+
 
 
 
