@@ -1,21 +1,21 @@
 {
-    "timestamp": "2026-11-17T09:49:26.9307400Z",
+    "timestamp": "2026-11-17T10:38:27.7368496Z",
     "phase": "Phase C.1.1: Character Verification and Visual Refinement",
-    "status": "PASS",
+    "status": "PARTIAL",
     "unityVersion": "6000.6.9f1",
     "platform": "WindowsEditor",
     "geometry": {
         "valid": true,
         "meshName": "SK_Humanoid_Operator",
-        "vertexCount": 894,
-        "triangleCount": 1784,
+        "vertexCount": 1078,
+        "triangleCount": 2152,
         "subMeshCount": 1,
-        "boneWeightCount": 894,
+        "boneWeightCount": 1078,
         "bindPoseCount": 25,
         "boundsSize": {
-            "x": 1.7000000476837158,
-            "y": 1.7599999904632568,
-            "z": 0.3185739517211914
+            "x": 1.8200000524520874,
+            "y": 1.8280000686645508,
+            "z": 0.3738207221031189
         },
         "hasNormals": true,
         "hasUVs": true,
@@ -32,6 +32,12 @@
         "hipDeformationPassed": true,
         "kneeDeformationPassed": true,
         "ankleDeformationPassed": true,
+        "armsRaisedDeformationPassed": true,
+        "forearmsRotatedDeformationPassed": true,
+        "legsLungeDeformationPassed": true,
+        "torsoTwistDeformationPassed": true,
+        "headRotationDeformationPassed": true,
+        "volumeRetentionPassed": true,
         "deformationTestPassed": true,
         "topologyQuality": "Continuous Anatomical 2-Manifold"
     },
@@ -314,7 +320,7 @@
             "checkName": "Watertight Continuous Humanoid Mesh",
             "status": "PASS",
             "description": "Verifies continuous 2-manifold humanoid topology with 1 connected component, 0 boundary edges, and 0 non-manifold edges.",
-            "evidence": "Verts: 894, Tris: 1784, Components: 1, BoundaryEdges: 0, NonManifoldEdges: 0",
+            "evidence": "Verts: 1078, Tris: 2152, Components: 1, BoundaryEdges: 0, NonManifoldEdges: 0",
             "reason": "",
             "assetPath": "Assets/Art/Characters/Shared/Meshes/SK_Humanoid_Operator.asset",
             "isAutomated": true

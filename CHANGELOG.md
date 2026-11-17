@@ -2,24 +2,30 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
-## [1.4.2] - 2026-11-17 - Phase C.1.1: Character Verification and Visual Refinement
+## [1.4.2] - 2026-11-17 - Phase C.1.1: Character Verification, Mesh Refinement & Validation
 
 ### Added
-- **Watertight Continuous 2-Manifold Humanoid Mesh (`SK_Humanoid_Operator.asset`)**:
+- **Refined Anatomical Watertight Humanoid Mesh (`SK_Humanoid_Operator.asset`)**:
   - Genuinely continuous, closed, watertight 2-manifold surface eliminating all disconnected body segments.
-  - Verified with 894 vertices, 1,784 triangles, 1 connected component, 0 boundary edges, 0 non-manifold edges.
-  - Verified 6-joint flexion deformation (shoulder, elbow, wrist, hip, knee, ankle) without volume collapse or NaN coordinates.
+  - Refined anatomical topology with 1,078 vertices, 2,152 triangles, 1 connected component, 0 boundary edges, 0 non-manifold edges.
+  - Anatomical features: skull dome, brow ridge, eye sockets, nose bridge/tip, philtrum, lips, chin, flared mandible, broad athletic deltoid span (0.464m), pectorals with sternal cleft, narrow waist, rectus abdominis, iliac crest, gluteus maximus swell with gluteal cleft, biceps/triceps, olecranon elbow points, forearm bellies, wrists, hands with palms, thenar thumb mounds, opposing thumb protrusions, knuckle ridges, and finger segments; thighs with quadriceps femoris, patella kneecap plates, popliteal fossa creases, gastrocnemius calf bellies, soleus, Achilles tendons, ankle malleoli, calcaneus heel expansions, plantar arches, metatarsal balls, flat tactical tread soles, and toe boxes.
+  - Seamless conformal $\sin(\theta)$ UV mapping without seam wrapping jumps.
+- **Surface Noise Eradication & Neutral Clay Material**:
+  - Eradicated surface noise caused by 8-pixel micro-ripstop checkerboard and Gaussian white noise feeding into unbuffered Sobel filters in `generate_phase_c_character_assets.py`.
+  - Added PIL `BoxBlur(1.5)` pre-filter on height maps, calibrated normal strength to 0.5, eliminating pixel-level tangent-space normal flips and specular twinkle.
+  - Authored clean neutral studio gray clay material (`M_Operator_Neutral_Clay.mat`: URP Lit, Color `(0.62, 0.64, 0.66)`, metallic 0, smoothness 0.22, untextured) for geometric silhouette and lighting audit.
+- **Programmatic Multi-Joint Deformation Verification**:
+  - Automated 11-joint deformation test suite in `CharacterValidationPipeline.cs` covering arms raised/lowered $\pm 75^\circ$, elbow bent $90^\circ$, wrist, hip, knee bent $-90^\circ$, ankle, forearms rotated $\pm 60^\circ$, deep lunge pose, torso twist $30^\circ$, and head rotation $45^\circ$.
+  - Programmatically verifies volume retention ($>70\%$ and $<160\%$) and zero NaN coordinates (all 11 tests PASS).
+- **Categorized In-Engine Validation Gate (`CharacterValidationPipeline.cs`)**:
+  - Upgraded validation with discrete categorization across Geometry, Skinning, Structural Assets, Animator, Playback, Materials, Weapon Switching, Perspective, Multiplayer Netcode, and DCC Boundary Review.
+  - Strictly maintained overall report status as **PARTIAL** in `character_validation_report.json` until external production-sculpted DCC assets are integrated.
+- **Visual Evidence Suite (`CaptureCharacterVisuals.cs`)**:
+  - Captured 10 specific required screenshots (`screenshot_rex_neutral_front.png`, `screenshot_rex_neutral_side.png`, `screenshot_rex_neutral_back.png`, `screenshot_rex_head_hands.png`, `screenshot_rex_wireframe.png`, `screenshot_rex_skeleton.png`, `screenshot_rex_deform_shoulder_elbow.png`, `screenshot_rex_deform_knee_hip.png`, `screenshot_rex_neutral_clay.png`, `screenshot_rex_shaded_final.png`) plus 20 diagnostic screenshots across Mode A, Mode B, and Multiplayer Proxy.
 - **Operator REX Visual & Equipment Quality Refinement**:
   - Replaced repetitive diagonal canvas stripes with calibrated charcoal/carbon steel palette and localized burnt amber chevron/visor accents.
   - 12 regenerated Wavefront OBJ equipment models: contoured domed combat helmet with ARC rails and NVG bracket, SAPI swimmer-cut ceramic plate carrier with triple bungee mag pouches and radio, articulated deltoid pauldrons, 3-day breach rucksack with bottom bedroll, molded Kydex sidearm holster, and tactical gloves with molded knuckle guards.
   - Corrected URP MaskMap channel packing (R: Metallic, G: AO, B: Detail, A: Smoothness) with calibrated dielectric and metal values.
-- **Categorized In-Engine Validation Gate (`CharacterValidationPipeline.cs`)**:
-  - Upgraded validation with discrete categorization across Geometry, Skinning, Structural Assets, Animator, Playback, Materials, Weapon Switching, Perspective, Multiplayer Netcode, and DCC Boundary Review.
-  - Automated report `character_validation_report.json` passes with status **PASS** (0 errors, 0 warnings).
-- **22-Screenshot In-Engine Visual Evidence Suite (`CaptureCharacterVisuals.cs`)**:
-  - Mode A (Static Close-Ups & Diagnostics): Front, Back, Side, First-Person, Third-Person, Weapon Switch, Head/Helmet, Upper Equipment, Hands/Gloves, Lower Equipment, Mesh Wireframe, 25-Bone Skeleton Hierarchy, Skin-Weight Heatmap.
-  - Mode B (Live Runtime Animation Playback): Idle, Walk, Run, Crouch, Aim & Fire, Reload, Hit Reaction, Downed / Death.
-  - Multiplayer Proxy: Remote proxy operator rendering in full third-person with socketed rifle and overhead HUD nametag.
 - **External DCC Artist Pipeline Documentation (`docs/CHARACTER_PIPELINE.md`)**:
   - Established formal technical specification for external FBX character artists (Blender/Maya/ZBrush/Marvelous Designer/Substance).
   - Defined 25-bone hierarchy naming, meter scale, vertex budgets (LOD0: 18k–25k tris, LOD1: 8k–12k, LOD2: 3k–5k), 4-bone influences, and URP PBR texture packing.

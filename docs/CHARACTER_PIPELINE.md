@@ -57,13 +57,20 @@ To guarantee project autonomy, headless compilation, and zero third-party licens
 
 - **Watertight 2-Manifold Mesh (`SK_Humanoid_Operator.asset`)**:
   - Authored via `CharacterAssetPipeline.cs` using lofted cross-sectional rings, anatomical contouring, and closed cylindrical topology.
-  - **Metrics**: 894 vertices, 1,784 triangles, 1 single connected component, 0 boundary edges, 0 non-manifold edges.
-  - **Skinning**: 25 bind poses, smooth multi-bone weights with normalized influences (max 2 influences per vertex for lightweight prototype runtime).
-  - **Deformation Verification**: Passes automated flexion audits across 6 major articulation points (shoulder, elbow, wrist, hip, knee, ankle) without volume collapse or NaN vertex coordinates.
+  - **Metrics**: 1,078 vertices, 2,152 triangles, 1 single connected component, 0 boundary edges, 0 non-manifold edges.
+  - **Anatomical Definition**:
+    - *Head & Facial Features*: Defined cranium dome, brow ridge, inset eye orbits, nose bridge and nose tip, philtrum, lips, chin protrusion, and flared mandible jawline.
+    - *Torso & Spine*: Broad athletic clavicles ($0.464$m span), trapezius slope, pectoralis major muscle plates with sternal cleft depression, ribcage curvature, athletic tapered waist, rectus abdominis with linea alba, iliac crest, and gluteus maximus swell with gluteal cleft.
+    - *Arms & Hands*: Deltoid caps, bicep/tricep curvature, olecranon elbow point, brachioradialis forearm belly, flattened oval wrist, palm base, thenar thumb mound, opposing thumb protrusion, metacarpal knuckle ridge, proximal/intermediate fingers, and fingertips.
+    - *Legs & Boots*: Quadriceps femoris curvature, patella kneecap plate, popliteal fossa crease, gastrocnemius calf bulges, soleus, Achilles tendon, ankle malleoli (lateral & medial bumps), calcaneus heel protrusion, instep arch, metatarsal ball, and flat tactical tread sole.
+  - **Skinning & Rigging**: 25 bind poses, smooth multi-bone weights with normalized influences (max 2 influences per vertex for lightweight runtime).
+  - **Deformation Verification**: Passes automated flexion and pose audits across 11 joint configurations (shoulder raised/lowered $\pm 75^\circ$, elbow bent $90^\circ$, wrist, hip, knee bent $-90^\circ$, ankle, forearms rotated $\pm 60^\circ$, full deep lunge pose, torso twist $30^\circ$, head rotation $45^\circ$) with volume retention ($>70\%$ and $<160\%$ of rest volume) and zero NaN vertex coordinates.
 - **Calibrated PBR Texture Suite**:
   - Albedo, Sobel Normal, and URP MaskMap textures generated for Shared Underlayer, Operator REX (Assault), and Operator TRACE (Recon).
+  - **Surface Noise Elimination**: Completely eliminated high-frequency Gaussian white noise and 8-pixel micro-ripstop checkerboards. Height maps are pre-filtered with a 1.5-pixel box-blur kernel before Sobel normal calculation (strength calibrated to 0.5) to guarantee clean, smooth bevels with zero specular twinkling.
+  - **Neutral Clay Inspection (`M_Operator_Neutral_Clay.mat`)**: Includes a dedicated neutral studio clay material (`Color(0.62, 0.64, 0.66)`, 0 metallic, 0.22 smoothness) for evaluating surface geometry in total isolation from textures.
   - URP MaskMap encoding: Red = Metallic, Green = Ambient Occlusion, Blue = Detail Mask (0), Alpha = Smoothness.
-  - Dielectric fabrics calibrated to Metallic = 0; tactical hardware/buckles calibrated to Metallic = 0.82; surface smoothness calibrated to 0.35–0.60 to avoid specular blow-out.
+  - Dielectric fabrics calibrated to Metallic = 0; tactical hardware/buckles calibrated to Metallic = 0.82; surface smoothness calibrated to 0.20–0.45 to prevent specular blow-out.
 
 > [!IMPORTANT]
 > **Architectural Boundary**: The procedural continuous mesh and equipment models serve as a **functional in-engine technical foundation** for multiplayer netcode verification, physics collision, camera rigging, and animation testing. They establish correct world proportions, socket transforms, and Mecanim retargeting. Final AAA production visual quality requires high-poly sculpted models produced in external DCC software according to the pipeline below.

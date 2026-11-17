@@ -77,77 +77,151 @@ namespace OutrunAftermath.Client.Editor
             try
             {
                 // ==========================================
-                // SECTION 1: STANDARD MULTI-PERSPECTIVE VIEWS
+                // SECTION 1: STANDARD MULTI-PERSPECTIVE VIEWS & REQUIRED 10 DELIVERABLES
                 // ==========================================
                 vc.ApplyPerspectiveMode(CameraPerspective.ThirdPerson);
 
                 // 1. REX Front View (Full Body, neutral combat stance)
                 PositionCamera(cam, new Vector3(0f, 1.10f, 2.7f), new Vector3(0f, 1.0f, 0f));
+                CaptureFrame(cam, "screenshot_rex_neutral_front.png");
                 CaptureFrame(cam, "screenshot_rex_front.png");
 
                 // 2. REX Back View (Backpack, rear armor, belt, holsters)
                 PositionCamera(cam, new Vector3(0f, 1.10f, -2.7f), new Vector3(0f, 1.0f, 0f));
+                CaptureFrame(cam, "screenshot_rex_neutral_back.png");
                 CaptureFrame(cam, "screenshot_rex_back.png");
 
                 // 3. REX Side View (Profile, armor plate thickness, backpack)
                 PositionCamera(cam, new Vector3(2.6f, 1.10f, 0f), new Vector3(0f, 1.0f, 0f));
+                CaptureFrame(cam, "screenshot_rex_neutral_side.png");
                 CaptureFrame(cam, "screenshot_rex_side.png");
 
-                // 4. REX Third-Person View (Over-the-shoulder tactical camera)
+                // 4. REX Head & Hands Close-Up (Facial structure, jaw, nose, chin, and palm/fingers)
+                Transform lArm = FindTransformInRex(rex.transform, "LeftUpperArm");
+                Transform lElbow = FindTransformInRex(rex.transform, "LeftLowerArm");
+                Transform lHand = FindTransformInRex(rex.transform, "LeftHand");
+                if (lArm != null) lArm.localRotation = Quaternion.Euler(30f, 0f, 40f);
+                if (lElbow != null) lElbow.localRotation = Quaternion.Euler(0f, 0f, 85f);
+                if (lHand != null) lHand.localRotation = Quaternion.Euler(0f, 30f, 10f);
+                PositionCamera(cam, new Vector3(0.20f, 1.50f, 0.95f), new Vector3(0f, 1.50f, 0.05f));
+                CaptureFrame(cam, "screenshot_rex_head_hands.png");
+                if (lArm != null) lArm.localRotation = Quaternion.identity;
+                if (lElbow != null) lElbow.localRotation = Quaternion.identity;
+                if (lHand != null) lHand.localRotation = Quaternion.identity;
+
+                // 5. REX Wireframe Diagnostic Overlay (Continuous 2-manifold topology, 1 component, 0 boundary edges)
+                var wireframeGo = CreateWireframeVisualization(rex);
+                PositionCamera(cam, new Vector3(0.3f, 1.15f, 2.5f), new Vector3(0f, 1.05f, 0f));
+                CaptureFrame(cam, "screenshot_rex_wireframe.png");
+                if (wireframeGo != null) UnityEngine.Object.DestroyImmediate(wireframeGo);
+
+                // 6. REX Skeleton Diagnostic View (25-Bone Anatomical Hierarchy with joint spheres and bone rods)
+                var skeletonGo = CreateSkeletonVisualization(rex);
+                PositionCamera(cam, new Vector3(0.4f, 1.15f, 2.5f), new Vector3(0f, 1.05f, 0f));
+                CaptureFrame(cam, "screenshot_rex_skeleton.png");
+                if (skeletonGo != null) UnityEngine.Object.DestroyImmediate(skeletonGo);
+
+                // 7. REX Deformation: Shoulder & Elbow (Arms raised +75, elbows bent 90, forearms rotated)
+                Transform rArm = FindTransformInRex(rex.transform, "RightUpperArm");
+                Transform rElbow = FindTransformInRex(rex.transform, "RightLowerArm");
+                Transform headBone = FindTransformInRex(rex.transform, "Head");
+                if (lArm != null) lArm.localRotation = Quaternion.Euler(0f, 0f, 75f);
+                if (lElbow != null) lElbow.localRotation = Quaternion.Euler(0f, 0f, 90f);
+                if (rArm != null) rArm.localRotation = Quaternion.Euler(0f, 0f, -65f);
+                if (rElbow != null) rElbow.localRotation = Quaternion.Euler(0f, 0f, -80f);
+                if (headBone != null) headBone.localRotation = Quaternion.Euler(0f, 25f, 0f);
+                PositionCamera(cam, new Vector3(0f, 1.35f, 2.0f), new Vector3(0f, 1.30f, 0f));
+                CaptureFrame(cam, "screenshot_rex_deform_shoulder_elbow.png");
+                if (lArm != null) lArm.localRotation = Quaternion.identity;
+                if (lElbow != null) lElbow.localRotation = Quaternion.identity;
+                if (rArm != null) rArm.localRotation = Quaternion.identity;
+                if (rElbow != null) rElbow.localRotation = Quaternion.identity;
+                if (headBone != null) headBone.localRotation = Quaternion.identity;
+
+                // 8. REX Deformation: Knee & Hip (Deep tactical lunge with forward and backward leg extension)
+                Transform lThigh = FindTransformInRex(rex.transform, "LeftThigh");
+                Transform lCalf = FindTransformInRex(rex.transform, "LeftCalf");
+                Transform rThigh = FindTransformInRex(rex.transform, "RightThigh");
+                Transform rCalf = FindTransformInRex(rex.transform, "RightCalf");
+                Transform spineBone = FindTransformInRex(rex.transform, "Spine");
+                if (lThigh != null) lThigh.localRotation = Quaternion.Euler(45f, 0f, 0f);
+                if (lCalf != null) lCalf.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+                if (rThigh != null) rThigh.localRotation = Quaternion.Euler(-30f, 0f, 0f);
+                if (rCalf != null) rCalf.localRotation = Quaternion.Euler(35f, 0f, 0f);
+                if (spineBone != null) spineBone.localRotation = Quaternion.Euler(0f, 25f, 0f);
+                PositionCamera(cam, new Vector3(1.3f, 0.85f, 1.8f), new Vector3(0f, 0.70f, 0f));
+                CaptureFrame(cam, "screenshot_rex_deform_knee_hip.png");
+                if (lThigh != null) lThigh.localRotation = Quaternion.identity;
+                if (lCalf != null) lCalf.localRotation = Quaternion.identity;
+                if (rThigh != null) rThigh.localRotation = Quaternion.identity;
+                if (rCalf != null) rCalf.localRotation = Quaternion.identity;
+                if (spineBone != null) spineBone.localRotation = Quaternion.identity;
+
+                // 9. REX Neutral Clay Render (Clean neutral matte clay material to evaluate geometry in isolation)
+                var smr = rex.GetComponentInChildren<SkinnedMeshRenderer>();
+                Material origMat = smr != null ? smr.sharedMaterial : null;
+                var clayMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Art/Characters/Shared/Materials/M_Operator_Neutral_Clay.mat");
+                if (smr != null && clayMat != null) smr.sharedMaterial = clayMat;
+
+                // Temporarily hide equipment for pure anatomical geometry inspection
+                var equipRenderers = rex.GetComponentsInChildren<MeshRenderer>(true);
+                var equipStates = new Dictionary<MeshRenderer, bool>();
+                foreach (var er in equipRenderers)
+                {
+                    if (er.gameObject.name.Contains("Plane")) continue;
+                    equipStates[er] = er.enabled;
+                    er.enabled = false;
+                }
+
+                PositionCamera(cam, new Vector3(0f, 1.10f, 2.7f), new Vector3(0f, 1.0f, 0f));
+                CaptureFrame(cam, "screenshot_rex_neutral_clay.png");
+
+                // Restore equipment & material
+                foreach (var kvp in equipStates)
+                {
+                    kvp.Key.enabled = kvp.Value;
+                }
+                if (smr != null && origMat != null) smr.sharedMaterial = origMat;
+
+                // 10. REX Final Shaded Render (PBR calibrated, clean textures, full equipment)
+                PositionCamera(cam, new Vector3(0.35f, 1.10f, 2.6f), new Vector3(0f, 1.0f, 0f));
+                CaptureFrame(cam, "screenshot_rex_shaded_final.png");
+
+                // Third-Person View (Over-the-shoulder tactical camera)
                 PositionCamera(cam, new Vector3(0.55f, 1.45f, -1.8f), new Vector3(0.15f, 1.35f, 2.0f));
                 CaptureFrame(cam, "screenshot_rex_thirdperson.png");
 
-                // 5. REX First-Person View (Viewmodel arms, hands on weapon, no clipping)
+                // First-Person View (Viewmodel arms, hands on weapon, no clipping)
                 vc.ApplyPerspectiveMode(CameraPerspective.FirstPerson);
                 PositionCamera(cam, new Vector3(0f, 1.55f, 0.15f), new Vector3(0f, 1.55f, 3.0f));
                 CaptureFrame(cam, "screenshot_rex_firstperson.png");
 
-                // 6. REX Weapon Switching (Shotgun active in hand, Rifle holstered on back)
+                // Weapon Switching (Shotgun active in hand, Rifle holstered on back)
                 vc.ApplyPerspectiveMode(CameraPerspective.ThirdPerson);
                 vc.SetActiveSlotIndex(1); // Breacher-12 Shotgun
                 PositionCamera(cam, new Vector3(0.75f, 1.25f, 1.8f), new Vector3(0f, 1.10f, 0f));
                 CaptureFrame(cam, "screenshot_rex_weapon_switch.png");
                 vc.SetActiveSlotIndex(0); // Reset to Rifle
 
-                // ==========================================
-                // SECTION 2: MODE A — DETAILED CLOSE-UPS & DIAGNOSTICS
-                // ==========================================
-
-                // 7. REX Head & Combat Helmet Close-Up (Domed shell, ARC rails, NVG shroud, visor, chin harness)
+                // Detailed Equipment Close-Ups
                 PositionCamera(cam, new Vector3(0.15f, 1.62f, 0.95f), new Vector3(0f, 1.60f, 0f));
                 CaptureFrame(cam, "screenshot_rex_head_helmet.png");
 
-                // 8. REX Upper Body Equipment Close-Up (SAPI plate carrier, triple mag pouches, radio, shoulder straps)
                 PositionCamera(cam, new Vector3(0.20f, 1.28f, 1.15f), new Vector3(0f, 1.26f, 0f));
                 CaptureFrame(cam, "screenshot_rex_upper_equipment.png");
 
-                // 9. REX Hands & Gloves Close-Up (Molded knuckle guards, palm pads, trigger finger indexing)
                 PositionCamera(cam, new Vector3(0.38f, 1.08f, 0.85f), new Vector3(0.28f, 1.05f, 0.25f));
                 CaptureFrame(cam, "screenshot_rex_hands_gloves.png");
 
-                // 10. REX Lower Body Equipment Close-Up (Contoured trousers, knee pads, combat boots with soles/laces)
                 PositionCamera(cam, new Vector3(0.20f, 0.55f, 1.45f), new Vector3(0f, 0.45f, 0f));
                 CaptureFrame(cam, "screenshot_rex_lower_equipment.png");
 
-                // 11. REX Wireframe Diagnostic Overlay (Continuous 2-manifold topology, 1 component, 0 boundary edges)
-                var wireframeGo = CreateWireframeVisualization(rex);
-                PositionCamera(cam, new Vector3(0.3f, 1.15f, 2.5f), new Vector3(0f, 1.05f, 0f));
-                CaptureFrame(cam, "screenshot_rex_wireframe.png");
-                if (wireframeGo != null) UnityEngine.Object.DestroyImmediate(wireframeGo);
-
-                // 12. REX Skeleton Diagnostic View (25-Bone Anatomical Hierarchy with joint spheres and bone rods)
-                var skeletonGo = CreateSkeletonVisualization(rex);
-                PositionCamera(cam, new Vector3(0.4f, 1.15f, 2.5f), new Vector3(0f, 1.05f, 0f));
-                CaptureFrame(cam, "screenshot_rex_skeleton.png");
-                if (skeletonGo != null) UnityEngine.Object.DestroyImmediate(skeletonGo);
-
-                // 13. REX Skin-Weights Heatmap View (Vertex color weighting across 25 bones)
-                var smr = rex.GetComponentInChildren<SkinnedMeshRenderer>();
-                Material origMat = smr != null ? smr.sharedMaterial : null;
+                // Skin-Weights Heatmap View
                 var weightMat = CreateSkinWeightMaterial(smr);
                 if (smr != null && weightMat != null) smr.sharedMaterial = weightMat;
                 PositionCamera(cam, new Vector3(0.3f, 1.15f, 2.5f), new Vector3(0f, 1.05f, 0f));
                 CaptureFrame(cam, "screenshot_rex_skin_weights.png");
+                if (smr != null && origMat != null) smr.sharedMaterial = origMat;
                 if (smr != null && origMat != null) smr.sharedMaterial = origMat;
 
                 // ==========================================
@@ -470,6 +544,17 @@ namespace OutrunAftermath.Client.Editor
             }
 
             Debug.Log($"[CaptureCharacterVisuals] Saved screenshot: {filename}");
+        }
+
+        private static Transform FindTransformInRex(Transform root, string name)
+        {
+            if (root.name == name) return root;
+            for (int i = 0; i < root.childCount; i++)
+            {
+                var found = FindTransformInRex(root.GetChild(i), name);
+                if (found != null) return found;
+            }
+            return null;
         }
 
         public static void CaptureBatchMode()

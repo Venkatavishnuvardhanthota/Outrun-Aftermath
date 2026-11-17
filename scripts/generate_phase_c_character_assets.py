@@ -38,13 +38,18 @@ def ensure_dirs():
 # 1. PBR TEXTURE UTILITIES
 # ==============================================================================
 
-def generate_normal_map(height_map: np.ndarray, strength: float = 2.5) -> Image.Image:
-    """Computes tangent-space normal map from a grayscale height map using Sobel filter."""
+def generate_normal_map(height_map: np.ndarray, strength: float = 0.5) -> Image.Image:
+    """Computes smooth tangent-space normal map from a grayscale height map using pre-filtering and Sobel."""
     h, w = height_map.shape
+    # Pre-blur height map to guarantee smooth beveled transitions and eliminate high-frequency specular sparkle
+    img_height = Image.fromarray(np.clip(height_map, 0, 255).astype(np.uint8), mode='L')
+    img_height = img_height.filter(ImageFilter.BoxBlur(1.5))
+    smooth_height = np.array(img_height, dtype=np.float32)
+
     sobel_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=np.float32)
     sobel_y = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=np.float32)
 
-    padded = np.pad(height_map, 1, mode='wrap')
+    padded = np.pad(smooth_height, 1, mode='edge')
     gx = np.zeros((h, w), dtype=np.float32)
     gy = np.zeros((h, w), dtype=np.float32)
 
@@ -86,41 +91,42 @@ def create_mask_map(metallic: np.ndarray, ao: np.ndarray, smoothness: np.ndarray
 # ==============================================================================
 
 def generate_character_textures():
-    print("Generating Character PBR Textures (Shared, REX, TRACE)...")
+    print("Generating Calibrated Character PBR Textures (Shared, REX, TRACE)...")
     size = 1024
 
     # -------------------------------------------------------------
-    # 1. SHARED OPERATOR UNDERSUIT (Tactical Ripstop Fabric)
+    # 1. SHARED OPERATOR UNDERSUIT (Clean Tactical Ballistic Matte Fabric)
     # Balanced tactical charcoal/slate (sRGB 54, 56, 60), 0 metallic, matte fabric
+    # Clean panel seams, beveled knee/elbow patches, ZERO random noise or sparkle!
     # -------------------------------------------------------------
-    np.random.seed(101)
     undersuit_albedo = np.full((size, size, 3), [54, 56, 60], dtype=np.float32)
     y_coords, x_coords = np.indices((size, size))
-    
-    # Micro ripstop cross-hatch weave
-    ripstop_grid = ((x_coords // 8) % 2 == 0) & ((y_coords // 8) % 2 == 0)
-    undersuit_albedo[ripstop_grid] += [5, 5, 6]
 
     # Reinforced Kevlar knee and elbow panels (slightly darker graphite)
     joint_reinforce_mask = ((y_coords > 550) & (y_coords < 780) & (x_coords > 250) & (x_coords < 750))
-    undersuit_albedo[joint_reinforce_mask] = [42, 44, 48]
+    undersuit_albedo[joint_reinforce_mask] = [44, 46, 50]
 
-    # Subtle fabric micro-noise
-    noise = np.random.normal(0, 2.0, (size, size, 3))
-    undersuit_albedo = np.clip(undersuit_albedo + noise, 0, 255)
+    # Deliberate tactical seam lines (2px smooth grooves)
+    seam_lines = (
+        ((x_coords >= 248) & (x_coords <= 252)) |
+        ((x_coords >= 748) & (x_coords <= 752)) |
+        ((y_coords >= 548) & (y_coords <= 552)) |
+        ((y_coords >= 778) & (y_coords <= 782)) |
+        ((x_coords >= 510) & (x_coords <= 514) & (y_coords < 500))
+    )
+    undersuit_albedo[seam_lines] = [38, 40, 44]
 
-    undersuit_height = np.full((size, size), 128, dtype=np.float32)
-    undersuit_height[ripstop_grid] += 8.0
-    undersuit_height[joint_reinforce_mask] += 20.0
-    undersuit_height += np.random.normal(0, 2.5, (size, size))
-    undersuit_height = np.clip(undersuit_height, 0, 255)
+    undersuit_height = np.full((size, size), 128.0, dtype=np.float32)
+    undersuit_height[joint_reinforce_mask] += 12.0
+    undersuit_height[seam_lines] -= 8.0
 
     undersuit_albedo_img = Image.fromarray(undersuit_albedo.astype(np.uint8), mode='RGB')
-    undersuit_normal_img = generate_normal_map(undersuit_height, strength=2.0)
+    undersuit_normal_img = generate_normal_map(undersuit_height, strength=0.5)
     undersuit_metallic = np.full((size, size), 0, dtype=np.uint8) # Non-metallic fabric
-    undersuit_smoothness = np.where(joint_reinforce_mask, 80, 55).astype(np.uint8) # 0.22 - 0.31 smoothness
+    undersuit_smoothness = np.where(joint_reinforce_mask, 75, 50).astype(np.uint8) # 0.20 - 0.29 smoothness
     undersuit_ao = np.full((size, size), 245, dtype=np.uint8)
-    undersuit_ao[joint_reinforce_mask] = 220
+    undersuit_ao[joint_reinforce_mask] = 230
+    undersuit_ao[seam_lines] = 210
     undersuit_mask = create_mask_map(undersuit_metallic, undersuit_ao, undersuit_smoothness)
 
     undersuit_albedo_img.save(f"{TEXTURES_CHAR_ROOT}/Shared/T_Operator_Shared_Albedo.png")
@@ -129,25 +135,24 @@ def generate_character_textures():
 
     # -------------------------------------------------------------
     # 2. OPERATOR REX (Rogue Assault)
-    # Tactical matte carbon plates (sRGB 48, 50, 54), steel hardware [72, 75, 80]
+    # Tactical matte carbon plates (sRGB 48, 50, 54), steel hardware [180, 185, 192]
     # Localized burnt amber insignia & accents [205, 115, 30] (NO diagonal stripes!)
+    # Clean beveled armor edges, ZERO random noise
     # -------------------------------------------------------------
-    np.random.seed(102)
-    rex_albedo = np.full((size, size, 3), [50, 52, 56], dtype=np.float32)
+    rex_albedo = np.full((size, size, 3), [48, 50, 54], dtype=np.float32)
 
-    # Ceramic ballistic armor plate zones (fine stippled surface)
+    # Ceramic ballistic armor plate zones
     plate_zones = ((x_coords > 180) & (x_coords < 844) & (y_coords > 180) & (y_coords < 840))
-    rex_albedo[plate_zones] = [44, 46, 50]
+    rex_albedo[plate_zones] = [42, 44, 48]
 
     # Steel hardware, buckles, and D-rings
     hardware_mask = (((x_coords > 120) & (x_coords < 160) & (y_coords > 300) & (y_coords < 420)) |
                      ((x_coords > 864) & (x_coords < 904) & (y_coords > 300) & (y_coords < 420)) |
                      ((x_coords > 450) & (x_coords < 574) & (y_coords > 720) & (y_coords < 760)))
-    rex_albedo[hardware_mask] = [78, 82, 88]
+    rex_albedo[hardware_mask] = [180, 185, 192]
 
     # Specific localized tactical emblems & burnt amber chevron patch (upper chest/shoulder patch)
     chevron_mask = ((x_coords > 470) & (x_coords < 554) & (y_coords > 240) & (y_coords < 320))
-    # Draw chevron shape inside the patch box
     for py in range(240, 320):
         for px in range(470, 554):
             offset_x = abs(px - 512)
@@ -163,25 +168,19 @@ def generate_character_textures():
     visor_zone = ((y_coords > 60) & (y_coords < 140) & (x_coords > 360) & (x_coords < 664))
     rex_albedo[visor_zone] = [185, 110, 35]
 
-    # Add gentle noise
-    noise = np.random.normal(0, 2.5, (size, size, 3))
-    rex_albedo = np.clip(rex_albedo + noise, 0, 255)
-
-    rex_height = np.full((size, size), 128, dtype=np.float32)
-    rex_height[plate_zones] += 25.0
-    rex_height[hardware_mask] += 40.0
-    rex_height[chevron_mask] += 15.0
-    rex_height[visor_zone] += 30.0
-    rex_height += np.random.normal(0, 3.0, (size, size))
-    rex_height = np.clip(rex_height, 0, 255)
+    rex_height = np.full((size, size), 128.0, dtype=np.float32)
+    rex_height[plate_zones] += 16.0
+    rex_height[hardware_mask] += 26.0
+    rex_height[chevron_mask] += 10.0
+    rex_height[visor_zone] += 18.0
 
     rex_albedo_img = Image.fromarray(rex_albedo.astype(np.uint8), mode='RGB')
-    rex_normal_img = generate_normal_map(rex_height, strength=2.6)
+    rex_normal_img = generate_normal_map(rex_height, strength=0.5)
     
     # Proper PBR: Only metal hardware is metallic! Plates and fabric are dielectric!
-    rex_metallic = np.where(hardware_mask, 210, np.where(visor_zone, 60, 20)).astype(np.uint8)
+    rex_metallic = np.where(hardware_mask, 215, np.where(visor_zone, 60, 12)).astype(np.uint8)
     # Smoothness: Visor is polished, hardware is semi-gloss, plates and fabric are matte
-    rex_smoothness = np.where(visor_zone, 225, np.where(hardware_mask, 165, np.where(plate_zones, 95, 70))).astype(np.uint8)
+    rex_smoothness = np.where(visor_zone, 230, np.where(hardware_mask, 180, np.where(plate_zones, 85, 60))).astype(np.uint8)
     rex_ao = np.full((size, size), 245, dtype=np.uint8)
     rex_ao[plate_zones] = 230
     rex_ao[hardware_mask] = 210
@@ -194,8 +193,7 @@ def generate_character_textures():
     # -------------------------------------------------------------
     # 3. OPERATOR TRACE (Sentinel Tracker: Matte Navy, Cyan Sensor Accents)
     # -------------------------------------------------------------
-    np.random.seed(103)
-    trace_albedo = np.full((size, size, 3), [56, 66, 78], dtype=np.float32)
+    trace_albedo = np.full((size, size, 3), [54, 62, 74], dtype=np.float32)
 
     # Optical sensor elements and telemetry lenses
     sensor_mask = ((x_coords > 420) & (x_coords < 604) & (y_coords > 80) & (y_coords < 140))
@@ -203,21 +201,16 @@ def generate_character_textures():
 
     # Lightweight titanium buckle hardware
     clip_mask = ((x_coords > 140) & (x_coords < 180) & (y_coords > 400) & (y_coords < 520))
-    trace_albedo[clip_mask] = [175, 185, 195]
+    trace_albedo[clip_mask] = [185, 192, 202]
 
-    noise = np.random.normal(0, 2.5, (size, size, 3))
-    trace_albedo = np.clip(trace_albedo + noise, 0, 255)
-
-    trace_height = np.full((size, size), 128, dtype=np.float32)
-    trace_height[sensor_mask] += 35.0
-    trace_height[clip_mask] += 30.0
-    trace_height += np.random.normal(0, 3.0, (size, size))
-    trace_height = np.clip(trace_height, 0, 255)
+    trace_height = np.full((size, size), 128.0, dtype=np.float32)
+    trace_height[sensor_mask] += 22.0
+    trace_height[clip_mask] += 26.0
 
     trace_albedo_img = Image.fromarray(trace_albedo.astype(np.uint8), mode='RGB')
-    trace_normal_img = generate_normal_map(trace_height, strength=2.5)
-    trace_metallic = np.where(clip_mask, 215, np.where(sensor_mask, 75, 25)).astype(np.uint8)
-    trace_smoothness = np.where(sensor_mask, 235, np.where(clip_mask, 175, 80)).astype(np.uint8)
+    trace_normal_img = generate_normal_map(trace_height, strength=0.5)
+    trace_metallic = np.where(clip_mask, 220, np.where(sensor_mask, 75, 15)).astype(np.uint8)
+    trace_smoothness = np.where(sensor_mask, 240, np.where(clip_mask, 180, 75)).astype(np.uint8)
     trace_ao = np.full((size, size), 245, dtype=np.uint8)
     trace_ao[sensor_mask] = 215
     trace_mask = create_mask_map(trace_metallic, trace_ao, trace_smoothness)

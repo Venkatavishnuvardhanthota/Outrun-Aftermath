@@ -51,6 +51,8 @@ namespace OutrunAftermath.Client.Editor
                 $"{TexturesRoot}/TRACE/T_Operator_TRACE_MaskMap.png",
                 smoothness: 0.55f, metallic: 0.70f);
 
+            var matNeutralClay = CreateNeutralClayMaterial("M_Operator_Neutral_Clay", SharedMaterialsDir);
+
             // 2. Build Continuous Anatomical Skinned Mesh, Skeleton & Humanoid Avatar
             var (avatar, sharedMesh) = BuildSharedSkeletonAndAvatar(matUnderlayer);
 
@@ -176,6 +178,44 @@ namespace OutrunAftermath.Client.Editor
 
             mat.SetFloat("_Smoothness", smoothness);
             mat.SetFloat("_Metallic", metallic);
+            mat.enableInstancing = true;
+
+            EditorUtility.SetDirty(mat);
+            return mat;
+        }
+
+        public static Material CreateNeutralClayMaterial(string matName, string folder)
+        {
+            string matPath = $"{folder}/{matName}.mat";
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            var shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+
+            if (mat == null)
+            {
+                mat = new Material(shader);
+                mat.name = matName;
+                AssetDatabase.CreateAsset(mat, matPath);
+                Debug.Log($"[CharacterAssetPipeline] Created Neutral Clay Material: {matPath}");
+            }
+            else if (mat.shader != shader)
+            {
+                mat.shader = shader;
+            }
+
+            Color clayColor = new Color(0.62f, 0.64f, 0.66f, 1.0f);
+            mat.color = clayColor;
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", clayColor);
+            if (mat.HasProperty("_Color")) mat.SetColor("_Color", clayColor);
+
+            mat.SetTexture("_BaseMap", null);
+            mat.SetTexture("_MainTex", null);
+            mat.SetTexture("_BumpMap", null);
+            mat.DisableKeyword("_NORMALMAP");
+            mat.SetTexture("_MetallicGlossMap", null);
+            mat.DisableKeyword("_METALLICSPECGLOSSMAP");
+
+            mat.SetFloat("_Smoothness", 0.22f);
+            mat.SetFloat("_Metallic", 0.0f);
             mat.enableInstancing = true;
 
             EditorUtility.SetDirty(mat);
@@ -362,22 +402,26 @@ namespace OutrunAftermath.Client.Editor
 
             const int nBody = 16;
 
-            // 1. HEAD & NECK (Continuous cranium, jaw, throat, and collar)
-            int headTop = AddVertex(new Vector3(0f, 1.78f, 0f), Vector3.up, new Vector2(0.5f, 1.0f), 6, 1.0f);
+            // 1. HEAD & SKULL WITH HIGH-DEFINITION FACIAL FEATURES (15 slices)
+            int headTop = AddVertex(new Vector3(0f, 1.84f, 0.01f), Vector3.up, new Vector2(0.5f, 1.0f), 6, 1.0f);
 
-            var headLevels = new (float y, float rx, float rz, int b0, float w0, int b1, float w1)[]
+            var headLevels = new (float y, float rx, float rz, float cz, string feat, int b0, float w0, int b1, float w1)[]
             {
-                (1.76f, 0.055f, 0.065f, 6, 1.0f,  5, 0.0f),
-                (1.73f, 0.082f, 0.095f, 6, 1.0f,  5, 0.0f),
-                (1.69f, 0.105f, 0.118f, 6, 1.0f,  5, 0.0f),
-                (1.65f, 0.112f, 0.125f, 6, 1.0f,  5, 0.0f),
-                (1.61f, 0.110f, 0.124f, 6, 0.95f, 5, 0.05f),
-                (1.57f, 0.102f, 0.118f, 6, 0.85f, 5, 0.15f),
-                (1.53f, 0.090f, 0.105f, 6, 0.70f, 5, 0.30f),
-                (1.49f, 0.080f, 0.090f, 6, 0.50f, 5, 0.50f), // Jaw
-                (1.45f, 0.075f, 0.082f, 5, 0.80f, 4, 0.20f), // Upper neck
-                (1.42f, 0.078f, 0.085f, 5, 0.60f, 4, 0.40f), // Mid neck
-                (1.39f, 0.088f, 0.094f, 4, 0.80f, 5, 0.20f)  // Collar ring
+                (1.815f, 0.052f, 0.062f,  0.010f, "cranium",     6, 1.00f, 5, 0.00f),
+                (1.785f, 0.078f, 0.088f,  0.012f, "cranium",     6, 1.00f, 5, 0.00f),
+                (1.745f, 0.092f, 0.104f,  0.015f, "cranium",     6, 1.00f, 5, 0.00f),
+                (1.705f, 0.098f, 0.114f,  0.018f, "forehead",    6, 1.00f, 5, 0.00f),
+                (1.665f, 0.100f, 0.118f,  0.022f, "brow",        6, 1.00f, 5, 0.00f),
+                (1.635f, 0.096f, 0.112f,  0.020f, "eyesockets",  6, 1.00f, 5, 0.00f),
+                (1.605f, 0.092f, 0.126f,  0.032f, "nose_bridge", 6, 1.00f, 5, 0.00f),
+                (1.575f, 0.088f, 0.138f,  0.042f, "nose_tip",    6, 1.00f, 5, 0.00f),
+                (1.545f, 0.084f, 0.118f,  0.022f, "philtrum",    6, 1.00f, 5, 0.00f),
+                (1.515f, 0.082f, 0.116f,  0.020f, "lips",        6, 0.95f, 5, 0.05f),
+                (1.485f, 0.078f, 0.108f,  0.016f, "chin",        6, 0.85f, 5, 0.15f),
+                (1.455f, 0.072f, 0.094f,  0.008f, "jaw",         6, 0.65f, 5, 0.35f),
+                (1.425f, 0.068f, 0.078f, -0.005f, "throat",      5, 0.85f, 6, 0.15f),
+                (1.395f, 0.072f, 0.082f, -0.005f, "neck",        5, 0.85f, 4, 0.15f),
+                (1.360f, 0.086f, 0.094f,  0.000f, "collar",      4, 0.80f, 5, 0.20f)
             };
 
             var headRings = new List<int[]>();
@@ -388,11 +432,48 @@ namespace OutrunAftermath.Client.Editor
                 for (int i = 0; i < nBody; i++)
                 {
                     float theta = 2.0f * Mathf.PI * i / nBody;
-                    float vx = lvl.rx * Mathf.Cos(theta);
-                    float vz = lvl.rz * Mathf.Sin(theta);
+                    float cosT = Mathf.Cos(theta);
+                    float sinT = Mathf.Sin(theta);
+
+                    float localRx = lvl.rx;
+                    float localRz = lvl.rz;
+                    float localCz = lvl.cz;
+
+                    if (sinT > 0.4f)
+                    {
+                        float factor = (sinT - 0.4f) / 0.6f;
+                        if (lvl.feat == "brow")
+                            localRz += 0.014f * factor;
+                        else if (lvl.feat == "eyesockets")
+                            localRz -= 0.010f * factor;
+                        else if (lvl.feat == "nose_bridge" && Mathf.Abs(cosT) < 0.35f)
+                            localRz += 0.022f * factor;
+                        else if (lvl.feat == "nose_tip")
+                        {
+                            if (Mathf.Abs(cosT) < 0.30f)
+                                localRz += 0.032f * factor;
+                            else
+                                localRz -= 0.006f * factor;
+                        }
+                        else if (lvl.feat == "philtrum" && Mathf.Abs(cosT) < 0.20f)
+                            localRz += 0.008f * factor;
+                        else if (lvl.feat == "lips" && Mathf.Abs(cosT) < 0.35f)
+                            localRz += 0.016f * factor;
+                        else if (lvl.feat == "chin" && Mathf.Abs(cosT) < 0.35f)
+                            localRz += 0.022f * factor;
+                        else if (lvl.feat == "jaw" && Mathf.Abs(cosT) > 0.4f)
+                            localRx += 0.010f;
+                    }
+                    else if (sinT < -0.3f)
+                    {
+                        localRz += 0.012f;
+                    }
+
+                    float vx = localRx * cosT;
+                    float vz = localCz + localRz * sinT;
                     Vector3 pos = new Vector3(vx, lvl.y, vz);
-                    Vector3 norm = new Vector3(Mathf.Cos(theta), 0.2f, Mathf.Sin(theta)).normalized;
-                    Vector2 uv = new Vector2((float)i / nBody, (lvl.y - 1.0f) / 0.8f);
+                    Vector3 norm = new Vector3(cosT, 0.1f, sinT).normalized;
+                    Vector2 uv = new Vector2(0.5f + 0.42f * sinT, Mathf.Clamp01((lvl.y - 1.30f) / 0.55f));
                     ring[i] = AddVertex(pos, norm, uv, lvl.b0, lvl.w0, lvl.b1, lvl.w1);
                 }
                 headRings.Add(ring);
@@ -412,23 +493,25 @@ namespace OutrunAftermath.Client.Editor
 
             int[] collarRing = headRings[headRings.Count - 1];
 
-            // 2. TORSO (Continuous UpperChest, Pectorals, Ribs, Waist, Abdomen, Pelvis)
-            var torsoLevels = new (float y, float rx, float rz, int b0, float w0, int b1, float w1)[]
+            // 2. TORSO WITH ANATOMICAL PECTORALS, STERNUM, WAIST, GLUTEALS (16 slices)
+            var torsoLevels = new (float y, float rx, float rz, float cz, string feat, int b0, float w0, int b1, float w1)[]
             {
-                (1.36f, 0.210f, 0.130f, 4, 0.90f, 3,  0.10f), // Ring 0: Clavicles / Shoulders
-                (1.31f, 0.205f, 0.142f, 4, 0.70f, 3,  0.30f), // Ring 1: Pectorals
-                (1.26f, 0.198f, 0.140f, 3, 0.90f, 4,  0.10f), // Ring 2: Mid-chest
-                (1.21f, 0.190f, 0.135f, 3, 0.75f, 2,  0.25f), // Ring 3
-                (1.16f, 0.180f, 0.128f, 3, 0.55f, 2,  0.45f), // Ring 4: Lower ribs
-                (1.11f, 0.168f, 0.120f, 2, 0.80f, 3,  0.20f), // Ring 5: Mid ribs
-                (1.06f, 0.160f, 0.115f, 2, 0.90f, 1,  0.10f), // Ring 6: Waist taper
-                (1.01f, 0.162f, 0.118f, 2, 0.70f, 1,  0.30f), // Ring 7
-                (0.96f, 0.168f, 0.124f, 2, 0.40f, 1,  0.60f), // Ring 8: Navel / Abdomen
-                (0.91f, 0.176f, 0.132f, 1, 0.80f, 2,  0.20f), // Ring 9: Iliac crest
-                (0.86f, 0.182f, 0.140f, 1, 0.90f, 17, 0.10f), // Ring 10: Pelvis upper
-                (0.81f, 0.180f, 0.135f, 1, 0.95f, 17, 0.05f), // Ring 11: Pelvis mid
-                (0.76f, 0.168f, 0.122f, 1, 0.98f, 17, 0.02f), // Ring 12: Pelvis lower
-                (0.72f, 0.150f, 0.110f, 1, 1.0f,  0,  0.0f)   // Ring 13: Crotch level
+                (1.335f, 0.232f, 0.126f, -0.005f, "shoulders_traps", 4, 0.90f, 3,  0.10f),
+                (1.295f, 0.224f, 0.148f,  0.014f, "upper_pecs",       4, 0.75f, 3,  0.25f),
+                (1.250f, 0.218f, 0.150f,  0.015f, "mid_pecs",         3, 0.85f, 4,  0.15f),
+                (1.205f, 0.208f, 0.144f,  0.010f, "lower_pecs",       3, 0.90f, 2,  0.10f),
+                (1.160f, 0.198f, 0.138f,  0.005f, "infra_pecs",       3, 0.70f, 2,  0.30f),
+                (1.115f, 0.188f, 0.130f,  0.000f, "ribcage_arch",     2, 0.70f, 3,  0.30f),
+                (1.070f, 0.176f, 0.124f,  0.000f, "mid_ribs",         2, 0.85f, 3,  0.15f),
+                (1.025f, 0.165f, 0.118f,  0.000f, "floating_ribs",    2, 0.90f, 1,  0.10f),
+                (0.980f, 0.158f, 0.114f,  0.000f, "narrow_waist",     2, 0.80f, 1,  0.20f),
+                (0.935f, 0.164f, 0.118f,  0.004f, "navel_abdomen",    2, 0.50f, 1,  0.50f),
+                (0.890f, 0.172f, 0.125f,  0.002f, "lower_abdomen",    1, 0.80f, 2,  0.20f),
+                (0.850f, 0.182f, 0.134f, -0.004f, "iliac_crest",      1, 0.90f, 2,  0.10f),
+                (0.810f, 0.188f, 0.144f, -0.014f, "gluteus_max",      1, 0.95f, 17, 0.05f),
+                (0.770f, 0.182f, 0.138f, -0.012f, "mid_pelvis",       1, 0.98f, 17, 0.02f),
+                (0.735f, 0.170f, 0.126f, -0.006f, "lower_pelvis",     1, 1.00f, 0,  0.00f),
+                (0.700f, 0.152f, 0.112f,  0.000f, "crotch_ring",      1, 1.00f, 0,  0.00f)
             };
 
             var torsoRings = new List<int[]>();
@@ -440,11 +523,39 @@ namespace OutrunAftermath.Client.Editor
                 for (int i = 0; i < nBody; i++)
                 {
                     float theta = 2.0f * Mathf.PI * i / nBody;
-                    float vx = lvl.rx * Mathf.Cos(theta);
-                    float vz = lvl.rz * Mathf.Sin(theta);
+                    float cosT = Mathf.Cos(theta);
+                    float sinT = Mathf.Sin(theta);
+
+                    float localRx = lvl.rx;
+                    float localRz = lvl.rz;
+
+                    if (lvl.feat.Contains("pec") && sinT > 0.35f)
+                    {
+                        if (Mathf.Abs(cosT) < 0.22f)
+                            localRz -= 0.015f;
+                        else
+                            localRz += 0.018f;
+                    }
+                    else if (lvl.feat == "gluteus_max" && sinT < -0.35f)
+                    {
+                        if (Mathf.Abs(cosT) < 0.20f)
+                            localRz -= 0.014f;
+                        else
+                            localRz += 0.016f;
+                    }
+                    else if (lvl.feat.Contains("abdomen") && sinT > 0.4f)
+                    {
+                        if (Mathf.Abs(cosT) < 0.20f)
+                            localRz -= 0.006f;
+                        else
+                            localRz += 0.008f;
+                    }
+
+                    float vx = localRx * cosT;
+                    float vz = lvl.cz + localRz * sinT;
                     Vector3 pos = new Vector3(vx, lvl.y, vz);
-                    Vector3 norm = new Vector3(Mathf.Cos(theta), 0f, Mathf.Sin(theta)).normalized;
-                    Vector2 uv = new Vector2((float)i / nBody, (lvl.y - 0.7f) / 0.8f);
+                    Vector3 norm = new Vector3(cosT, 0f, sinT).normalized;
+                    Vector2 uv = new Vector2(0.5f + 0.42f * sinT, Mathf.Clamp01((lvl.y - 0.65f) / 0.75f));
                     ring[i] = AddVertex(pos, norm, uv, lvl.b0, lvl.w0, lvl.b1, lvl.w1);
                 }
 
@@ -465,7 +576,7 @@ namespace OutrunAftermath.Client.Editor
             int[] pelvisBottom = torsoRings[torsoRings.Count - 1];
 
             // 3. LEGS & BOOTS (Continuous Pelvis to Thigh, Knee, Calf, Ankle, and Boot)
-            int crotchMid = AddVertex(new Vector3(0f, 0.70f, 0f), Vector3.down, new Vector2(0.5f, 0.35f), 1, 1.0f);
+            int crotchMid = AddVertex(new Vector3(0f, 0.68f, 0f), Vector3.down, new Vector2(0.5f, 0.35f), 1, 1.0f);
 
             int[] leftHip = new[]
             {
@@ -484,31 +595,33 @@ namespace OutrunAftermath.Client.Editor
             void BuildContinuousLeg(int[] hipRing, bool isLeft)
             {
                 float sign = isLeft ? -1.0f : 1.0f;
-                float legCx = sign * 0.11f;
+                float legCx = sign * 0.115f;
                 int nLeg = hipRing.Length; // 10 vertices
                 int thighB = isLeft ? 17 : 21;
                 int calfB = isLeft ? 18 : 22;
                 int footB = isLeft ? 19 : 23;
                 int toeB = isLeft ? 20 : 24;
 
-                var legLevels = new (float y, float rx, float rz, float zo, int b0, float w0, int b1, float w1)[]
+                var legLevels = new (float y, float rx, float rz, float cz, string feat, int b0, float w0, int b1, float w1)[]
                 {
-                    (0.68f, 0.090f, 0.090f, 0.0f,   thighB, 0.90f, 1,      0.10f),
-                    (0.64f, 0.086f, 0.086f, 0.0f,   thighB, 0.95f, calfB,  0.05f),
-                    (0.59f, 0.080f, 0.080f, 0.0f,   thighB, 0.90f, calfB,  0.10f),
-                    (0.54f, 0.075f, 0.075f, 0.0f,   thighB, 0.80f, calfB,  0.20f),
-                    (0.49f, 0.070f, 0.070f, 0.0f,   thighB, 0.65f, calfB,  0.35f), // Supra-patella
-                    (0.46f, 0.067f, 0.068f, 0.01f,  thighB, 0.55f, calfB,  0.45f), // Patella upper
-                    (0.44f, 0.066f, 0.069f, 0.015f, thighB, 0.45f, calfB,  0.55f), // Patella apex
-                    (0.41f, 0.067f, 0.067f, 0.0f,   calfB,  0.70f, thighB, 0.30f), // Infra-patella
-                    (0.36f, 0.072f, 0.072f, 0.0f,   calfB,  0.95f, footB,  0.05f), // Gastrocnemius
-                    (0.30f, 0.070f, 0.070f, 0.0f,   calfB,  0.95f, footB,  0.05f),
-                    (0.24f, 0.064f, 0.064f, 0.0f,   calfB,  0.88f, footB,  0.12f),
-                    (0.18f, 0.056f, 0.056f, 0.0f,   calfB,  0.72f, footB,  0.28f),
-                    (0.13f, 0.048f, 0.048f, 0.0f,   footB,  0.70f, calfB,  0.30f), // Ankle
-                    (0.09f, 0.046f, 0.065f, 0.02f,  footB,  0.88f, toeB,   0.12f), // Heel rise
-                    (0.05f, 0.046f, 0.085f, 0.05f,  footB,  0.92f, toeB,   0.08f), // Foot arch / sole
-                    (0.02f, 0.044f, 0.070f, 0.11f,  toeB,   0.88f, footB,  0.12f)  // Forefoot
+                    (0.665f, 0.094f, 0.094f,  0.000f, "upper_groin",        thighB, 0.90f, 1,      0.10f),
+                    (0.625f, 0.090f, 0.090f,  0.004f, "upper_thigh",        thighB, 0.95f, calfB,  0.05f),
+                    (0.575f, 0.086f, 0.086f,  0.006f, "quad_belly",         thighB, 0.92f, calfB,  0.08f),
+                    (0.525f, 0.080f, 0.080f,  0.004f, "lower_quad",         thighB, 0.82f, calfB,  0.18f),
+                    (0.480f, 0.074f, 0.074f,  0.000f, "suprapatellar",      thighB, 0.65f, calfB,  0.35f),
+                    (0.450f, 0.069f, 0.076f,  0.016f, "patella_upper",      thighB, 0.52f, calfB,  0.48f),
+                    (0.425f, 0.068f, 0.078f,  0.018f, "patella_apex",       calfB,  0.52f, thighB, 0.48f),
+                    (0.395f, 0.066f, 0.070f,  0.005f, "infrapatellar",      calfB,  0.75f, thighB, 0.25f),
+                    (0.360f, 0.071f, 0.078f, -0.012f, "gastrocnemius_upper",calfB,  0.92f, thighB, 0.08f),
+                    (0.320f, 0.074f, 0.082f, -0.016f, "gastrocnemius_peak", calfB,  0.96f, footB,  0.04f),
+                    (0.275f, 0.070f, 0.076f, -0.012f, "soleus_calf",        calfB,  0.92f, footB,  0.08f),
+                    (0.225f, 0.062f, 0.064f, -0.006f, "achilles_upper",     calfB,  0.82f, footB,  0.18f),
+                    (0.175f, 0.054f, 0.054f,  0.000f, "supramalleolar",     calfB,  0.65f, footB,  0.35f),
+                    (0.135f, 0.050f, 0.052f,  0.000f, "malleoli",           footB,  0.75f, calfB,  0.25f),
+                    (0.095f, 0.046f, 0.068f,  0.014f, "calcaneus_heel",     footB,  0.88f, toeB,   0.12f),
+                    (0.060f, 0.046f, 0.086f,  0.034f, "instep_arch",        footB,  0.92f, toeB,   0.08f),
+                    (0.030f, 0.046f, 0.104f,  0.052f, "metatarsal_ball",    toeB,   0.70f, footB,  0.30f),
+                    (0.012f, 0.044f, 0.118f,  0.066f, "toe_box",            toeB,   0.95f, footB,  0.05f)
                 };
 
                 int[] prevLegRing = hipRing;
@@ -519,19 +632,34 @@ namespace OutrunAftermath.Client.Editor
                     for (int i = 0; i < nLeg; i++)
                     {
                         float theta = 2.0f * Mathf.PI * i / nLeg;
-                        float vx = legCx + lvl.rx * Mathf.Cos(theta);
-                        float vz = lvl.zo + lvl.rz * Mathf.Sin(theta);
+                        float cosT = Mathf.Cos(theta);
+                        float sinT = Mathf.Sin(theta);
+
+                        float localRx = lvl.rx;
+                        float localRz = lvl.rz;
+
+                        if (lvl.feat.Contains("patella") && sinT > 0.35f)
+                            localRz += 0.018f * (sinT - 0.35f) / 0.65f;
+                        else if (lvl.feat.Contains("patella") && sinT < -0.4f)
+                            localRz -= 0.010f;
+                        else if (lvl.feat.Contains("calcaneus") && sinT < -0.3f)
+                            localRz += 0.026f * Mathf.Abs(sinT);
+                        else if (lvl.feat == "malleoli" && Mathf.Abs(cosT) > 0.45f)
+                            localRx += 0.010f;
+
+                        float vx = legCx + localRx * cosT;
+                        float vz = lvl.cz + localRz * sinT;
                         Vector3 pos = new Vector3(vx, lvl.y, vz);
-                        Vector3 norm = new Vector3(Mathf.Cos(theta), 0f, Mathf.Sin(theta)).normalized;
-                        Vector2 uv = new Vector2((isLeft ? 0.2f : 0.6f) + (float)i / nLeg * 0.2f, lvl.y / 0.8f);
+                        Vector3 norm = new Vector3(cosT, 0f, sinT).normalized;
+                        Vector2 uv = new Vector2((isLeft ? 0.30f : 0.70f) + 0.18f * sinT, Mathf.Clamp01(lvl.y / 0.70f));
                         ring[i] = AddVertex(pos, norm, uv, lvl.b0, lvl.w0, lvl.b1, lvl.w1);
                     }
                     StitchRings(prevLegRing, ring);
                     prevLegRing = ring;
                 }
 
-                // Toe cap pole
-                int toeTip = AddVertex(new Vector3(legCx, 0.02f, 0.175f), Vector3.forward, new Vector2(isLeft ? 0.3f : 0.7f, 0.02f), toeB, 1.0f);
+                // Flat sole toe tip
+                int toeTip = AddVertex(new Vector3(legCx, 0.012f, 0.192f), Vector3.forward, new Vector2(isLeft ? 0.30f : 0.70f, 0.02f), toeB, 1.0f);
                 for (int i = 0; i < nLeg; i++)
                 {
                     int next = (i + 1) % nLeg;
@@ -565,22 +693,26 @@ namespace OutrunAftermath.Client.Editor
                 int handB = isLeft ? 10 : 15;
                 int fingB = isLeft ? 11 : 16;
 
-                var armLevels = new (float x, float ry, float rz, int b0, float w0, int b1, float w1)[]
+                var armLevels = new (float x, float ry, float rz, float cz, string feat, int b0, float w0, int b1, float w1)[]
                 {
-                    (sign * 0.22f, 0.076f, 0.076f, clavB, 0.40f, upB,   0.60f), // Deltoid root
-                    (sign * 0.26f, 0.072f, 0.072f, upB,   0.80f, clavB, 0.20f),
-                    (sign * 0.31f, 0.068f, 0.068f, upB,   0.90f, clavB, 0.10f), // Bicep peak
-                    (sign * 0.37f, 0.064f, 0.064f, upB,   0.95f, lowB,  0.05f),
-                    (sign * 0.42f, 0.058f, 0.058f, upB,   0.75f, lowB,  0.25f), // Pre-elbow
-                    (sign * 0.45f, 0.054f, 0.054f, upB,   0.55f, lowB,  0.45f), // Elbow flexion
-                    (sign * 0.48f, 0.053f, 0.053f, lowB,  0.65f, upB,   0.35f), // Elbow crease
-                    (sign * 0.52f, 0.055f, 0.055f, lowB,  0.85f, upB,   0.15f), // Post-elbow
-                    (sign * 0.59f, 0.056f, 0.056f, lowB,  0.95f, handB, 0.05f), // Forearm belly
-                    (sign * 0.65f, 0.050f, 0.050f, lowB,  0.85f, handB, 0.15f),
-                    (sign * 0.70f, 0.042f, 0.042f, handB, 0.60f, lowB,  0.40f), // Wrist cuff
-                    (sign * 0.74f, 0.036f, 0.044f, handB, 0.85f, fingB, 0.15f), // Palm base
-                    (sign * 0.79f, 0.026f, 0.042f, fingB, 0.55f, handB, 0.45f), // Knuckle bar
-                    (sign * 0.83f, 0.018f, 0.034f, fingB, 0.90f, handB, 0.10f)  // Fingertips
+                    (sign * 0.235f, 0.084f, 0.084f,  0.000f, "deltoid_root",        clavB, 0.40f, upB,   0.60f),
+                    (sign * 0.275f, 0.082f, 0.082f,  0.000f, "deltoid_cap",         upB,   0.80f, clavB, 0.20f),
+                    (sign * 0.320f, 0.076f, 0.076f,  0.004f, "deltoid_insertion",   upB,   0.92f, clavB, 0.08f),
+                    (sign * 0.365f, 0.070f, 0.070f,  0.006f, "bicep_tricep",        upB,   0.96f, lowB,  0.04f),
+                    (sign * 0.410f, 0.064f, 0.064f,  0.002f, "lower_upperarm",      upB,   0.88f, lowB,  0.12f),
+                    (sign * 0.445f, 0.058f, 0.058f,  0.000f, "pre_elbow",           upB,   0.70f, lowB,  0.30f),
+                    (sign * 0.475f, 0.053f, 0.059f, -0.014f, "elbow_olecranon",     upB,   0.50f, lowB,  0.50f),
+                    (sign * 0.505f, 0.055f, 0.056f,  0.000f, "brachioradialis",     lowB,  0.70f, upB,   0.30f),
+                    (sign * 0.550f, 0.058f, 0.058f,  0.000f, "forearm_belly",       lowB,  0.92f, handB, 0.08f),
+                    (sign * 0.605f, 0.054f, 0.052f,  0.000f, "forearm_mid",         lowB,  0.95f, handB, 0.05f),
+                    (sign * 0.655f, 0.048f, 0.042f,  0.000f, "forearm_taper",       lowB,  0.85f, handB, 0.15f),
+                    (sign * 0.695f, 0.042f, 0.032f,  0.000f, "wrist_cuff",          handB, 0.60f, lowB,  0.40f),
+                    (sign * 0.730f, 0.044f, 0.026f,  0.010f, "palm_thenar",         handB, 0.80f, fingB, 0.20f),
+                    (sign * 0.765f, 0.046f, 0.024f,  0.018f, "palm_thumb",          handB, 0.85f, fingB, 0.15f),
+                    (sign * 0.800f, 0.046f, 0.022f,  0.012f, "metacarpal_knuckles", handB, 0.50f, fingB, 0.50f),
+                    (sign * 0.835f, 0.042f, 0.020f,  0.004f, "finger_proximal",     fingB, 0.75f, handB, 0.25f),
+                    (sign * 0.865f, 0.036f, 0.018f,  0.000f, "finger_intermediate", fingB, 0.90f, handB, 0.10f),
+                    (sign * 0.890f, 0.028f, 0.015f,  0.000f, "fingertips",          fingB, 1.00f, handB, 0.00f)
                 };
 
                 int[] prevArmRing = armhole;
@@ -591,11 +723,22 @@ namespace OutrunAftermath.Client.Editor
                     for (int i = 0; i < nArm; i++)
                     {
                         float theta = 2.0f * Mathf.PI * i / nArm;
-                        float vy = 1.36f + lvl.ry * Mathf.Cos(theta);
-                        float vz = lvl.rz * Mathf.Sin(theta);
+                        float cosT = Mathf.Cos(theta);
+                        float sinT = Mathf.Sin(theta);
+
+                        float localRy = lvl.ry;
+                        float localRz = lvl.rz;
+
+                        if (lvl.feat.Contains("thumb") && sinT > 0.35f)
+                            localRz += 0.018f * (sinT - 0.35f) / 0.65f;
+                        else if (lvl.feat == "metacarpal_knuckles" && Mathf.Abs(cosT) > 0.4f)
+                            localRy += 0.006f;
+
+                        float vy = 1.34f + localRy * cosT;
+                        float vz = lvl.cz + localRz * sinT;
                         Vector3 pos = new Vector3(lvl.x, vy, vz);
-                        Vector3 norm = new Vector3(sign * 0.2f, Mathf.Cos(theta), Mathf.Sin(theta)).normalized;
-                        Vector2 uv = new Vector2(0.2f + (float)i / nArm * 0.2f, Mathf.Abs(lvl.x) / 0.8f);
+                        Vector3 norm = new Vector3(sign * 0.2f, cosT, sinT).normalized;
+                        Vector2 uv = new Vector2((isLeft ? 0.25f : 0.75f) + 0.18f * sinT, Mathf.Clamp01(Mathf.Abs(lvl.x) / 0.95f));
                         ring[i] = AddVertex(pos, norm, uv, lvl.b0, lvl.w0, lvl.b1, lvl.w1);
                     }
                     StitchRings(prevArmRing, ring);
@@ -603,7 +746,7 @@ namespace OutrunAftermath.Client.Editor
                 }
 
                 // Fingertip cap pole
-                int tipPole = AddVertex(new Vector3(sign * 0.85f, 1.36f, 0f), new Vector3(sign, 0f, 0f), new Vector2(isLeft ? 0.4f : 0.8f, 0.5f), fingB, 1.0f);
+                int tipPole = AddVertex(new Vector3(sign * 0.910f, 1.34f, 0f), new Vector3(sign, 0f, 0f), new Vector2(isLeft ? 0.25f : 0.75f, 0.5f), fingB, 1.0f);
                 for (int i = 0; i < nArm; i++)
                 {
                     int next = (i + 1) % nArm;

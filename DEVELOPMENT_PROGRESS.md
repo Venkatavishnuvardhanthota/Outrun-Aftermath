@@ -1298,11 +1298,18 @@ Address all character visual and rigging weaknesses identified during the indepe
 ### Completed Features
 
 - **Continuous Watertight 2-Manifold Skinned Mesh (`SK_Humanoid_Operator.asset`)**:
-  - Rewrote `GenerateContinuousHumanoidSkinnedMesh()` in `client/Assets/Editor/CharacterAssetPipeline.cs`.
-  - Continuous lofted rings connect head, neck collar, torso, pelvis, crotch bridge, thighs, calves, and boots into a single seamless mesh surface.
-  - Chest seamlessly branches into left and right shoulders, arms, hands, and fingertips with zero non-manifold edges.
-  - **Automated Topology Metrics**: 894 vertices, 1,784 triangles, **1 single connected component**, **0 boundary edges**, **0 non-manifold edges**, **100% watertight 2-manifold closed surface**.
-  - **Multi-Joint Flexion Audit**: Passes 6-joint deformation test (shoulder, elbow, wrist, hip, knee, ankle) with 0 volume collapse, 0 invalid/unnormalized weights, and 0 NaN vertices.
+  - Rewrote `GenerateContinuousHumanoidSkinnedMesh()` in `client/Assets/Editor/CharacterAssetPipeline.cs` to author detailed anatomical topology.
+  - Head and skull feature a cranium dome, defined brow ridge, eye socket indentations, nose bridge and tip, philtrum, lips, chin, and flared mandible jawline across 15 lofted slices.
+  - Torso spans a broad 0.464m athletic clavicle/deltoid width, upper/mid/lower pectorals with sternal cleft depression, tapered waist, rectus abdominis with linea alba, iliac crest, and gluteus maximus swell with gluteal cleft across 16 lofted slices.
+  - Arms feature deltoid caps, bicep/tricep bellies, olecranon elbow points, brachioradialis forearm bellies, oval wrist transitions, and detailed hands with thenar thumb mounds, opposing thumb protrusions, knuckle ridges, and finger segments across 18 slices per arm.
+  - Legs feature quadriceps femoris contours, patella kneecap plates, popliteal fossa creases, twin gastrocnemius calf bellies, soleus, Achilles tendon, lateral and medial ankle malleoli, calcaneus heel expansions, plantar arches, metatarsal balls, flat tactical tread soles, and toe boxes across 18 slices per leg.
+  - Seamless conformal $\sin(\theta)$ UV mapping eliminates horizontal texture wrapping jumps and seams.
+  - **Automated Topology Metrics**: 1,078 vertices, 2,152 triangles, **1 single connected component**, **0 boundary edges**, **0 non-manifold edges**, **100% watertight 2-manifold closed surface**.
+  - **Programmatic Deformation Verification**: Automated 11-joint deformation suite verifies volume retention ($>70\%$ and $<160\%$) and zero NaN coordinates across arms raised/lowered $\pm 75^\circ$, elbow bent $90^\circ$, wrist, hip, knee bent $-90^\circ$, ankle, forearms rotated $\pm 60^\circ$, deep lunge pose, torso twist $30^\circ$, and head rotation $45^\circ$.
+- **Surface Noise Investigation & Complete Remediation**:
+  - Root cause identified in `scripts/generate_phase_c_character_assets.py`: an 8-pixel micro-ripstop checkerboard (`((x // 8) % 2 == 0) & ((y // 8) % 2 == 0)`) combined with Gaussian white noise (`np.random.normal`) fed directly into an unbuffered Sobel filter (`strength=2.6`), causing chaotic pixel-level tangent-space normal flips and specular twinkle under directional lighting.
+  - Remediated by removing micro-checkerboard and white noise, adding a PIL `BoxBlur(1.5)` pre-filter on height maps prior to Sobel calculation, and calibrating normal strength to 0.5.
+  - Authored clean neutral studio gray clay material (`M_Operator_Neutral_Clay.mat`: URP Lit, Color `(0.62, 0.64, 0.66)`, metallic 0, smoothness 0.22, untextured) for geometric silhouette and lighting audit.
 - **Operator REX Visual & Tactical Overhaul**:
   - Rewrote `scripts/generate_phase_c_character_assets.py` to regenerate 12 refined Wavefront OBJ equipment models and 9 calibrated PBR texture maps:
     - `REX_Helmet_Combat.obj`: Contoured dome, ARC accessory rails, NVG shroud bracket, visor bezel, and chin harness.
@@ -1315,15 +1322,14 @@ Address all character visual and rigging weaknesses identified during the indepe
 - **Hit Reaction Animation & Netcode Refinement**:
   - Enhanced `Operator_HitReaction.anim` to author 21 skeletal rotational curves across Hips, Spine, Chest, UpperChest, Neck/Head, LeftUpperArm, and RightUpperArm (eliminating placeholder curve counts).
   - Added `SynchronizeRemoteAnimationParameters()` to `NetworkPlayerController.cs` to explicitly expose remote proxy animation updating from NetVars.
-- **Discrete Categorized Validation Pipeline (`CharacterValidationPipeline.cs`)**:
+- **Categorized Validation Pipeline & Status Enforcement (`CharacterValidationPipeline.cs`)**:
   - Implemented deep topological BFS analysis for connected components, boundary edges, and non-manifold edge detection.
-  - Implemented multi-joint flexion deformation tests.
-  - Evaluated 10 categorized checks: 9 automated checks returning **PASS**, 1 visual quality boundary review returning **PARTIAL** with clear DCC boundary documentation.
-  - Generated authoritative `character_validation_report.json` with status **PASS** (0 errors, 0 warnings).
-- **22-Screenshot In-Engine Visual Evidence Capture (`CaptureCharacterVisuals.cs`)**:
-  - Mode A (Static Close-Ups & Diagnostics): Front, Back, Side, First-Person, Third-Person, Weapon Switch, Head & Helmet, Upper Equipment, Hands & Gloves, Lower Equipment, Mesh Wireframe, 25-Bone Skeleton Hierarchy, Skin-Weight Heatmap.
-  - Mode B (Live Runtime Animation Playback): Idle, Walk, Run, Crouch, Aim & Fire, Reload, Hit Reaction, Downed / Death.
-  - Multiplayer Proxy: Remote proxy operator rendering in full third-person with socketed rifle and overhead HUD nametag.
+  - Implemented multi-joint flexion deformation tests across 11 poses.
+  - Strictly enforced overall validation status as **`PARTIAL`** pending external production-sculpted DCC assets (preventing premature production-ready claims on procedural geometry).
+  - Generated authoritative `character_validation_report.json` with status **PARTIAL** (0 errors, 1 architectural limitation note on procedural vs DCC assets).
+- **In-Engine Visual Evidence Capture (`CaptureCharacterVisuals.cs`)**:
+  - Captured 10 specific required screenshots: Neutral Front (`screenshot_rex_neutral_front.png`), Neutral Side (`screenshot_rex_neutral_side.png`), Neutral Back (`screenshot_rex_neutral_back.png`), Head & Hands Detail (`screenshot_rex_head_hands.png`), Mesh Wireframe (`screenshot_rex_wireframe.png`), 25-Bone Skeleton (`screenshot_rex_skeleton.png`), Shoulder & Elbow Deformation (`screenshot_rex_deform_shoulder_elbow.png`), Knee & Hip Lunge Deformation (`screenshot_rex_deform_knee_hip.png`), Neutral Studio Clay (`screenshot_rex_neutral_clay.png`), Shaded Final PBR (`screenshot_rex_shaded_final.png`).
+  - Captured complete 30-screenshot diagnostic set across Mode A, Mode B, and Multiplayer Proxy.
 - **Comprehensive E2E Regression Verification**:
   - Standalone binaries recompiled via `build_standalone.ps1 -Target All` (ExitCode 0).
   - All 76 Simulation unit tests passed (`dotnet test shared/OutrunAftermath.Simulation.Tests`).
@@ -1344,20 +1350,24 @@ Address all character visual and rigging weaknesses identified during the indepe
 - `client/Assets/Art/Characters/Operators/TRACE/Meshes/*.obj` (6 refined models)
 - `client/Assets/Art/Textures/Characters/*/*.png` (9 calibrated PBR textures)
 - `scripts/generate_phase_c_character_assets.py` (procedural asset generator script)
-- `character_validation_report.json` (authoritative validation report: PASS)
-- `docs/ASSET_REGISTER.md` (updated asset table and 22 visual evidence screenshot entries)
+- `character_validation_report.json` (authoritative validation report: PARTIAL)
+- `docs/ASSET_REGISTER.md` (updated asset table and visual evidence screenshot entries)
 - `DEVELOPMENT_PROGRESS.md`
 - `KNOWN_ISSUES.md`
 - `CHANGELOG.md`
 
 ### Artifacts and Evidence Generated
-- `character_validation_report.json`: PASS (0 errors, 0 warnings, 10 categorized checks)
-- 22 in-engine 1080p visual evidence screenshots (`screenshot_rex_*.png`)
+- `character_validation_report.json`: PARTIAL (0 errors, 10 categorized checks, procedural vs DCC status note)
+- 10 required in-engine 1080p visual evidence screenshots + 20 diagnostic screenshots (`screenshot_rex_*.png`)
 - `e2e_production_test_report.json`: PASS (23/23 stages passed, 100%)
 - `e2e_production_test_console.log`: Complete verification transcript
 
 ### Verification Verdict
-**PASS**: Phase C.1.1 completed with 100% automated validation pass rate, continuous watertight 2-manifold humanoid mesh (1 component, 0 boundary edges, 0 non-manifold edges), refined REX tactical assets, 22 in-engine visual evidence screenshots, 76/76 simulation tests, 12/12 API tests, and 23/23 E2E multiplayer lifecycle stages passing without defect.
+**PARTIAL (Architectural Character Foundation PASS; DCC Art Asset Gate PARTIAL)**:
+- **Humanoid Skeletal & Rigging Foundation**: PASS. Continuous watertight 2-manifold skinned mesh (1,078 vertices, 2,152 triangles, 1 connected component, 0 boundary edges, 0 non-manifold edges), 25-bone standard humanoid skeleton, valid Humanoid Avatar, 13 keyframed animation clips with 2-layer Mecanim controller and upper body combat mask. Programmatic 11-joint flexion and volume retention tests passing with 0 NaNs and 0 collapses.
+- **Equipment & Visual Systems**: PASS. 9 modular equipment sockets, zero-allocation weapon switching, dual FPS/TPS presentation roots with authentic local shadow casting, and owner-authoritative multiplayer replication. Surface noise eradicated via PIL height map box blur pre-filtering, calibrated normal strength (0.5), and seamless conformal UVs. Clean neutral studio clay material (`M_Operator_Neutral_Clay.mat`) verified.
+- **Automated Regression & E2E Verification**: PASS. 76/76 simulation unit tests, 12/12 API tests, and 23/23 E2E multiplayer lifecycle stages passing without defect.
+- **Production Art Visual Quality Boundary**: PARTIAL (by design). Current assets are procedural in-engine meshes. While geometrically sound, watertight, and fully playable, production AAA art requires high-resolution artist sculpts authored in external DCC tools (Blender/Maya/ZBrush) adhering to `docs/CHARACTER_PIPELINE.md`. Overall character validation report status is maintained as **PARTIAL** until external DCC assets are integrated.
 
 
 

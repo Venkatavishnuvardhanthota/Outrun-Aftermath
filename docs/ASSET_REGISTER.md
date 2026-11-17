@@ -158,10 +158,11 @@ All 9 sockets are authored and anchored to anatomical bone transforms:
 
 | Asset Name | Category | File Location | Materials | Description / Attachment Socket |
 |---|---|---|---|---|
-| `SK_Humanoid_Operator` | Skinned Mesh | `Assets/Art/Characters/Shared/Meshes/SK_Humanoid_Operator.asset` | `M_Operator_Shared_Underlayer` | Watertight continuous anatomical humanoid mesh (894 verts, 1,784 tris, 1 component, 0 boundary edges, 0 non-manifold edges, 25 bones, valid multi-joint flexion) |
+| `SK_Humanoid_Operator` | Skinned Mesh | `Assets/Art/Characters/Shared/Meshes/SK_Humanoid_Operator.asset` | `M_Operator_Shared_Underlayer` | Watertight continuous anatomical humanoid mesh (1,078 verts, 2,152 tris, 1 component, 0 boundary edges, 0 non-manifold edges, 25 bones, valid multi-joint flexion across 11 poses with volume retention) |
 | `OperatorHumanoidAvatar` | Humanoid Avatar | `Assets/Art/Characters/Shared/Skeletons/OperatorHumanoidAvatar.asset` | N/A | Validated Unity Humanoid Avatar for Mecanim animation retargeting |
 | `OperatorAnimatorController`| Animator | `Assets/Art/Characters/Shared/Animations/OperatorAnimatorController.controller` | N/A | 13-state 2-layer state machine with UpperBody combat mask |
-| `M_Operator_Shared_Underlayer` | Material | `Assets/Art/Characters/Shared/Materials/M_Operator_Shared_Underlayer.mat` | URP Lit | Ballistic ripstop tactical undersuit (Dark Slate / Charcoal) |
+| `M_Operator_Shared_Underlayer` | Material | `Assets/Art/Characters/Shared/Materials/M_Operator_Shared_Underlayer.mat` | URP Lit | Ballistic tactical undersuit (Dark Slate / Charcoal, smooth seams, zero noise) |
+| `M_Operator_Neutral_Clay` | Material | `Assets/Art/Characters/Shared/Materials/M_Operator_Neutral_Clay.mat` | URP Lit | Clean neutral studio gray clay material (Color 0.62, 0.64, 0.66, 0 metallic, 0.22 smoothness) for evaluating surface geometry in isolation |
 | `M_Operator_REX_Assault` | Material | `Assets/Art/Characters/Operators/REX/Materials/M_Operator_REX_Assault.mat` | URP Lit | Heavy ballistic assault plating, carbon steel, calibrated burnt amber accents |
 | `M_Operator_TRACE_Recon` | Material | `Assets/Art/Characters/Operators/TRACE/Materials/M_Operator_TRACE_Recon.mat` | URP Lit | Lightweight composite harness, optical sensors, matte navy & cyan accents |
 | `REX_Helmet_Combat` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/REX_Helmet_Combat.obj` | `M_Operator_REX_Assault` | Contoured domed helmet with ARC rails, NVG shroud, visor, and chin harness (HelmetAttachmentSocket) |
@@ -181,15 +182,27 @@ All 9 sockets are authored and anchored to anatomical bone transforms:
 
 ---
 
-## 5. Verified In-Engine Visual Evidence (Phase C.1.1)
+## 5. Verified In-Engine Visual Evidence (Phase C.1.1 Mesh Refinement & Validation)
 
-The following 22 1080p in-engine screenshots were captured directly in the Unity LTS 6000.6.9f1 editor using `CaptureCharacterVisuals.CaptureBatchMode`, validating Mode A (detailed static close-ups and diagnostics), Mode B (live Animator runtime playback over time), and networked multiplayer proxy replication:
+The following 1080p in-engine screenshots were captured directly in the Unity LTS 6000.6.9f1 editor using `CaptureCharacterVisuals.CaptureBatchMode`, verifying anatomical mesh geometry, multi-joint deformation, neutral clay review, wireframe topology, skeleton hierarchy, live Animator runtime playback, and networked multiplayer proxy replication:
 
+### Primary Required Character Screenshots
 | Image File | Category | Description | Resolution | Viewpoint & Technical Features |
 |---|---|---|---|---|
-| `screenshot_rex_front.png` | Standard | REX Front View (Full Body) | 1920x1080 | Full-body frontal profile showing continuous watertight mesh, helmet visor, plate carrier, and rifle ready. |
-| `screenshot_rex_back.png` | Standard | REX Back View (Full Body) | 1920x1080 | Rear silhouette showing 3-day assault rucksack with bottom mat roll, slung holster, and armored pauldrons. |
-| `screenshot_rex_side.png` | Standard | REX Side View (Profile) | 1920x1080 | Side profile showing knee and elbow crease anatomy, drop-leg Kydex holster, and contoured helmet shell. |
+| `screenshot_rex_neutral_front.png` | Neutral View | Front View (Neutral Pose) | 1920x1080 | Full-body frontal profile showing continuous watertight mesh, facial features (jaw, chin, nose, brow), broad shoulders, and chest/quadriceps anatomy. |
+| `screenshot_rex_neutral_side.png` | Neutral View | Side View (Neutral Pose) | 1920x1080 | Side profile showing cranial dome, nose projection, patella knee plates, gastrocnemius calf curves, calcaneus heel protrusion, and sole profile. |
+| `screenshot_rex_neutral_back.png` | Neutral View | Back View (Neutral Pose) | 1920x1080 | Rear view showing trapezoid slope, spine curvature, gluteal swell and cleft, calf bellies, and Achilles tendon contours. |
+| `screenshot_rex_head_hands.png` | Close-Up | Head & Hands Close-Up | 1920x1080 | Angled close-up framing facial structure (mandible, chin, lips, philtrum, nose bridge/tip, brow) and hand (palm base, thenar thumb mound, opposing thumb protrusion, knuckle ridge, fingers). |
+| `screenshot_rex_wireframe.png` | Diagnostic | Mesh Wireframe Topology | 1920x1080 | Diagnostic topology overlay showing continuous 2-manifold edge flow (1,078 verts, 2,152 tris, 1 component, 0 boundary edges, 0 non-manifold edges). |
+| `screenshot_rex_skeleton.png` | Diagnostic | 25-Bone Hierarchy Overlay | 1920x1080 | Diagnostic joint spheres and connecting bone rods showing complete 25-bone anatomical hierarchy from Root (0,0,0) to toes and fingertips. |
+| `screenshot_rex_deform_shoulder_elbow.png` | Deformation | Shoulder & Elbow Flexion | 1920x1080 | Left arm raised $+75^\circ$, left elbow bent $90^\circ$, right arm lowered $-65^\circ$, right elbow bent $-80^\circ$, head rotated $25^\circ$. Demonstrates clean volume retention with 0 joint collapse. |
+| `screenshot_rex_deform_knee_hip.png` | Deformation | Knee & Hip Flexion (Lunge) | 1920x1080 | Deep tactical lunge with left thigh $+45^\circ$, left knee bent $-90^\circ$, right thigh $-30^\circ$, right knee bent $35^\circ$, spine twisted $25^\circ$. Demonstrates continuous watertight knee and groin deformation. |
+| `screenshot_rex_neutral_clay.png` | Neutral Clay | Clean Neutral-Material Render | 1920x1080 | Neutral studio matte gray material (`M_Operator_Neutral_Clay.mat`) with equipment hidden, showcasing pure underlying anatomical geometry in total isolation from textures. |
+| `screenshot_rex_shaded_final.png` | Final Shaded | Final Shaded Render | 1920x1080 | Full-body combat stance with calibrated PBR textures, modular equipment, and 3-point studio lighting with zero surface noise or sparkle. |
+
+### Extended Animation Playback & Multiplayer Verification Screenshots
+| Image File | Category | Description | Resolution | Viewpoint & Technical Features |
+|---|---|---|---|---|
 | `screenshot_rex_thirdperson.png` | Perspective | REX Third-Person View | 1920x1080 | Over-the-shoulder tactical combat camera framing operator back, shoulder armor, and forward sightline. |
 | `screenshot_rex_firstperson.png` | Perspective | REX First-Person View | 1920x1080 | First-person viewmodel arms with molded knuckle guards and active weapon aiming down sightline with 0 clipping. |
 | `screenshot_rex_weapon_switch.png` | Mechanics | REX Weapon Switching | 1920x1080 | Breacher-12 shotgun in hand socket, and primary Vanguard-4 rifle slung on back holster with 0 duplicates. |
@@ -197,8 +210,6 @@ The following 22 1080p in-engine screenshots were captured directly in the Unity
 | `screenshot_rex_upper_equipment.png` | Mode A Close-Up | REX Upper Body Equipment | 1920x1080 | SAPI swimmer-cut ceramic plate carrier, triple mag pouches with bungee tabs, radio, shoulder straps. |
 | `screenshot_rex_hands_gloves.png` | Mode A Close-Up | REX Hands & Gloves | 1920x1080 | Molded knuckle guards, palm pads, and trigger finger indexing weapon receiver. |
 | `screenshot_rex_lower_equipment.png` | Mode A Close-Up | REX Lower Body Equipment | 1920x1080 | Contoured trousers, reinforced knee pads, and combat boots with defined tread soles and laces. |
-| `screenshot_rex_wireframe.png` | Diagnostic | REX Mesh Wireframe Overlay | 1920x1080 | Diagnostic topology overlay showing continuous 2-manifold edge flow, 1 component, 0 boundary edges. |
-| `screenshot_rex_skeleton.png` | Diagnostic | REX 25-Bone Hierarchy | 1920x1080 | Diagnostic joint spheres and connecting bone rods showing complete anatomical skeleton hierarchy. |
 | `screenshot_rex_skin_weights.png` | Diagnostic | REX Skin-Weight Heatmap | 1920x1080 | Vertex color visualization of multi-bone skinning weight distribution across 25 bones. |
 | `screenshot_rex_idle.png` | Mode B Playback | REX Idle State | 1920x1080 | Relaxed combat posture with continuous torso breathing motion and weight distribution across legs. |
 | `screenshot_rex_walk.png` | Mode B Playback | REX Walk Cycle | 1920x1080 | Dynamic stride pose showing knee articulation, pelvic translation, and counter-balancing arm movement. |
