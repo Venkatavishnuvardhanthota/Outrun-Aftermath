@@ -190,18 +190,46 @@ namespace OutrunAftermath.Client.Editor
                 // Third-Person View (Over-the-shoulder tactical camera)
                 PositionCamera(cam, new Vector3(0.55f, 1.45f, -1.8f), new Vector3(0.15f, 1.35f, 2.0f));
                 CaptureFrame(cam, "screenshot_rex_thirdperson.png");
+                CaptureFrame(cam, "screenshot_rex_thirdperson_rifle.png");
 
                 // First-Person View (Viewmodel arms, hands on weapon, no clipping)
                 vc.ApplyPerspectiveMode(CameraPerspective.FirstPerson);
                 PositionCamera(cam, new Vector3(0f, 1.55f, 0.15f), new Vector3(0f, 1.55f, 3.0f));
                 CaptureFrame(cam, "screenshot_rex_firstperson.png");
+                CaptureFrame(cam, "screenshot_rex_firstperson_rifle.png");
 
-                // Weapon Switching (Shotgun active in hand, Rifle holstered on back)
+                // Weapon Switching & Holster Views
                 vc.ApplyPerspectiveMode(CameraPerspective.ThirdPerson);
+
+                // Shotgun Equipped (Active in right hand)
                 vc.SetActiveSlotIndex(1); // Breacher-12 Shotgun
                 PositionCamera(cam, new Vector3(0.75f, 1.25f, 1.8f), new Vector3(0f, 1.10f, 0f));
                 CaptureFrame(cam, "screenshot_rex_weapon_switch.png");
-                vc.SetActiveSlotIndex(0); // Reset to Rifle
+                CaptureFrame(cam, "screenshot_rex_shotgun_equipped.png");
+
+                // Rifle Holstered Close-up (Rear view of rifle slung on back)
+                PositionCamera(cam, new Vector3(-0.35f, 1.35f, -1.2f), new Vector3(-0.05f, 1.25f, 0f));
+                CaptureFrame(cam, "screenshot_rex_rifle_holstered.png");
+
+                // Pistol Equipped (Active in right hand)
+                vc.SetActiveSlotIndex(2); // Sidekick-9 Pistol
+                PositionCamera(cam, new Vector3(0.65f, 1.20f, 1.6f), new Vector3(0f, 1.10f, 0f));
+                CaptureFrame(cam, "screenshot_rex_pistol_equipped.png");
+
+                // Shotgun Holstered Close-up (Rear view with shotgun on back)
+                PositionCamera(cam, new Vector3(0.35f, 1.35f, -1.2f), new Vector3(0.05f, 1.25f, 0f));
+                CaptureFrame(cam, "screenshot_rex_shotgun_holstered.png");
+
+                // Reset to Rifle (Slot 0)
+                vc.SetActiveSlotIndex(0);
+
+                // Pistol Holstered Close-up (Thigh holster view)
+                PositionCamera(cam, new Vector3(0.45f, 0.85f, 0.95f), new Vector3(0.15f, 0.80f, 0f));
+                CaptureFrame(cam, "screenshot_rex_pistol_holstered.png");
+
+                // Support Hand Foregrip Grip Close-up (Left hand on rifle foregrip)
+                PositionCamera(cam, new Vector3(0.25f, 1.22f, 0.85f), new Vector3(0.08f, 1.18f, 0.25f));
+                CaptureFrame(cam, "screenshot_rex_support_hand_grip.png");
 
                 // Detailed Equipment Close-Ups
                 PositionCamera(cam, new Vector3(0.15f, 1.62f, 0.95f), new Vector3(0f, 1.60f, 0f));
@@ -252,6 +280,7 @@ namespace OutrunAftermath.Client.Editor
                 SampleClip(rex, $"{animDir}/Operator_Fire.anim", 0.05f);
                 PositionCamera(cam, new Vector3(0.85f, 1.35f, 1.7f), new Vector3(0.1f, 1.30f, 0f));
                 CaptureFrame(cam, "screenshot_rex_aim_fire.png");
+                CaptureFrame(cam, "screenshot_rex_fire.png");
 
                 // 19. Reload State (Weapon lowered, left hand indexing fresh magazine into magwell)
                 SampleClip(rex, $"{animDir}/Operator_Reload.anim", 1.20f);
@@ -263,10 +292,21 @@ namespace OutrunAftermath.Client.Editor
                 PositionCamera(cam, new Vector3(0.70f, 1.25f, 1.8f), new Vector3(0f, 1.15f, 0f));
                 CaptureFrame(cam, "screenshot_rex_hit_reaction.png");
 
-                // 21. Downed / Death State (Ground collapse, sprawled incapacitated posture)
+                // 21. Downed State (Ground collapse, sprawled incapacitated posture)
                 SampleClip(rex, $"{animDir}/Operator_Downed.anim", 1.0f);
                 PositionCamera(cam, new Vector3(1.3f, 0.95f, 1.5f), new Vector3(0f, 0.35f, 0f));
                 CaptureFrame(cam, "screenshot_rex_downed_death.png");
+                CaptureFrame(cam, "screenshot_rex_downed.png");
+
+                // 22. Revive State (Push-up ascent from downed posture)
+                SampleClip(rex, $"{animDir}/Operator_Revive.anim", 0.5f);
+                PositionCamera(cam, new Vector3(1.1f, 0.85f, 1.5f), new Vector3(0f, 0.45f, 0f));
+                CaptureFrame(cam, "screenshot_rex_revive.png");
+
+                // 23. Death State (Full ground collapse)
+                SampleClip(rex, $"{animDir}/Operator_Death.anim", 1.2f);
+                PositionCamera(cam, new Vector3(1.4f, 0.90f, 1.4f), new Vector3(0f, 0.25f, 0f));
+                CaptureFrame(cam, "screenshot_rex_death.png");
 
                 // Reset pose
                 SampleClip(rex, $"{animDir}/Operator_Idle.anim", 0f);
@@ -275,7 +315,7 @@ namespace OutrunAftermath.Client.Editor
                 // SECTION 4: REAL MULTIPLAYER PROXY PERSPECTIVE
                 // ==========================================
 
-                // 22. Multiplayer Client Perspective (Remote proxy operator with Third-Person visual, socketed rifle, and overhead HUD nametag)
+                // 24. Multiplayer Client Perspective (Remote proxy operator with Third-Person visual, socketed rifle, and overhead HUD nametag)
                 var proxyGo = UnityEngine.Object.Instantiate(rexPrefab);
                 proxyGo.transform.position = new Vector3(0.6f, 0f, 1.8f);
                 proxyGo.transform.rotation = Quaternion.Euler(0f, -155f, 0f);
@@ -298,10 +338,11 @@ namespace OutrunAftermath.Client.Editor
 
                 PositionCamera(cam, new Vector3(0f, 1.55f, 0f), proxyGo.transform.position + Vector3.up * 1.3f);
                 CaptureFrame(cam, "screenshot_rex_multiplayer_proxy.png");
+                CaptureFrame(cam, "screenshot_rex_remote_multiplayer.png");
 
                 UnityEngine.Object.DestroyImmediate(proxyGo);
 
-                Debug.Log("[CaptureCharacterVisuals] All 22 required character screenshots successfully captured!");
+                Debug.Log("[CaptureCharacterVisuals] All character screenshots successfully captured!");
             }
             finally
             {

@@ -177,12 +177,13 @@ All 9 sockets are authored and anchored to anatomical bone transforms:
 | `TRACE_Pouches_UtilityLeg` | 3D Mesh | `Assets/Art/Characters/Operators/TRACE/Meshes/TRACE_Pouches_UtilityLeg.obj` | `M_Operator_TRACE_Recon` | Utility leg pouch for field analysis kits (LeftThigh bone) |
 | `TRACE_Holster_Recon` | 3D Mesh | `Assets/Art/Characters/Operators/TRACE/Meshes/TRACE_Holster_Recon.obj` | `M_Operator_TRACE_Recon` | Quick-draw recon sidearm holster (SecondaryWeaponHolster) |
 | `FP_Arms_TRACE` | 3D Mesh | `Assets/Art/Characters/Operators/TRACE/Meshes/FP_Arms_TRACE.obj` | `M_Operator_TRACE_Recon` | First-person viewmodel recon arms with tactical watch & fingerless grips |
-| `PF_Operator_REX` | Prefab | `Assets/Art/Characters/Operators/REX/Prefabs/PF_Operator_REX.prefab` | Multi | Complete game-ready REX operator prefab (9 sockets, 9 renderers, FP+TP) |
-| `PF_Operator_TRACE` | Prefab | `Assets/Art/Characters/Operators/TRACE/Prefabs/PF_Operator_TRACE.prefab` | Multi | Complete game-ready TRACE operator prefab (9 sockets, 9 renderers, FP+TP) |
+| `PF_Operator_REX` | Prefab | `Assets/Art/Characters/Operators/REX/Prefabs/PF_Operator_REX.prefab` | Multi | Complete game-ready REX operator prefab (9 sockets, 9 renderers, FP+TP, foregrip IK) |
+| `PF_Operator_TRACE` | Prefab | `Assets/Art/Characters/Operators/TRACE/Prefabs/PF_Operator_TRACE.prefab` | Multi | Complete game-ready TRACE operator prefab (9 sockets, 9 renderers, FP+TP, foregrip IK) |
+| `Socket_Foregrip` | Sockets | Runtime / Prefab on two-handed weapons | Project Original | Foregrip attachment socket for LeftHand alignment (AR, Shotgun) |
 
 ---
 
-## 5. Verified In-Engine Visual Evidence (Phase C.1.1 Mesh Refinement & Validation)
+## 5. Verified In-Engine Visual Evidence (Phase C.1.1 & C.1.2 Mesh Refinement, Animation & Attachment Validation)
 
 The following 1080p in-engine screenshots were captured directly in the Unity LTS 6000.6.9f1 editor using `CaptureCharacterVisuals.CaptureBatchMode`, verifying anatomical mesh geometry, multi-joint deformation, neutral clay review, wireframe topology, skeleton hierarchy, live Animator runtime playback, and networked multiplayer proxy replication:
 

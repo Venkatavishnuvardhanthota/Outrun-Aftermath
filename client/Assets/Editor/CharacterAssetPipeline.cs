@@ -479,11 +479,11 @@ namespace OutrunAftermath.Client.Editor
                 headRings.Add(ring);
             }
 
-            // Top pole fan
+            // Top pole fan (wound in reverse of cylinder so boundary edges are opposite directed pairs)
             for (int i = 0; i < nBody; i++)
             {
                 int next = (i + 1) % nBody;
-                AddTriangle(headTop, headRings[0][i], headRings[0][next]);
+                AddTriangle(headTop, headRings[0][next], headRings[0][i]);
             }
 
             for (int r = 0; r < headRings.Count - 1; r++)
@@ -745,19 +745,12 @@ namespace OutrunAftermath.Client.Editor
                     prevArmRing = ring;
                 }
 
-                // Fingertip cap pole
+                // Fingertip cap pole (both arms wound consistently to match arm cylinder rings)
                 int tipPole = AddVertex(new Vector3(sign * 0.910f, 1.34f, 0f), new Vector3(sign, 0f, 0f), new Vector2(isLeft ? 0.25f : 0.75f, 0.5f), fingB, 1.0f);
                 for (int i = 0; i < nArm; i++)
                 {
                     int next = (i + 1) % nArm;
-                    if (isLeft)
-                    {
-                        AddTriangle(tipPole, prevArmRing[i], prevArmRing[next]);
-                    }
-                    else
-                    {
-                        AddTriangle(tipPole, prevArmRing[next], prevArmRing[i]);
-                    }
+                    AddTriangle(tipPole, prevArmRing[i], prevArmRing[next]);
                 }
             }
 
@@ -888,10 +881,13 @@ namespace OutrunAftermath.Client.Editor
         private const string PathSpine = "ThirdPersonPresentation/Skeleton/Root/Hips/Spine";
         private const string PathChest = "ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest";
         private const string PathUpperChest = "ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest";
+        private const string PathNeck = "ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest/Neck";
         private const string PathHead = "ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest/Neck/Head";
+        private const string PathLClavicle = "ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest/LeftClavicle";
         private const string PathLUpperArm = "ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest/LeftClavicle/LeftUpperArm";
         private const string PathLLowerArm = "ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest/LeftClavicle/LeftUpperArm/LeftLowerArm";
         private const string PathLHand = "ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest/LeftClavicle/LeftUpperArm/LeftLowerArm/LeftHand";
+        private const string PathRClavicle = "ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest/RightClavicle";
         private const string PathRUpperArm = "ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest/RightClavicle/RightUpperArm";
         private const string PathRLowerArm = "ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest/RightClavicle/RightUpperArm/RightLowerArm";
         private const string PathRHand = "ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest/RightClavicle/RightUpperArm/RightLowerArm/RightHand";
@@ -1317,28 +1313,82 @@ namespace OutrunAftermath.Client.Editor
         private static AnimationClip CreateFireClip()
         {
             var clip = new AnimationClip { name = "Operator_Fire", legacy = false, wrapMode = WrapMode.Once };
-            float[] times = new float[] { 0.0f, 0.03f, 0.08f, 0.16f, 0.25f };
+            float[] times = new float[] { 0.0f, 0.03f, 0.07f, 0.14f, 0.22f, 0.30f };
 
-            // Recoil kick impulse
+            // 1. Hips recoil shock absorption
+            AddRotCurve(clip, PathHips, times,
+                new float[] { 0f, 1.2f, 0.6f, -0.2f, 0f, 0f },
+                new float[] { 0f, -0.5f, -0.2f, 0f, 0f, 0f },
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f });
+
+            // 2. Spine & Chest recoil kick impulse (pitch backwards, absorb shock)
+            AddRotCurve(clip, PathSpine, times,
+                new float[] { 0f, -4.5f, -2.8f, -1.0f, -0.2f, 0f },
+                new float[] { 0f, -0.8f, -0.4f, 0f, 0f, 0f },
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f });
+
             AddRotCurve(clip, PathChest, times,
-                new float[] { 0f, -3.5f, -1.8f, -0.4f, 0f },
-                new float[] { 0f, 0f, 0f, 0f, 0f },
-                new float[] { 0f, 0f, 0f, 0f, 0f });
+                new float[] { 0f, -6.8f, -4.2f, -1.5f, -0.3f, 0f },
+                new float[] { 0f, -1.2f, -0.6f, 0f, 0f, 0f },
+                new float[] { 0f, 0.5f, 0.2f, 0f, 0f, 0f });
+
+            AddRotCurve(clip, PathUpperChest, times,
+                new float[] { 0f, -4.0f, -2.5f, -0.8f, -0.2f, 0f },
+                new float[] { 0f, -0.6f, -0.3f, 0f, 0f, 0f },
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f });
+
+            // 3. Neck & Head sightline stabilization (pitch forward to keep eyes on target)
+            AddRotCurve(clip, PathNeck, times,
+                new float[] { 0f, 3.2f, 2.0f, 0.6f, 0.1f, 0f },
+                new float[] { 0f, 0.6f, 0.3f, 0f, 0f, 0f },
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f });
+
+            AddRotCurve(clip, PathHead, times,
+                new float[] { 0f, 4.5f, 2.8f, 0.9f, 0.2f, 0f },
+                new float[] { 0f, 0.8f, 0.4f, 0f, 0f, 0f },
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f });
+
+            // 4. Right Shoulder & Arm (Muzzle climb and stock drive)
+            AddRotCurve(clip, PathRClavicle, times,
+                new float[] { 0f, -2.5f, -1.5f, -0.5f, 0f, 0f },
+                new float[] { 0f, 1.0f, 0.5f, 0f, 0f, 0f },
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f });
 
             AddRotCurve(clip, PathRUpperArm, times,
-                new float[] { 68.0f, 82.0f, 74.0f, 69.5f, 68.0f },
-                new float[] { -14.0f, -16.0f, -14.8f, -14.2f, -14.0f },
-                new float[] { -12.0f, -16.0f, -13.5f, -12.3f, -12.0f });
+                new float[] { 68.0f, 85.0f, 78.0f, 71.5f, 68.8f, 68.0f },
+                new float[] { -14.0f, -18.5f, -16.0f, -14.8f, -14.2f, -14.0f },
+                new float[] { -12.0f, -17.0f, -14.5f, -12.8f, -12.2f, -12.0f });
 
             AddRotCurve(clip, PathRLowerArm, times,
-                new float[] { 78.0f, 70.0f, 75.0f, 77.2f, 78.0f },
-                new float[] { 4.0f, 6.0f, 4.8f, 4.2f, 4.0f },
-                new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f });
+                new float[] { 78.0f, 68.0f, 73.0f, 76.5f, 77.8f, 78.0f },
+                new float[] { 4.0f, 8.0f, 6.0f, 4.8f, 4.2f, 4.0f },
+                new float[] { 0.0f, -2.0f, -1.0f, 0.0f, 0.0f, 0.0f });
+
+            AddRotCurve(clip, PathRHand, times,
+                new float[] { 0f, 8.5f, 5.0f, 1.8f, 0.4f, 0f },
+                new float[] { 0f, -2.0f, -1.0f, 0f, 0f, 0f },
+                new float[] { 0f, 3.0f, 1.5f, 0f, 0f, 0f });
+
+            // 5. Left Shoulder & Support Arm (Absorbing foregrip climb)
+            AddRotCurve(clip, PathLClavicle, times,
+                new float[] { 0f, 1.8f, 1.0f, 0.3f, 0f, 0f },
+                new float[] { 0f, -0.8f, -0.4f, 0f, 0f, 0f },
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f });
 
             AddRotCurve(clip, PathLUpperArm, times,
-                new float[] { 54.0f, 62.0f, 57.0f, 54.8f, 54.0f },
-                new float[] { 28.0f, 26.0f, 27.5f, 28.0f, 28.0f },
-                new float[] { 18.0f, 15.0f, 17.0f, 18.0f, 18.0f });
+                new float[] { 54.0f, 65.0f, 60.0f, 56.2f, 54.5f, 54.0f },
+                new float[] { 28.0f, 24.5f, 26.5f, 27.6f, 28.0f, 28.0f },
+                new float[] { 18.0f, 13.5f, 16.0f, 17.5f, 18.0f, 18.0f });
+
+            AddRotCurve(clip, PathLLowerArm, times,
+                new float[] { 82.0f, 74.0f, 78.0f, 80.8f, 81.8f, 82.0f },
+                new float[] { -18.0f, -22.0f, -20.0f, -18.8f, -18.2f, -18.0f },
+                new float[] { 0.0f, 3.0f, 1.5f, 0.0f, 0.0f, 0.0f });
+
+            AddRotCurve(clip, PathLHand, times,
+                new float[] { 0f, -5.0f, -3.0f, -1.0f, 0f, 0f },
+                new float[] { 0f, 2.0f, 1.0f, 0f, 0f, 0f },
+                new float[] { 0f, -2.5f, -1.0f, 0f, 0f, 0f });
 
             return clip;
         }
@@ -1346,30 +1396,76 @@ namespace OutrunAftermath.Client.Editor
         private static AnimationClip CreateReloadClip()
         {
             var clip = new AnimationClip { name = "Operator_Reload", legacy = false, wrapMode = WrapMode.Once };
-            float[] times = new float[] { 0.0f, 0.35f, 0.70f, 1.15f, 1.45f, 1.80f, 2.20f };
+            float[] times = new float[] { 0.0f, 0.30f, 0.65f, 1.10f, 1.45f, 1.80f, 2.20f };
 
-            // Right arm lowers slightly, then rises back to aim
+            // 1. Torso postures: leans slightly toward hip at 0.65s, braces at slap (1.45s)
+            AddRotCurve(clip, PathSpine, times,
+                new float[] { 0f, 2.0f, 4.0f, 2.5f, -3.0f, -0.5f, 0f },
+                new float[] { 0f, -2.0f, -5.0f, -2.0f, 1.0f, 0f, 0f },
+                new float[] { 0f, 1.5f, 3.0f, 1.0f, -1.0f, 0f, 0f });
+
+            AddRotCurve(clip, PathChest, times,
+                new float[] { 0f, 2.5f, 5.0f, 3.0f, -4.5f, -1.0f, 0f },
+                new float[] { 0f, -3.0f, -7.0f, -3.0f, 1.5f, 0f, 0f },
+                new float[] { 0f, 2.0f, 4.0f, 1.5f, -1.5f, 0f, 0f });
+
+            AddRotCurve(clip, PathUpperChest, times,
+                new float[] { 0f, 1.5f, 3.0f, 2.0f, -2.8f, -0.5f, 0f },
+                new float[] { 0f, -2.0f, -4.5f, -2.0f, 1.0f, 0f, 0f },
+                new float[] { 0f, 1.0f, 2.0f, 1.0f, -1.0f, 0f, 0f });
+
+            // 2. Head tracks mag handling: looks down at hip pouch (0.65s), checks magwell (1.45s), looks up
+            AddRotCurve(clip, PathNeck, times,
+                new float[] { 0f, 5.0f, 10.0f, 7.0f, -2.0f, 1.0f, 0f },
+                new float[] { 0f, -4.0f, -8.0f, -3.0f, 0f, 0f, 0f },
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f, 0f });
+
+            AddRotCurve(clip, PathHead, times,
+                new float[] { 0f, 7.0f, 14.0f, 9.0f, -3.0f, 1.5f, 0f },
+                new float[] { 0f, -6.0f, -12.0f, -4.0f, 0f, 0f, 0f },
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f, 0f });
+
+            // 3. Right arm braces rifle at chest level, rolls magwell slightly upward
+            AddRotCurve(clip, PathRClavicle, times,
+                new float[] { 0f, -1.0f, -2.0f, -1.5f, 2.0f, 0.5f, 0f },
+                new float[] { 0f, 1.5f, 3.0f, 2.0f, -1.0f, 0f, 0f },
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f, 0f });
+
             AddRotCurve(clip, PathRUpperArm, times,
-                new float[] { 68.0f, 52.0f, 50.0f, 54.0f, 58.0f, 65.0f, 68.0f },
-                new float[] { -14.0f, -10.0f, -10.0f, -12.0f, -14.0f, -14.0f, -14.0f },
-                new float[] { -12.0f, -8.0f, -8.0f, -10.0f, -12.0f, -12.0f, -12.0f });
+                new float[] { 68.0f, 55.0f, 48.0f, 52.0f, 60.0f, 65.0f, 68.0f },
+                new float[] { -14.0f, -8.0f, -6.0f, -10.0f, -13.0f, -14.0f, -14.0f },
+                new float[] { -12.0f, -6.0f, -4.0f, -8.0f, -11.0f, -12.0f, -12.0f });
 
-            // Left arm reaches to hip pouch, pulls mag, slaps into magwell, returns to handguard
+            AddRotCurve(clip, PathRLowerArm, times,
+                new float[] { 78.0f, 85.0f, 90.0f, 86.0f, 82.0f, 79.0f, 78.0f },
+                new float[] { 4.0f, 10.0f, 14.0f, 8.0f, 5.0f, 4.0f, 4.0f },
+                new float[] { 0.0f, 4.0f, 6.0f, 3.0f, 1.0f, 0.0f, 0.0f });
+
+            AddRotCurve(clip, PathRHand, times,
+                new float[] { 0f, -4.0f, -8.0f, -4.0f, 3.0f, 1.0f, 0f },
+                new float[] { 0f, 5.0f, 8.0f, 4.0f, 1.0f, 0f, 0f },
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f, 0f });
+
+            // 4. Left arm sequence: Foregrip -> Pouch (0.65s) -> Mag Extraction (1.1s) -> Mag Slap (1.45s) -> Bolt (1.8s) -> Foregrip (2.2s)
+            AddRotCurve(clip, PathLClavicle, times,
+                new float[] { 0f, -2.0f, -4.0f, 1.0f, 3.5f, 1.0f, 0f },
+                new float[] { 0f, 2.0f, 4.0f, -1.0f, -2.0f, 0f, 0f },
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f, 0f });
+
             AddRotCurve(clip, PathLUpperArm, times,
-                new float[] { 54.0f, 18.0f, 12.0f, 48.0f, 58.0f, 52.0f, 54.0f },
-                new float[] { 28.0f, 8.0f, 6.0f, 20.0f, 24.0f, 26.0f, 28.0f },
-                new float[] { 18.0f, 5.0f, 4.0f, 12.0f, 16.0f, 18.0f, 18.0f });
+                new float[] { 54.0f, 20.0f, 8.0f, 42.0f, 58.0f, 64.0f, 54.0f },
+                new float[] { 28.0f, 12.0f, 5.0f, 18.0f, 26.0f, 29.0f, 28.0f },
+                new float[] { 18.0f, 6.0f, 2.0f, 10.0f, 16.0f, 19.0f, 18.0f });
 
             AddRotCurve(clip, PathLLowerArm, times,
-                new float[] { 82.0f, 45.0f, 42.0f, 85.0f, 92.0f, 84.0f, 82.0f },
-                new float[] { -18.0f, -5.0f, -5.0f, -15.0f, -18.0f, -18.0f, -18.0f },
-                new float[] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f });
+                new float[] { 82.0f, 48.0f, 38.0f, 78.0f, 96.0f, 92.0f, 82.0f },
+                new float[] { -18.0f, -8.0f, -4.0f, -14.0f, -20.0f, -19.0f, -18.0f },
+                new float[] { 0.0f, -5.0f, -8.0f, 2.0f, 5.0f, 2.0f, 0.0f });
 
-            // Upward slap impulse on chest at t=1.45s
-            AddRotCurve(clip, PathChest, times,
-                new float[] { 0f, 2f, 2f, 1f, -3f, 0f, 0f },
-                new float[] { 0f, 0f, 0f, 0f, 0f, 0f, 0f },
-                new float[] { 0f, 0f, 0f, 0f, 0f, 0f, 0f });
+            AddRotCurve(clip, PathLHand, times,
+                new float[] { 0f, 12.0f, 18.0f, 6.0f, -15.0f, -8.0f, 0f },
+                new float[] { 0f, -8.0f, -14.0f, -4.0f, 6.0f, 2.0f, 0f },
+                new float[] { 0f, 5.0f, 10.0f, 2.0f, -5.0f, -2.0f, 0f });
 
             return clip;
         }
@@ -1728,7 +1824,9 @@ namespace OutrunAftermath.Client.Editor
             // LifeState Transitions (Downed, Revive, Death)
             var tToDowned = rootSm.AddAnyStateTransition(sDowned);
             tToDowned.AddCondition(AnimatorConditionMode.Equals, 1, "LifeState");
+            tToDowned.AddCondition(AnimatorConditionMode.IfNot, 0, "IsReviving");
             tToDowned.hasExitTime = false;
+            tToDowned.canTransitionToSelf = false;
             tToDowned.duration = 0.25f;
 
             var tToRevive = sDowned.AddTransition(sRevive);
@@ -1750,6 +1848,7 @@ namespace OutrunAftermath.Client.Editor
             var tToDeath = rootSm.AddAnyStateTransition(sDeath);
             tToDeath.AddCondition(AnimatorConditionMode.Equals, 2, "LifeState");
             tToDeath.hasExitTime = false;
+            tToDeath.canTransitionToSelf = false;
             tToDeath.duration = 0.20f;
 
             // 3. Upper-Body Combat Layer (Layer 1 with AvatarMask)
@@ -1826,6 +1925,7 @@ namespace OutrunAftermath.Client.Editor
                 AssetDatabase.CreateAsset(mask, maskPath);
             }
             layers[1].avatarMask = mask;
+            layers[1].iKPass = true;
             controller.layers = layers;
 
             EditorUtility.SetDirty(controller);

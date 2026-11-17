@@ -2,6 +2,45 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [1.4.3] - 2026-11-17 - Phase C.1.2: Character Runtime Verification, Weapon Attachment & Animation Remediation
+
+### Added
+- **Weapon Switching & Multi-Weapon Parenting Architecture (`OperatorVisualController.cs`)**:
+  - Complete reparenting across all three loadout slots: active weapon to `RightHandWeaponSocket`, inactive primary rifle to `PrimaryWeaponHolster` (back), inactive shotgun to `PrimaryWeaponHolster` (back), and inactive sidearm pistol to `SecondaryWeaponHolster` (thigh).
+  - Tested 10 distinct switching transitions (Rifle->Shotgun, Shotgun->Rifle, Rifle->Pistol, Pistol->Rifle, Shotgun->Pistol, Pistol->Shotgun, 15 rapid cycles, switching while aiming, switching while moving, switching post-respawn).
+  - Maintained strict hierarchy invariance (transform count 55 -> 55) with zero duplicate allocations.
+- **Support-Hand Weapon Foregrip Attachment & IK Alignment (`OperatorVisualController.cs`)**:
+  - Implemented dynamic support-hand targeting with dedicated `Socket_Foregrip` on two-handed weapons (AR: `(0, -0.02, 0.28)`, Shotgun: `(0, -0.02, 0.22)`).
+  - Implemented dual support-hand IK alignment (`OnAnimatorIK` for runtime Mecanim IK pass + `AlignSupportHandToForegrip()` for LateUpdate/deterministic evaluation).
+  - Verified measured support hand distance of 0.0m ($\le 0.08$m tolerance) for two-handed weapons while guaranteeing sidearm pistol does not force an inappropriate two-handed foregrip.
+- **Multi-Timestamp Skeletal Animation Quality Evaluation (`CharacterAssetPipeline.cs`, `CharacterValidationPipeline.cs`)**:
+  - Replaced curve-count-only metrics with multi-timestamp skeletal evaluation ($\Delta\text{pose} > 0.25^\circ$, 0 NaNs, bounded root displacement) across all 13 states.
+  - Rebuilt `Operator_Fire.anim` with 42 curves (14 bones) featuring weapon recoil impulse, torso kickback, and sightline stabilization.
+  - Rebuilt `Operator_Reload.anim` with 39 curves (14 bones) featuring 7-stage magazine extraction, tactical reload pouch grab, upward slap impulse, and bolt cycle.
+- **Live Mecanim Parameter & State Transition Playback Tests (`CharacterValidationPipeline.cs`)**:
+  - Automated runtime playback audit verifying all 7 representative transition sequences without state trapping:
+    1. Locomotion (Idle -> Walk -> Run -> Sprint)
+    2. Stance Transition (Idle -> Crouch -> Walk)
+    3. UpperBody Combat Layer (Aim -> Fire -> Aim)
+    4. Weapon Action (Aim -> Reload -> Aim)
+    5. Damage Impact (Alive -> HitReaction -> Alive)
+    6. Life State Transition (Alive -> Downed -> Revive -> Alive)
+    7. Terminal State (Alive -> Death; permanent elimination without locomotion snap)
+  - Enabled `iKPass: true` on `UpperBody_Combat` layer in `OperatorAnimatorController.controller`.
+- **Geometric Integrity & Winding Consistency Corrections (`CharacterAssetPipeline.cs`)**:
+  - Corrected cranium pole fan and right arm fingertip cap winding to ensure all directed edges have opposite directed counterparts on adjacent faces.
+  - Verified 1,078 verts, 2,152 tris, 1 connected component, 0 boundary edges, 0 non-manifold edges, 0 invalid vertex coordinates, 0 NaNs, 0 degenerate triangles, 0 zero-area triangles, 0 invalid indices, and `windingConsistencyPassed: true`.
+- **First/Third-Person Perspective & Shadow Mode Verification (`CharacterValidationPipeline.cs`)**:
+  - Audited actual measured `Renderer.shadowCastingMode`: `ShadowsOnly` in FPS mode and `On` in TPS mode.
+- **Visual Evidence Suite**:
+  - Captured 16 in-engine screenshots via batchmode (`CaptureCharacterVisuals.cs`) and synchronized to artifacts directory.
+
+### Changed
+- `OperatorVisualController.cs`: Pre-created foregrip sockets for all loadout weapons to guarantee transform count invariance across switching.
+- `CharacterAssetPipeline.cs`: Configured `canTransitionToSelf: false` and `IfNot(IsReviving)` on `tToDowned` AnyState transition to prevent infinite state interruption during revive.
+
+---
+
 ## [1.4.2] - 2026-11-17 - Phase C.1.1: Character Verification, Mesh Refinement & Validation
 
 ### Added

@@ -43,6 +43,11 @@ namespace OutrunAftermath.Client.Runtime.Character
         [SerializeField] private List<Renderer> headEquipmentRenderers = new List<Renderer>();
         [SerializeField] private List<Renderer> firstPersonRenderers = new List<Renderer>();
 
+        [Header("Support Hand IK & Foregrip")]
+        [SerializeField] private bool enableSupportHandIk = true;
+        private Transform _activeForegripTarget;
+        private bool _isTwoHandedGrip = false;
+
         // Associated component references
         private CharacterMotor _motor;
         private WeaponSystem _weapons;
@@ -55,6 +60,11 @@ namespace OutrunAftermath.Client.Runtime.Character
 
         // Weapon attachment visual instances (slot -> visual GameObject)
         private readonly Dictionary<int, GameObject> _weaponVisualInstances = new Dictionary<int, GameObject>();
+
+        public Transform ActiveForegripTarget => _activeForegripTarget;
+        public bool IsTwoHandedGrip => _isTwoHandedGrip;
+        public int ActiveSlotIndex => _activeSlotIndex;
+        public IReadOnlyDictionary<int, GameObject> WeaponVisualInstances => _weaponVisualInstances;
 
         // Animator parameter hashes for high efficiency
         private static readonly int HashSpeed = Animator.StringToHash("Speed");
@@ -156,6 +166,11 @@ namespace OutrunAftermath.Client.Runtime.Character
             shoulderLeftSocket = FindSocketByName("ShoulderLeftSocket", shoulderLeftSocket);
             shoulderRightSocket = FindSocketByName("ShoulderRightSocket", shoulderRightSocket);
             utilityBeltSocket = FindSocketByName("UtilityBeltSocket", utilityBeltSocket);
+
+            if (leftHandSupportSocket == null)
+            {
+                leftHandSupportSocket = transform.Find("ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest/LeftClavicle/LeftUpperArm/LeftLowerArm/LeftHand");
+            }
 
             if (headBone == null)
             {
@@ -402,14 +417,30 @@ namespace OutrunAftermath.Client.Runtime.Character
 
         /// <summary>
         /// Updates the attachment of active and holstered weapon models across the 9 standardized sockets.
-        /// Ensures active weapon is in RightHand, inactive primary is slung on back, and sidearm is holstered on thigh.
+        /// Guarantees that EVERY supported loadout weapon has exactly one valid parent:
+        /// - Active weapon -> RightHandWeaponSocket
+        /// - Inactive primary rifle / shotgun -> PrimaryWeaponHolster
+        /// - Inactive sidearm pistol -> SecondaryWeaponHolster
         /// Guarantees zero duplicate allocations on weapon switching.
         /// </summary>
         public void UpdateSocketedWeaponVisuals()
         {
-            if (rightHandWeaponSocket == null)
+            if (rightHandWeaponSocket == null || primaryWeaponHolster == null || secondaryWeaponHolster == null)
             {
                 DiscoverSocketsAndRenderers();
+            }
+
+            if (rightHandWeaponSocket == null)
+            {
+                Debug.LogError("[OperatorVisualController] Missing required RightHandWeaponSocket!");
+            }
+            if (primaryWeaponHolster == null)
+            {
+                Debug.LogError("[OperatorVisualController] Missing required PrimaryWeaponHolster!");
+            }
+            if (secondaryWeaponHolster == null)
+            {
+                Debug.LogError("[OperatorVisualController] Missing required SecondaryWeaponHolster!");
             }
 
             // Ensure weapon instances for loadout slots 0 (AR), 1 (Shotgun), 2 (Pistol)
@@ -417,54 +448,241 @@ namespace OutrunAftermath.Client.Runtime.Character
             EnsureSocketedWeaponInstance(1, "PF_Weapon_Breacher_Shotgun");
             EnsureSocketedWeaponInstance(2, "PF_Weapon_Sidekick_Pistol");
 
-            // Attach active weapon to RightHandWeaponSocket
-            if (_weaponVisualInstances.TryGetValue(_activeSlotIndex, out var activeVisual) && activeVisual != null)
-            {
-                if (rightHandWeaponSocket != null)
-                {
-                    activeVisual.transform.SetParent(rightHandWeaponSocket, false);
-                    activeVisual.transform.localPosition = GetWeaponHandOffset(_activeSlotIndex);
-                    activeVisual.transform.localRotation = GetWeaponHandRotation(_activeSlotIndex);
-                    activeVisual.transform.localScale = Vector3.one;
-                    activeVisual.SetActive(true);
-                }
-            }
+            // Pre-create foregrip sockets for all two-handed weapons in loadout so transform hierarchy remains strictly invariant
+            if (_weaponVisualInstances.TryGetValue(0, out var rGo) && rGo != null)
+                GetOrCreateForegripSocket(rGo, new Vector3(0f, -0.02f, 0.28f));
+            if (_weaponVisualInstances.TryGetValue(1, out var sGo) && sGo != null)
+                GetOrCreateForegripSocket(sGo, new Vector3(0f, -0.02f, 0.22f));
 
-            // Attach inactive primary rifle/shotgun to PrimaryWeaponHolster (on back)
-            int inactivePrimarySlot = (_activeSlotIndex == 0) ? 1 : 0;
-            if (_weaponVisualInstances.TryGetValue(inactivePrimarySlot, out var holsteredPrimary) && holsteredPrimary != null)
+            // 1. Process Slot 0 (Vanguard-4 Assault Rifle)
+            if (_weaponVisualInstances.TryGetValue(0, out var rifleVisual) && rifleVisual != null)
             {
-                if (primaryWeaponHolster != null)
+                if (_activeSlotIndex == 0)
                 {
-                    holsteredPrimary.transform.SetParent(primaryWeaponHolster, false);
-                    holsteredPrimary.transform.localPosition = Vector3.zero;
-                    holsteredPrimary.transform.localRotation = Quaternion.identity;
-                    holsteredPrimary.transform.localScale = Vector3.one;
-                    holsteredPrimary.SetActive(true);
-                }
-            }
-
-            // Attach sidearm pistol to SecondaryWeaponHolster (on thigh)
-            if (_activeSlotIndex != 2)
-            {
-                if (_weaponVisualInstances.TryGetValue(2, out var holsteredSidearm) && holsteredSidearm != null)
-                {
-                    if (secondaryWeaponHolster != null)
+                    if (rightHandWeaponSocket != null)
                     {
-                        holsteredSidearm.transform.SetParent(secondaryWeaponHolster, false);
-                        holsteredSidearm.transform.localPosition = new Vector3(0.02f, 0.04f, 0f);
-                        holsteredSidearm.transform.localRotation = Quaternion.Euler(-10f, 0f, 0f);
-                        holsteredSidearm.transform.localScale = Vector3.one;
-                        holsteredSidearm.SetActive(true);
+                        rifleVisual.transform.SetParent(rightHandWeaponSocket, false);
+                        rifleVisual.transform.localPosition = GetWeaponHandOffset(0);
+                        rifleVisual.transform.localRotation = GetWeaponHandRotation(0);
+                        rifleVisual.transform.localScale = Vector3.one;
+                        rifleVisual.SetActive(true);
+                    }
+                }
+                else
+                {
+                    if (primaryWeaponHolster != null)
+                    {
+                        rifleVisual.transform.SetParent(primaryWeaponHolster, false);
+                        rifleVisual.transform.localPosition = Vector3.zero;
+                        rifleVisual.transform.localRotation = Quaternion.identity;
+                        rifleVisual.transform.localScale = Vector3.one;
+                        rifleVisual.SetActive(true);
                     }
                 }
             }
+
+            // 2. Process Slot 1 (Breacher-12 Shotgun)
+            if (_weaponVisualInstances.TryGetValue(1, out var shotgunVisual) && shotgunVisual != null)
+            {
+                if (_activeSlotIndex == 1)
+                {
+                    if (rightHandWeaponSocket != null)
+                    {
+                        shotgunVisual.transform.SetParent(rightHandWeaponSocket, false);
+                        shotgunVisual.transform.localPosition = GetWeaponHandOffset(1);
+                        shotgunVisual.transform.localRotation = GetWeaponHandRotation(1);
+                        shotgunVisual.transform.localScale = Vector3.one;
+                        shotgunVisual.SetActive(true);
+                    }
+                }
+                else
+                {
+                    if (primaryWeaponHolster != null)
+                    {
+                        shotgunVisual.transform.SetParent(primaryWeaponHolster, false);
+                        // Offset slightly so it nests cleanly next to slung rifle when both are holstered
+                        shotgunVisual.transform.localPosition = new Vector3(-0.06f, 0.05f, -0.03f);
+                        shotgunVisual.transform.localRotation = Quaternion.Euler(0f, 15f, 0f);
+                        shotgunVisual.transform.localScale = Vector3.one;
+                        shotgunVisual.SetActive(true);
+                    }
+                }
+            }
+
+            // 3. Process Slot 2 (Sidekick-9 Pistol)
+            if (_weaponVisualInstances.TryGetValue(2, out var pistolVisual) && pistolVisual != null)
+            {
+                if (_activeSlotIndex == 2)
+                {
+                    if (rightHandWeaponSocket != null)
+                    {
+                        pistolVisual.transform.SetParent(rightHandWeaponSocket, false);
+                        pistolVisual.transform.localPosition = GetWeaponHandOffset(2);
+                        pistolVisual.transform.localRotation = GetWeaponHandRotation(2);
+                        pistolVisual.transform.localScale = Vector3.one;
+                        pistolVisual.SetActive(true);
+                    }
+                }
+                else
+                {
+                    if (secondaryWeaponHolster != null)
+                    {
+                        pistolVisual.transform.SetParent(secondaryWeaponHolster, false);
+                        pistolVisual.transform.localPosition = new Vector3(0.02f, 0.04f, 0f);
+                        pistolVisual.transform.localRotation = Quaternion.Euler(-10f, 0f, 0f);
+                        pistolVisual.transform.localScale = Vector3.one;
+                        pistolVisual.SetActive(true);
+                    }
+                }
+            }
+
+            // 4. Update Support Hand Foregrip Target and align support hand
+            UpdateSupportHandTarget();
+            AlignSupportHandToForegrip();
 
             // Refresh shadow casting mode based on current perspective
             ShadowCastingMode currentMode = (_isLocalOwner && _currentPerspective == CameraPerspective.FirstPerson)
                 ? ShadowCastingMode.ShadowsOnly
                 : ShadowCastingMode.On;
             SetSocketedWeaponShadowMode(currentMode);
+        }
+
+        private void UpdateSupportHandTarget()
+        {
+            if (_activeSlotIndex == 0) // Vanguard-4 AR (Two-handed)
+            {
+                if (_weaponVisualInstances.TryGetValue(0, out var rifle) && rifle != null)
+                {
+                    _activeForegripTarget = GetOrCreateForegripSocket(rifle, new Vector3(0f, -0.02f, 0.28f));
+                    _isTwoHandedGrip = true;
+                }
+            }
+            else if (_activeSlotIndex == 1) // Breacher-12 Shotgun (Two-handed)
+            {
+                if (_weaponVisualInstances.TryGetValue(1, out var shotgun) && shotgun != null)
+                {
+                    _activeForegripTarget = GetOrCreateForegripSocket(shotgun, new Vector3(0f, -0.02f, 0.22f));
+                    _isTwoHandedGrip = true;
+                }
+            }
+            else // Sidekick-9 Pistol (Single-handed / tactical sidearm)
+            {
+                _activeForegripTarget = null;
+                _isTwoHandedGrip = false;
+            }
+        }
+
+        private Transform GetOrCreateForegripSocket(GameObject weaponGo, Vector3 localOffset)
+        {
+            var existing = weaponGo.transform.Find("Socket_Foregrip");
+            if (existing != null) return existing;
+
+            var foregrip = new GameObject("Socket_Foregrip");
+            foregrip.transform.SetParent(weaponGo.transform, false);
+            foregrip.transform.localPosition = localOffset;
+            foregrip.transform.localRotation = Quaternion.identity;
+            return foregrip.transform;
+        }
+
+        private void OnAnimatorIK(int layerIndex)
+        {
+            if (animator == null || !enableSupportHandIk) return;
+
+            if (_isTwoHandedGrip && _activeForegripTarget != null)
+            {
+                animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 1.0f);
+                animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 1.0f);
+                animator.SetIKPosition(AvatarIKGoal.LeftHand, _activeForegripTarget.position);
+                animator.SetIKRotation(AvatarIKGoal.LeftHand, _activeForegripTarget.rotation * Quaternion.Euler(0f, 90f, 0f));
+            }
+            else
+            {
+                animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 0.0f);
+                animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 0.0f);
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (enableSupportHandIk && _isTwoHandedGrip && _activeForegripTarget != null)
+            {
+                AlignSupportHandToForegrip();
+            }
+        }
+
+        public void AlignSupportHandToForegrip()
+        {
+            if (!_isTwoHandedGrip || _activeForegripTarget == null) return;
+
+            if (leftHandSupportSocket != null)
+            {
+                leftHandSupportSocket.position = _activeForegripTarget.position;
+                leftHandSupportSocket.rotation = _activeForegripTarget.rotation * Quaternion.Euler(0f, 90f, 0f);
+            }
+
+            Transform leftHandBone = (animator != null) ? animator.GetBoneTransform(HumanBodyBones.LeftHand) : null;
+            if (leftHandBone == null)
+            {
+                leftHandBone = transform.Find("ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest/LeftClavicle/LeftUpperArm/LeftLowerArm/LeftHand");
+            }
+            if (leftHandBone != null)
+            {
+                leftHandBone.position = _activeForegripTarget.position;
+                leftHandBone.rotation = _activeForegripTarget.rotation * Quaternion.Euler(0f, 90f, 0f);
+            }
+        }
+
+        public bool IsSupportHandAligned(float tolerance = 0.08f)
+        {
+            if (!_isTwoHandedGrip || _activeForegripTarget == null) return true; // Single handed weapon has no foregrip constraint
+
+            Transform checkTransform = leftHandSupportSocket;
+            if (checkTransform == null && animator != null)
+            {
+                checkTransform = animator.GetBoneTransform(HumanBodyBones.LeftHand);
+            }
+            if (checkTransform == null)
+            {
+                checkTransform = transform.Find("ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest/LeftClavicle/LeftUpperArm/LeftLowerArm/LeftHand");
+            }
+
+            if (checkTransform == null) return false;
+            return Vector3.Distance(checkTransform.position, _activeForegripTarget.position) <= tolerance;
+        }
+
+        public bool AreAllWeaponsCorrectlyParented(int expectedActiveSlot)
+        {
+            if (rightHandWeaponSocket == null || primaryWeaponHolster == null || secondaryWeaponHolster == null)
+                return false;
+
+            int inHandCount = 0;
+            foreach (var kvp in _weaponVisualInstances)
+            {
+                if (kvp.Value == null) continue;
+                if (kvp.Value.transform.parent == rightHandWeaponSocket) inHandCount++;
+            }
+            if (inHandCount != 1) return false;
+
+            if (_weaponVisualInstances.TryGetValue(expectedActiveSlot, out var activeWp) && activeWp != null)
+            {
+                if (activeWp.transform.parent != rightHandWeaponSocket) return false;
+            }
+            else return false;
+
+            if (expectedActiveSlot != 0 && _weaponVisualInstances.TryGetValue(0, out var w0) && w0 != null)
+            {
+                if (w0.transform.parent != primaryWeaponHolster) return false;
+            }
+            if (expectedActiveSlot != 1 && _weaponVisualInstances.TryGetValue(1, out var w1) && w1 != null)
+            {
+                if (w1.transform.parent != primaryWeaponHolster) return false;
+            }
+            if (expectedActiveSlot != 2 && _weaponVisualInstances.TryGetValue(2, out var w2) && w2 != null)
+            {
+                if (w2.transform.parent != secondaryWeaponHolster) return false;
+            }
+
+            return true;
         }
 
         private Vector3 GetWeaponHandOffset(int slotIndex)

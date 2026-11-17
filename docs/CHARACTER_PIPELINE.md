@@ -198,25 +198,32 @@ Inspect `character_validation_report.json` to confirm that all 10 automated cate
 
 All character assets must satisfy the rigorous standards enforced by `CharacterValidationPipeline.cs`:
 
-1. **Geometry Topology Audit**:
+1. **Geometry Topology & Integrity Audit**:
    - Connected component count = 1.
-   - Boundary edge count = 0 (watertight closed manifold).
+   - Boundary edge count = 0 (watertight closed 2-manifold).
    - Non-manifold edge count = 0.
+   - Degenerate triangles = 0; zero-area triangles = 0; invalid vertex coordinates / NaNs = 0.
+   - Winding consistency = true (every directed edge has an opposite directed counterpart on an adjacent triangle).
 2. **Skinning & Flexion Audit**:
    - Max influences per vertex $\le 4$.
-   - 0 vertices with unassigned, negative, or NaN bone weights.
-   - 6-joint flexion deformation test (shoulder, elbow, wrist, hip, knee, ankle) must pass with 0 mesh collapse.
+   - 0 vertices with unassigned, negative, or NaN bone weights. All weights normalized to 1.0.
+   - 11-joint flexion and deformation test (shoulder, elbow, wrist, hip, knee, ankle, arms raised, forearms rotated, deep lunge, torso twist, head rotation) must pass volume retention ($>70\%$ and $<160\%$) with 0 NaNs.
 3. **Mecanim Avatar Audit**:
    - Humanoid avatar must be valid (`avatar.isValid == true` and `avatar.isHuman == true`).
-   - 25 anatomical bones present in correct depth-first ordering.
-4. **Animation Controller Audit**:
+   - 25 anatomical bones present in correct depth-first ordering from Root through toes and fingers.
+4. **Animation Controller & Authentic Clip Quality Audit**:
    - 13 required states present across Base and UpperBody layers.
-   - 0 placeholder single-key clips (all clips must possess authentic multi-key skeletal curves).
-5. **Equipment & Socket Audit**:
+   - Multi-timestamp skeletal evaluation verifies authentic motion ($\Delta\text{pose} > 0.25^\circ$, 0 NaNs, bounded root displacement) across all 13 states.
+   - 0 placeholder single-key clips (recoil impulse on Fire, 7-phase magazine and bolt cycle on Reload).
+   - Live Mecanim parameter and state transition evaluation verifies all 7 representative sequences (Locomotion, Stance, UpperBody Combat, Weapon Action, Damage Impact, Life State Downed/Revive, and Death terminal state).
+   - UpperBody_Combat layer has `iKPass = true` and `Mask_UpperBody_Combat.mask`.
+5. **Equipment, Weapon Attachment & Support-Hand Audit**:
    - All 9 standard attachment sockets present and correctly positioned.
-   - Weapon slot switching maintains an invariant child transform count (zero duplicate allocations or memory leaks).
+   - Weapon slot switching guarantees complete reparenting across all 3 loadout slots (active to `RightHandWeaponSocket`, inactive primary to `PrimaryWeaponHolster`, inactive secondary to `SecondaryWeaponHolster`).
+   - 10 distinct weapon switching transitions verified with strict hierarchy invariance (transform count invariant at 55 with 0 duplicate allocations).
+   - Support-hand foregrip system (`Socket_Foregrip`) verified for two-handed weapons with support-hand alignment distance $\le 0.08$m (0.0m measured), while sidearm pistol does not force an inappropriate two-handed foregrip.
 6. **Presentation Audit**:
-   - First-Person mode enables viewmodel arms and activates `ShadowCastingMode.ShadowsOnly` on body mesh.
-   - Third-Person mode enables full body with `ShadowCastingMode.On`.
+   - First-Person mode enables viewmodel arms and activates measured `ShadowCastingMode.ShadowsOnly` on body mesh.
+   - Third-Person mode enables full body with measured `ShadowCastingMode.On`.
 7. **Netcode Audit**:
-   - Authoritative synchronization supported across 7 NetworkVariables and 3 RPCs.
+   - Authoritative synchronization supported across 7 NetworkVariables and 3 RPCs, verified in 12-stage E2E multiplayer test.

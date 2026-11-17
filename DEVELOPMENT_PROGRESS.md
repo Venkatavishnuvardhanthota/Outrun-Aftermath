@@ -1369,6 +1369,73 @@ Address all character visual and rigging weaknesses identified during the indepe
 - **Automated Regression & E2E Verification**: PASS. 76/76 simulation unit tests, 12/12 API tests, and 23/23 E2E multiplayer lifecycle stages passing without defect.
 - **Production Art Visual Quality Boundary**: PARTIAL (by design). Current assets are procedural in-engine meshes. While geometrically sound, watertight, and fully playable, production AAA art requires high-resolution artist sculpts authored in external DCC tools (Blender/Maya/ZBrush) adhering to `docs/CHARACTER_PIPELINE.md`. Overall character validation report status is maintained as **PARTIAL** until external DCC assets are integrated.
 
+---
+
+## Phase C.1.2 — 2026-11-17 (Character Runtime Verification, Weapon Attachment & Animation Remediation)
+
+### Completed Features
+
+- **Weapon Switching & Multi-Weapon Parenting Architecture (`OperatorVisualController.cs`)**:
+  - Complete reparenting across all three loadout slots: active weapon to `RightHandWeaponSocket`, inactive primary rifle to `PrimaryWeaponHolster` (back), inactive shotgun to `PrimaryWeaponHolster` (back), and inactive sidearm pistol to `SecondaryWeaponHolster` (thigh).
+  - Pre-created foregrip sockets for all loadout weapons to guarantee transform count invariance across switching.
+  - Tested 10 distinct switching transitions (Rifle->Shotgun, Shotgun->Rifle, Rifle->Pistol, Pistol->Rifle, Shotgun->Pistol, Pistol->Shotgun, 15 rapid cycles, switching while aiming, switching while moving, switching post-respawn).
+  - Maintained strict hierarchy invariance (transform count 55 -> 55) with zero duplicate allocations.
+- **Support-Hand Foregrip Attachment & IK Alignment (`OperatorVisualController.cs`)**:
+  - Dynamically resolved active weapon foregrip socket (`Socket_Foregrip`) with weapon-specific offsets (AR: `(0, -0.02, 0.28)`, Shotgun: `(0, -0.02, 0.22)`).
+  - Implemented dual support-hand IK alignment (`OnAnimatorIK` for runtime Mecanim IK pass + `AlignSupportHandToForegrip()` in LateUpdate and edit-mode).
+  - Verified measured support hand distance of 0.0m ($\le 0.08$m tolerance) for two-handed weapons while guaranteeing sidearm pistol does not force an inappropriate two-handed foregrip.
+- **Multi-Timestamp Skeletal Animation Quality Evaluation (`CharacterAssetPipeline.cs`, `CharacterValidationPipeline.cs`)**:
+  - Replaced curve-count-only metrics with multi-timestamp skeletal evaluation ($\Delta\text{pose} > 0.25^\circ$, 0 NaNs, bounded root displacement) across all 13 states.
+  - Rebuilt `Operator_Fire.anim` with 42 curves (14 bones) featuring weapon recoil impulse, torso kickback, and sightline stabilization.
+  - Rebuilt `Operator_Reload.anim` with 39 curves (14 bones) featuring 7-stage magazine extraction, tactical reload pouch grab, upward slap impulse, and bolt cycle.
+- **Live Mecanim Parameter & State Transition Playback Tests (`CharacterValidationPipeline.cs`)**:
+  - Automated runtime playback audit verifying all 7 representative transition sequences without state trapping:
+    1. Locomotion (Idle -> Walk -> Run -> Sprint)
+    2. Stance Transition (Idle -> Crouch -> Walk)
+    3. UpperBody Combat Layer (Aim -> Fire -> Aim)
+    4. Weapon Action (Aim -> Reload -> Aim)
+    5. Damage Impact (Alive -> HitReaction -> Alive)
+    6. Life State Transition (Alive -> Downed -> Revive -> Alive)
+    7. Terminal State (Alive -> Death; permanent elimination without locomotion snap)
+  - Enabled `iKPass: true` on `UpperBody_Combat` layer in `OperatorAnimatorController.controller`.
+  - Configured `canTransitionToSelf: false` and `IfNot(IsReviving)` on `tToDowned` AnyState transition to prevent infinite state interruption during revive.
+- **Geometric Integrity & Winding Consistency Corrections (`CharacterAssetPipeline.cs`)**:
+  - Corrected cranium pole fan and right arm fingertip cap winding to ensure all directed edges have opposite directed counterparts on adjacent faces.
+  - Verified 1,078 verts, 2,152 tris, 1 connected component, 0 boundary edges, 0 non-manifold edges, 0 invalid vertex coordinates, 0 NaNs, 0 degenerate triangles, 0 zero-area triangles, 0 invalid indices, and `windingConsistencyPassed: true`.
+- **First/Third-Person Perspective & Shadow Mode Verification (`CharacterValidationPipeline.cs`)**:
+  - Audited actual measured `Renderer.shadowCastingMode`: `ShadowsOnly` in FPS mode and `On` in TPS mode.
+- **Visual Evidence Suite**:
+  - Captured 16 in-engine screenshots via batchmode (`CaptureCharacterVisuals.cs`) and synchronized to artifacts directory.
+- **Automated Regression & E2E Verification**:
+  - 76/76 simulation unit tests passed (`dotnet test shared/OutrunAftermath.Simulation.Tests`).
+  - 12/12 API integration tests passed (`dotnet test backend/tests/OutrunAftermath.Api.Tests`).
+  - 23/23 E2E multiplayer lifecycle stages passed (`run_e2e_production_test.ps1 -Strict`, 100% PASS, 0 failed, 0 skipped).
+
+### Files Modified
+
+- `client/Assets/Game/Runtime/Character/OperatorVisualController.cs` (weapon reparenting, foregrip socket creation, support hand IK & alignment)
+- `client/Assets/Editor/CharacterAssetPipeline.cs` (mesh winding fixes, recoil & reload curves, Animator IK pass & transition tuning)
+- `client/Assets/Editor/CharacterValidationPipeline.cs` (geometric integrity audit, live Mecanim playback audit, weapon reparenting audit)
+- `client/Assets/Editor/CaptureCharacterVisuals.cs` (16 screenshot capture batch mode)
+- `character_validation_report.json` (authoritative validation report: PARTIAL, 0 errors, 0 warnings)
+- `CHANGELOG.md`
+- `DEVELOPMENT_PROGRESS.md`
+- `KNOWN_ISSUES.md`
+- `docs/CHARACTER_PIPELINE.md`
+- `docs/ASSET_REGISTER.md`
+
+### Verification Verdict
+**PARTIAL (All 11 Technical Validation Checks PASS; DCC Art Asset Gate PARTIAL)**:
+- **Geometry & Topology**: PASS (1,078 verts, 2,152 tris, 1 component, 0 boundary edges, 0 non-manifold edges, 0 degenerate/zero-area tris, winding consistent).
+- **Skinning & Deformation**: PASS (11 flexion tests pass, volume retention verified, 0 NaNs).
+- **Skeleton & Avatar**: PASS (25 bones, valid Unity Humanoid Avatar).
+- **Animator Configuration**: PASS (13 states, 2 layers, combat mask, IK pass enabled).
+- **Animation Playback**: PASS (7/7 runtime playback transition sequences verified).
+- **Weapon Attachment**: PASS (10/10 transitions pass, 55->55 transform count invariant, zero duplicate allocations, support hand aligned $\le 0.08$m).
+- **Perspective & Shadows**: PASS (FPS viewmodel + ShadowsOnly, TPS + On).
+- **Multiplayer Netcode**: PASS (7 NetVars, 3 RPCs, 12-stage E2E test 100% PASS).
+- **Overall Status**: PARTIAL (strictly maintained pending external high-poly DCC sculpted artist models).
+
 
 
 
