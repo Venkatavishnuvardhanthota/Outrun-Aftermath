@@ -191,9 +191,10 @@ namespace OutrunAftermath.Client.Editor
         {
             Debug.Log("[BuildScript] Preparing Prefabs, DefaultNetworkPrefabs, and Main Scene...");
 
-            // 0. Authoritative URP Foundation & Modular 3D Art Assets
+            // 0. Authoritative URP Foundation & Modular 3D Art Assets & Rigged Character Foundation
             URPSetupPipeline.SetupURP();
             ArtAssetPipeline.ConfigureArtAssets();
+            CharacterAssetPipeline.ConfigureCharacterPipeline();
 
             // 1. Create / update NetworkPlayer and WastelandRaptor prefabs
             GameObject playerPrefab = CreateOrUpdateNetworkPlayerPrefab();

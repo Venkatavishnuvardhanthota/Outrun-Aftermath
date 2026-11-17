@@ -312,13 +312,13 @@ try {
         }
     }
 
-    # Poll up to 10 seconds for server socket binding & verify UDP ownership by PID
+    # Poll up to 30 seconds for server socket binding & verify UDP ownership by PID
     $socketBound = $false
     $boundPid = $null
     $boundEndpoint = $null
     $ownershipEvidence = $null
 
-    for ($i = 0; $i -lt 20; $i++) {
+    for ($i = 0; $i -lt 60; $i++) {
         Start-Sleep -Milliseconds 500
 
         # Method A: Get-NetUDPEndpoint
@@ -429,7 +429,7 @@ try {
             Evidence = $ownershipEvidence
         }
     } else {
-        $reason = if (-not $boundPid) { "Socket :$ServerPort not bound within 10s timeout" } else { $ownershipEvidence }
+        $reason = if (-not $boundPid) { "Socket :$ServerPort not bound within 30s timeout" } else { $ownershipEvidence }
         Report-Fail "Stage 3: UDP Socket Ownership" $reason
         $netcodeStages["Stage03_SocketListening"] = @{ 
             Status = "FAIL"

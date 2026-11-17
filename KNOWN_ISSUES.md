@@ -74,8 +74,16 @@
    - Strict multiplayer identity correlation confirms client handshake `ClientId=1`, server callback `ClientId=1`, server authoritative spawn `ClientId=1`, and client replicated player `OwnerClientId=1` with zero ID discrepancies.
    - Correlated RPC round-trip verification links client `FireWeaponRpc`, server processing, server `PlayShotEffectsRpc` broadcast, and client effect processing to the identical shot correlation identifier (`ShotId=8801`). Generic responses rejected.
    - All 23 dynamic stages validated with clean exit codes (0), zero timeouts, graceful termination, and complete test suites (76 simulation tests, 12 API tests).
-13. **Character & Vehicle Animation Rigs**:
-   - Player operators and vehicles currently utilize rigid modular compound hierarchies rather than skinned, bone-weighted skeletal meshes with Mecanim humanoid controllers and articulated suspension.
+13. **Phase C Complete: Character Foundation & Rigged Operators (REX & TRACE)**:
+   - Player operator visual hierarchy upgraded from rigid compound primitives to an authentic humanoid skeletal foundation.
+   - Built reusable 25-bone anatomical humanoid skeleton hierarchy matching Unity Humanoid avatar standards (`OperatorHumanoidAvatar.asset`, `isValid=true`, `isHuman=true`).
+   - Implemented continuous skinned mesh `SK_Humanoid_Operator.asset` with smooth 4-bone vertex weights and distinct PBR materials (`M_Operator_Shared`, `M_Operator_REX`, `M_Operator_TRACE`).
+   - Established 13-state 2-layer Mecanim Animator Controller (`OperatorAnimatorController.controller`) with base locomotion layer and combat upper-body layer masked via `Mask_UpperBody_Combat.mask`.
+   - Standardized 9 modular equipment attachment sockets across both operator prefabs (`PF_Operator_REX`, `PF_Operator_TRACE`) and 12 modular 3D equipment models.
+   - Integrated dual-perspective rendering in `OperatorVisualController.cs` (`FirstPersonPresentation` viewmodel arms vs `ThirdPersonPresentation` full body with `ShadowCastingMode.ShadowsOnly` local culling).
+   - Validated across NGO dedicated server and client builds, verified with automated batchmode validator (`character_validation_report.json`), passing 23/23 E2E multiplayer stages with 0 errors.
+14. **Vehicle Articulation**:
+   - Vehicles utilize rigid compound hierarchies and arcade physics rather than fully articulated skeletal suspension meshes (scheduled for future vehicle visual upgrade phase).
 14. Voice chat vendor not selected; no voice chat in any build.
 15. Aim assist, mobile HUD, and touch controls are specified but unimplemented (Phase 8).
 

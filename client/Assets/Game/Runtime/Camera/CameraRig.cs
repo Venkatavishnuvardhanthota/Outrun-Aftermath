@@ -50,6 +50,7 @@ namespace OutrunAftermath.Client.Runtime.CameraSystem
 
         public Camera UnityCamera => _cam;
         public CameraPerspective Perspective => currentPerspective;
+        public bool IsAiming => _isAiming;
         public float Yaw => _yaw;
         public float Pitch => _pitch;
 

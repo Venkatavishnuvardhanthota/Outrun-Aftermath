@@ -1116,9 +1116,78 @@ Phase B.1.3: Final Multiplayer Verification Hardening & Evidence Closure — Str
 
 **PASS**: Phase B.1.3 complete with 100% test success rate, zero hardcoded values, strict executable separation, proven identity correlation across 4 lifecycle checkpoints, and end-to-end shot correlation ID verification.
 
-### Next phase
+## Phase C — 2026-11-17 (Character Foundation: Rigged Operators, Modular Equipment & Animation Architecture)
 
-Phase C: Character Foundation — Rigged Operators REX (Rogue Assault) and TRACE (Sentinel Tracker) with modular tactical gear, weapon attachment sockets, first-person and third-person presentations, and complete 13-state animation controller system.
+### Completed features
+
+- **Rigged Humanoid Skeletal Foundation**:
+  - Replaced rigid primitive capsule/sphere visuals with an authentic continuous anatomical humanoid skinned mesh `SK_Humanoid_Operator.asset` (144 vertices, 216 triangles, 144 smooth bone weights, 25 valid bind poses).
+  - Built and validated genuine Unity Humanoid Avatar `OperatorHumanoidAvatar.asset` using `AvatarBuilder.BuildHumanAvatar` (`isHuman=true`, `isValid=true`).
+  - Standardized anatomical 25-bone skeletal hierarchy with `Root` at (0,0,0) and correct depth-first anatomical ordering across spine, neck, head, clavicles, arms, hands, thighs, calves, feet, and toes.
+- **13-State 2-Layer Animator Controller (`OperatorAnimatorController.controller`)**:
+  - Layer 0 (`Base Layer`): Full body locomotion states (`Idle`, `Walk`, `Run`, `Sprint`, `Crouch`, `Jump`, `Downed`, `Revive`, `Death`).
+  - Layer 1 (`UpperBody_Combat`): Weight 1.0, Override blending with `Mask_UpperBody_Combat.mask` enabling torso/arm/head combat actions (`Aim`, `Fire`, `Reload`, `HitReaction`) simultaneously with lower-body locomotion.
+  - Parameter synchronization via `OperatorVisualController`: `Speed`, `IsGrounded`, `IsCrouched`, `IsAiming`, `IsFiring`, `IsReloading`, `HitTrigger`, `LifeState`, `IsReviving`.
+- **Modular Equipment & Standard Sockets (9 Attachment Points)**:
+  - Authored and anchored 9 standard attachment sockets on bone transforms: `RightHandWeaponSocket`, `LeftHandSupportSocket`, `PrimaryWeaponHolster`, `SecondaryWeaponHolster`, `BackpackSocket`, `HelmetAttachmentSocket`, `ShoulderLeftSocket`, `ShoulderRightSocket`, `UtilityBeltSocket`.
+  - Authored 12 modular 3D equipment models:
+    - **REX** (Rogue Assault): `REX_Helmet_Combat.obj`, `REX_Vest_TacticalAssault.obj`, `REX_Pauldrons_Armored.obj`, `REX_Backpack_Assault.obj`, `REX_Holster_Sidearm.obj`, `FP_Arms_REX.obj`.
+    - **TRACE** (Sentinel Tracker): `TRACE_Headset_ReconComms.obj`, `TRACE_Harness_ReconChest.obj`, `TRACE_Backpack_ReconComms.obj`, `TRACE_Pouches_UtilityLeg.obj`, `TRACE_Holster_Recon.obj`, `FP_Arms_TRACE.obj`.
+- **Dual Presentation Architecture**:
+  - `FirstPersonPresentation`: Viewmodel arms + active weapon rendered in first-person without body clipping.
+  - `ThirdPersonPresentation`: Complete operator body + modular equipment + socketed weapons with `ShadowCastingMode.ShadowsOnly` in FPS mode (casting authentic player shadows) and `ShadowCastingMode.On` in TPS / remote replica modes.
+- **In-Engine Asset & Validation Pipelines**:
+  - Created `CharacterAssetPipeline.cs`: Automated in-engine batch building of materials, humanoid skinned mesh, avatar, animations, controller, and prefabs `PF_Operator_REX` and `PF_Operator_TRACE`.
+  - Created `CharacterValidationPipeline.cs`: Automated in-engine validation producing machine-readable `character_validation_report.json` with 100% PASS verification across skeleton, skinned mesh, avatar, animator states, materials, and modular prefabs.
+- **Production Regression & Netcode Integrity**:
+  - Netcode for GameObjects (NGO) runtime integration in `NetworkPlayerController.cs` dynamically instantiates `PF_Operator_REX` or `PF_Operator_TRACE` based on `NetOperatorId` with full remote replication and headshot collision support.
+  - Built standalone production binaries (`OutrunAftermath.exe`, `OutrunAftermath_Client.exe`, `OutrunAftermath_Server.exe`).
+  - Executed all test suites:
+    - Simulation Engine unit tests: 76/76 passed (100%).
+    - Web API integration tests: 12/12 passed (100%).
+    - End-to-end production verification (`run_e2e_production_test.ps1`): 23/23 stages passed (100% PASS).
+
+### Files created
+
+- `scripts/generate_phase_c_character_assets.py`
+- `client/Assets/Game/Runtime/Character/OperatorVisualController.cs`
+- `client/Assets/Editor/CharacterAssetPipeline.cs`
+- `client/Assets/Editor/CharacterValidationPipeline.cs`
+- `client/Assets/Art/Characters/Shared/Meshes/SK_Humanoid_Operator.asset`
+- `client/Assets/Art/Characters/Shared/Skeletons/OperatorHumanoidAvatar.asset`
+- `client/Assets/Art/Characters/Shared/Animations/OperatorAnimatorController.controller`
+- `client/Assets/Art/Characters/Shared/Animations/Mask_UpperBody_Combat.mask`
+- `client/Assets/Art/Characters/Shared/Animations/Operator_{Idle,Walk,Run,Sprint,Crouch,Jump,Aim,Fire,Reload,HitReaction,Downed,Revive,Death}.anim`
+- `client/Assets/Art/Characters/Shared/Materials/M_Operator_Shared_Underlayer.mat`
+- `client/Assets/Art/Characters/Operators/REX/Materials/M_Operator_REX_Assault.mat`
+- `client/Assets/Art/Characters/Operators/TRACE/Materials/M_Operator_TRACE_Recon.mat`
+- `client/Assets/Art/Characters/Operators/REX/Prefabs/PF_Operator_REX.prefab`
+- `client/Assets/Art/Characters/Operators/TRACE/Prefabs/PF_Operator_TRACE.prefab`
+- `client/Assets/Resources/Art/Characters/PF_Operator_REX.prefab`
+- `client/Assets/Resources/Art/Characters/PF_Operator_TRACE.prefab`
+- `character_validation_report.json`
+
+### Files modified
+
+- `client/Assets/Game/Multiplayer/NetworkPlayerController.cs`
+- `client/Assets/Game/Runtime/Camera/CameraRig.cs`
+- `client/Assets/Editor/BuildScript.cs`
+- `run_e2e_production_test.ps1`
+- `docs/ASSET_REGISTER.md`
+- `DEVELOPMENT_PROGRESS.md`
+- `CHANGELOG.md`
+- `KNOWN_ISSUES.md`
+
+### Artifacts and evidence generated
+
+- `character_validation_report.json`: In-engine automated validation report (Status: PASS, 25 bones, valid avatar, 13 animator states, 9 sockets, 8 equipment renderers per operator).
+- `e2e_production_test_report.json`: 23-stage end-to-end production verification report (100% PASS, 0 failed, 0 skipped).
+- `e2e_production_test_console.log`: Complete raw transcript of test execution.
+
+### Verification verdict
+
+**PASS**: Phase C complete. Continuous humanoid skeletal rig, valid Unity humanoid avatar, 13-state 2-layer animator controller, modular equipment sockets, and dual presentation architecture verified in engine and across production multiplayer binaries.
+
 
 
 

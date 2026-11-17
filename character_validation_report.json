@@ -1,0 +1,160 @@
+{
+    "timestamp": "2026-11-17T05:24:25.4243494Z",
+    "phase": "Phase C: Character Foundation",
+    "status": "PASS",
+    "skeleton": {
+        "valid": true,
+        "expectedBoneCount": 25,
+        "actualBoneCount": 25,
+        "bones": [
+            "Root",
+            "Hips",
+            "Spine",
+            "Chest",
+            "UpperChest",
+            "Neck",
+            "Head",
+            "LeftClavicle",
+            "LeftUpperArm",
+            "LeftLowerArm",
+            "LeftHand",
+            "LeftHandFingers",
+            "RightClavicle",
+            "RightUpperArm",
+            "RightLowerArm",
+            "RightHand",
+            "RightHandFingers",
+            "LeftThigh",
+            "LeftCalf",
+            "LeftFoot",
+            "LeftToe",
+            "RightThigh",
+            "RightCalf",
+            "RightFoot",
+            "RightToe"
+        ],
+        "missingBones": []
+    },
+    "mesh": {
+        "valid": true,
+        "meshName": "SK_Humanoid_Operator",
+        "vertexCount": 144,
+        "triangleCount": 216,
+        "boneWeightCount": 144,
+        "bindPoseCount": 25
+    },
+    "avatar": {
+        "valid": true,
+        "avatarName": "OperatorHumanoidAvatar",
+        "isHuman": true,
+        "isValid": true
+    },
+    "animator": {
+        "valid": true,
+        "controllerName": "OperatorAnimatorController",
+        "layerCount": 2,
+        "layers": [
+            "Base Layer",
+            "UpperBody_Combat"
+        ],
+        "stateCount": 13,
+        "states": [
+            "Idle",
+            "Walk",
+            "Run",
+            "Sprint",
+            "Crouch",
+            "Jump",
+            "Downed",
+            "Revive",
+            "Death",
+            "Aim",
+            "Fire",
+            "Reload",
+            "HitReaction"
+        ],
+        "missingStates": [],
+        "hasUpperBodyMask": true
+    },
+    "materials": {
+        "valid": true,
+        "validatedMaterials": [
+            "M_Operator_Shared_Underlayer",
+            "M_Operator_REX_Assault",
+            "M_Operator_TRACE_Recon"
+        ],
+        "missingMaterials": []
+    },
+    "rex": {
+        "valid": true,
+        "operatorId": "rex",
+        "prefabPath": "Assets/Art/Characters/Operators/REX/Prefabs/PF_Operator_REX.prefab",
+        "hasAnimator": true,
+        "hasCharacterController": true,
+        "hasVisualController": true,
+        "hasThirdPersonPresentation": true,
+        "hasFirstPersonPresentation": true,
+        "hasSkinnedMeshRenderer": true,
+        "socketCount": 9,
+        "presentSockets": [
+            "RightHandWeaponSocket",
+            "LeftHandSupportSocket",
+            "PrimaryWeaponHolster",
+            "SecondaryWeaponHolster",
+            "BackpackSocket",
+            "HelmetAttachmentSocket",
+            "ShoulderLeftSocket",
+            "ShoulderRightSocket",
+            "UtilityBeltSocket"
+        ],
+        "missingSockets": [],
+        "equipmentCount": 8,
+        "equipmentRenderers": [
+            "REX_Helmet_Combat",
+            "Vanguard_AR_Hand",
+            "REX_Backpack_Assault",
+            "REX_Pauldrons_Armored",
+            "Holstered_Weapon",
+            "REX_Vest_TacticalAssault",
+            "REX_Holster_Sidearm",
+            "FP_Arms_REX"
+        ]
+    },
+    "trace": {
+        "valid": true,
+        "operatorId": "trace",
+        "prefabPath": "Assets/Art/Characters/Operators/TRACE/Prefabs/PF_Operator_TRACE.prefab",
+        "hasAnimator": true,
+        "hasCharacterController": true,
+        "hasVisualController": true,
+        "hasThirdPersonPresentation": true,
+        "hasFirstPersonPresentation": true,
+        "hasSkinnedMeshRenderer": true,
+        "socketCount": 9,
+        "presentSockets": [
+            "RightHandWeaponSocket",
+            "LeftHandSupportSocket",
+            "PrimaryWeaponHolster",
+            "SecondaryWeaponHolster",
+            "BackpackSocket",
+            "HelmetAttachmentSocket",
+            "ShoulderLeftSocket",
+            "ShoulderRightSocket",
+            "UtilityBeltSocket"
+        ],
+        "missingSockets": [],
+        "equipmentCount": 8,
+        "equipmentRenderers": [
+            "TRACE_Headset_ReconComms",
+            "Vanguard_AR_Hand",
+            "TRACE_Backpack_ReconComms",
+            "TRACE_Harness_ReconChest",
+            "TRACE_Pouches_UtilityLeg",
+            "TRACE_Holster_Recon",
+            "Holstered_Weapon",
+            "FP_Arms_TRACE"
+        ]
+    },
+    "errors": [],
+    "warnings": []
+}

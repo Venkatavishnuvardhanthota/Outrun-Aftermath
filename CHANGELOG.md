@@ -2,6 +2,32 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [1.4.0] - 2026-11-17 - Phase C: Character Foundation — Rigged Operators, Modular Equipment & Animation Architecture
+
+### Added
+- **Rigged Humanoid Skeletal Foundation**:
+  - Continuous anatomical humanoid skinned mesh `SK_Humanoid_Operator.asset` with 144 vertices, 216 triangles, and smooth skinning weights across all 25 bones.
+  - Unity Humanoid Avatar `OperatorHumanoidAvatar.asset` generated via `AvatarBuilder.BuildHumanAvatar` (`isHuman=true`, `isValid=true`).
+  - 25-bone anatomical hierarchy with `Root` at (0,0,0) covering spine, neck, head, clavicles, arms, hands, thighs, calves, feet, and toes.
+- **13-State 2-Layer Animator Controller (`OperatorAnimatorController.controller`)**:
+  - `Base Layer`: Full-body locomotion (`Idle`, `Walk`, `Run`, `Sprint`, `Crouch`, `Jump`, `Downed`, `Revive`, `Death`).
+  - `UpperBody_Combat`: Weight 1.0, Override blending with `Mask_UpperBody_Combat.mask` for upper body combat actions (`Aim`, `Fire`, `Reload`, `HitReaction`).
+  - Parameter synchronization via `OperatorVisualController` for speed, grounded, crouch, aim, fire, reload, hit reactions, and revival state.
+- **Modular Equipment & Standard Attachment Sockets (9 Sockets)**:
+  - 9 attachment sockets: `RightHandWeaponSocket`, `LeftHandSupportSocket`, `PrimaryWeaponHolster`, `SecondaryWeaponHolster`, `BackpackSocket`, `HelmetAttachmentSocket`, `ShoulderLeftSocket`, `ShoulderRightSocket`, `UtilityBeltSocket`.
+  - 12 modular 3D equipment models:
+    - **REX** (Rogue Assault): `REX_Helmet_Combat.obj`, `REX_Vest_TacticalAssault.obj`, `REX_Pauldrons_Armored.obj`, `REX_Backpack_Assault.obj`, `REX_Holster_Sidearm.obj`, `FP_Arms_REX.obj`.
+    - **TRACE** (Sentinel Tracker): `TRACE_Headset_ReconComms.obj`, `TRACE_Harness_ReconChest.obj`, `TRACE_Backpack_ReconComms.obj`, `TRACE_Pouches_UtilityLeg.obj`, `TRACE_Holster_Recon.obj`, `FP_Arms_TRACE.obj`.
+- **Dual Presentation Architecture**:
+  - `FirstPersonPresentation` (viewmodel arms + weapon) and `ThirdPersonPresentation` (full body + modular gear).
+  - Dynamic `ShadowCastingMode` handling (`ShadowsOnly` for local owner body in FPS, `On` for TPS and remote replicas).
+- **Automated Validation & Production Tests**:
+  - Created `CharacterValidationPipeline.cs` producing machine-readable `character_validation_report.json` with 100% PASS status.
+  - Recompiled standalone Windows binaries (`OutrunAftermath.exe`, `OutrunAftermath_Client.exe`, `OutrunAftermath_Server.exe`).
+  - Verified 76/76 simulation unit tests, 12/12 API integration tests, and 23/23 stages of end-to-end production multiplayer verification suite.
+
+---
+
 ## [1.3.4] - 2026-11-17 - Phase B.1.3: Final Multiplayer Verification Hardening & Evidence Closure
 
 ### Added

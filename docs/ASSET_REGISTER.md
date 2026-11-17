@@ -103,3 +103,64 @@ The following 1080p in-game screenshots were captured directly inside the Unity 
 | `screenshot_sector4_sidekick9_fps.png` | Sidekick-9 Combat Pistol (First-Person Hip) | 1920x1080 | Sidearm rest with Sidekick-9 pistol showing slide, grip, and iron sights framing the avenue barricades and bank facade. |
 | `screenshot_phase_b1_deadcity.png` | Sector 4 Dead City Wide Vista | 1920x1080 | Elevated tactical overview of Sector 4 showing asphalt avenue, bomb crater, bank ruins, rusted fuel barrels, and wrecked sedan. |
 
+---
+
+## 4. Phase C: Character Foundation — Rigged Operators & Modular Equipment
+
+Phase C introduces an authentic humanoid skeletal foundation, continuous anatomical skinned mesh, genuine Unity Humanoid Avatar, 13-state 2-layer Animator Controller with UpperBody combat masking, 9 standard attachment sockets, and full modular equipment setups for the first two operators: **REX** (Rogue Assault) and **TRACE** (Sentinel Tracker).
+
+### 4.1 Character Mesh & Skeleton Hierarchy
+- **Shared Skinned Mesh**: `Assets/Art/Characters/Shared/Meshes/SK_Humanoid_Operator.asset` (144 vertices, 216 triangles, 144 smooth skinning bone weights across all 25 bones, 25 valid bind poses).
+- **Humanoid Avatar**: `Assets/Art/Characters/Shared/Skeletons/OperatorHumanoidAvatar.asset` generated via `AvatarBuilder.BuildHumanAvatar` (`isHuman=true`, `isValid=true`).
+- **Anatomical Skeleton Bones (25 Bones)**:
+  - Core & Spine: `Root`, `Hips`, `Spine`, `Chest`, `UpperChest`, `Neck`, `Head`
+  - Left Arm: `LeftClavicle`, `LeftUpperArm`, `LeftLowerArm`, `LeftHand`, `LeftHandFingers`
+  - Right Arm: `RightClavicle`, `RightUpperArm`, `RightLowerArm`, `RightHand`, `RightHandFingers`
+  - Left Leg: `LeftThigh`, `LeftCalf`, `LeftFoot`, `LeftToe`
+  - Right Leg: `RightThigh`, `RightCalf`, `RightFoot`, `RightToe`
+
+### 4.2 Standard Equipment Attachment Sockets (9 Sockets)
+All 9 sockets are authored and anchored to anatomical bone transforms:
+1. `RightHandWeaponSocket` (RightHand bone) - Active weapon attachment
+2. `LeftHandSupportSocket` (LeftHand bone) - Support hand weapon grip
+3. `PrimaryWeaponHolster` (Chest / back bone) - Slung primary long gun
+4. `SecondaryWeaponHolster` (RightThigh bone) - Thigh holster for sidearms
+5. `BackpackSocket` (UpperChest bone) - Comms & assault rucksacks
+6. `HelmetAttachmentSocket` (Head bone) - Helmets, NVGs, tactical headsets
+7. `ShoulderLeftSocket` (LeftClavicle bone) - Armored pauldrons & antenna mounts
+8. `ShoulderRightSocket` (RightClavicle bone) - Armored pauldrons & squad patch
+9. `UtilityBeltSocket` (Hips bone) - Tactical belt, ammo mag dump pouches
+
+### 4.3 Animation Controller Architecture
+- **Controller Asset**: `Assets/Art/Characters/Shared/Animations/OperatorAnimatorController.controller`
+- **Layers (2)**:
+  1. `Base Layer` (Locomotion): Full body states (`Idle`, `Walk`, `Run`, `Sprint`, `Crouch`, `Jump`, `Downed`, `Revive`, `Death`)
+  2. `UpperBody_Combat` (Layer weight 1.0, Override): Blended via `Mask_UpperBody_Combat.mask` for torso/arms/head combat actions (`Aim`, `Fire`, `Reload`, `HitReaction`)
+- **Required Animation States (13)**: `Idle`, `Walk`, `Run`, `Sprint`, `Crouch`, `Jump`, `Aim`, `Fire`, `Reload`, `HitReaction`, `Downed`, `Revive`, `Death`
+
+### 4.4 Character PBR Materials & Modular Equipment Inventory
+
+| Asset Name | Category | File Location | Materials | Description / Attachment Socket |
+|---|---|---|---|---|
+| `SK_Humanoid_Operator` | Skinned Mesh | `Assets/Art/Characters/Shared/Meshes/SK_Humanoid_Operator.asset` | `M_Operator_Shared_Underlayer` | Continuous anatomical humanoid base body with 25 bone skinning weights |
+| `OperatorHumanoidAvatar` | Humanoid Avatar | `Assets/Art/Characters/Shared/Skeletons/OperatorHumanoidAvatar.asset` | N/A | Validated Unity Humanoid Avatar for Mecanim animation retargeting |
+| `OperatorAnimatorController`| Animator | `Assets/Art/Characters/Shared/Animations/OperatorAnimatorController.controller` | N/A | 13-state 2-layer state machine with UpperBody combat mask |
+| `M_Operator_Shared_Underlayer` | Material | `Assets/Art/Characters/Shared/Materials/M_Operator_Shared_Underlayer.mat` | URP Lit | Ballistic ripstop tactical undersuit (Dark Slate / Charcoal) |
+| `M_Operator_REX_Assault` | Material | `Assets/Art/Characters/Operators/REX/Materials/M_Operator_REX_Assault.mat` | URP Lit | Heavy ballistic assault plating, carbon steel, burnt amber accents |
+| `M_Operator_TRACE_Recon` | Material | `Assets/Art/Characters/Operators/TRACE/Materials/M_Operator_TRACE_Recon.mat` | URP Lit | Lightweight composite harness, optical sensors, matte navy & cyan accents |
+| `REX_Helmet_Combat` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/REX_Helmet_Combat.obj` | `M_Operator_REX_Assault` | Enclosed ballistic helmet with amber HUD visor (HelmetAttachmentSocket) |
+| `REX_Vest_TacticalAssault` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/REX_Vest_TacticalAssault.obj` | `M_Operator_REX_Assault` | Heavy ceramic trauma plate carrier with mag pouches (Chest bone) |
+| `REX_Pauldrons_Armored` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/REX_Pauldrons_Armored.obj` | `M_Operator_REX_Assault` | Articulated composite shoulder armor (ShoulderLeft/RightSocket) |
+| `REX_Backpack_Assault` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/REX_Backpack_Assault.obj` | `M_Operator_REX_Assault` | 3-day tactical breach rucksack (BackpackSocket) |
+| `REX_Holster_Sidearm` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/REX_Holster_Sidearm.obj` | `M_Operator_REX_Assault` | Kydex drop-leg tactical sidearm holster (SecondaryWeaponHolster) |
+| `FP_Arms_REX` | 3D Mesh | `Assets/Art/Characters/Operators/REX/Meshes/FP_Arms_REX.obj` | `M_Operator_REX_Assault` | First-person viewmodel tactical assault arms with tactical gloves |
+| `TRACE_Headset_ReconComms` | 3D Mesh | `Assets/Art/Characters/Operators/TRACE/Meshes/TRACE_Headset_ReconComms.obj` | `M_Operator_TRACE_Recon` | Integrated comms headset with sensor boom & night visor (HelmetAttachmentSocket) |
+| `TRACE_Harness_ReconChest` | 3D Mesh | `Assets/Art/Characters/Operators/TRACE/Meshes/TRACE_Harness_ReconChest.obj` | `M_Operator_TRACE_Recon` | Lightweight MOLLE recon chest rig with scanner battery packs (Chest bone) |
+| `TRACE_Backpack_ReconComms` | 3D Mesh | `Assets/Art/Characters/Operators/TRACE/Meshes/TRACE_Backpack_ReconComms.obj` | `M_Operator_TRACE_Recon` | Tactical telemetry antenna pack (BackpackSocket) |
+| `TRACE_Pouches_UtilityLeg` | 3D Mesh | `Assets/Art/Characters/Operators/TRACE/Meshes/TRACE_Pouches_UtilityLeg.obj` | `M_Operator_TRACE_Recon` | Utility leg pouch for field analysis kits (LeftThigh bone) |
+| `TRACE_Holster_Recon` | 3D Mesh | `Assets/Art/Characters/Operators/TRACE/Meshes/TRACE_Holster_Recon.obj` | `M_Operator_TRACE_Recon` | Quick-draw recon sidearm holster (SecondaryWeaponHolster) |
+| `FP_Arms_TRACE` | 3D Mesh | `Assets/Art/Characters/Operators/TRACE/Meshes/FP_Arms_TRACE.obj` | `M_Operator_TRACE_Recon` | First-person viewmodel recon arms with tactical watch & fingerless grips |
+| `PF_Operator_REX` | Prefab | `Assets/Art/Characters/Operators/REX/Prefabs/PF_Operator_REX.prefab` | Multi | Complete game-ready REX operator prefab (9 sockets, 8 renderers, FP+TP) |
+| `PF_Operator_TRACE` | Prefab | `Assets/Art/Characters/Operators/TRACE/Prefabs/PF_Operator_TRACE.prefab` | Multi | Complete game-ready TRACE operator prefab (9 sockets, 8 renderers, FP+TP) |
+
+

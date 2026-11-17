@@ -1,3 +1,5 @@
+using System;
+using Random = UnityEngine.Random;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Netcode;
@@ -49,10 +51,13 @@ namespace OutrunAftermath.Client.Multiplayer
         private TacticalHUD _hud;
 
         private GameObject _visualRoot;
+        private OutrunAftermath.Client.Runtime.Character.OperatorVisualController _visualController;
         private readonly List<Renderer> _bodyRenderers = new List<Renderer>();
         private Renderer _torsoRenderer;
         private Renderer _headRenderer;
         private TextMesh _overheadLabel;
+
+        public OutrunAftermath.Client.Runtime.Character.OperatorVisualController VisualController => _visualController;
 
         // Server-side validation state
         private float _serverNextFireTime;
@@ -84,55 +89,73 @@ namespace OutrunAftermath.Client.Multiplayer
         {
             if (_visualRoot != null) return;
 
+            string opId = NetOperatorId.Value.IsEmpty ? "rex" : NetOperatorId.Value.ToString().ToLowerInvariant();
+            string opUpper = (opId == "trace") ? "TRACE" : "REX";
+
             var existing = transform.Find("OperatorVisualRig");
             if (existing != null)
             {
                 _visualRoot = existing.gameObject;
-                _torsoRenderer = existing.Find("Body_Torso")?.GetComponent<Renderer>();
+                _visualController = _visualRoot.GetComponent<OutrunAftermath.Client.Runtime.Character.OperatorVisualController>();
+                _torsoRenderer = _visualController != null && _visualController.BodyMesh != null ? _visualController.BodyMesh : existing.Find("Body_Torso")?.GetComponent<Renderer>();
                 _headRenderer = existing.Find("Head_Crit")?.GetComponent<Renderer>();
                 _overheadLabel = existing.Find("OverheadNameplate")?.GetComponent<TextMesh>();
                 _bodyRenderers.Clear();
-                foreach (var r in _visualRoot.GetComponentsInChildren<Renderer>())
+                foreach (var r in _visualRoot.GetComponentsInChildren<Renderer>(true))
                 {
                     if (r.GetComponent<TextMesh>() == null) _bodyRenderers.Add(r);
                 }
                 return;
             }
 
-            _visualRoot = new GameObject("OperatorVisualRig");
-            _visualRoot.transform.SetParent(transform, false);
-
-            // Body Capsule (matches CharacterController hitbox)
-            var torso = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            torso.name = "Body_Torso";
-            torso.transform.SetParent(_visualRoot.transform, false);
-            torso.transform.localPosition = new Vector3(0f, 0.9f, 0f);
-            torso.transform.localScale = new Vector3(0.7f, 0.72f, 0.7f);
-            _torsoRenderer = torso.GetComponent<Renderer>();
-            _bodyRenderers.Add(_torsoRenderer);
-
-            // Head Sphere (real headshot collider!)
-            var head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            head.name = "Head_Crit";
-            head.transform.SetParent(_visualRoot.transform, false);
-            head.transform.localPosition = new Vector3(0f, 1.68f, 0f);
-            head.transform.localScale = new Vector3(0.4f, 0.4f, 0.4f);
-            _headRenderer = head.GetComponent<Renderer>();
-            _bodyRenderers.Add(_headRenderer);
-
-            // Shoulder Weapon Silhouette
-            var weaponVis = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            weaponVis.name = "WorldWeaponProp";
-            weaponVis.transform.SetParent(_visualRoot.transform, false);
-            weaponVis.transform.localPosition = new Vector3(0.32f, 1.28f, 0.35f);
-            weaponVis.transform.localScale = new Vector3(0.1f, 0.14f, 0.55f);
-            var wCol = weaponVis.GetComponent<Collider>();
-            if (wCol != null) Destroy(wCol);
-            var wRenderer = weaponVis.GetComponent<Renderer>();
-            if (wRenderer != null)
+            // Load Phase C Rigged Operator Prefab from Resources
+            string prefabResPath = $"Art/Characters/PF_Operator_{opUpper}";
+            var operatorPrefab = Resources.Load<GameObject>(prefabResPath);
+            if (operatorPrefab == null)
             {
-                if (wRenderer.material != null) wRenderer.material.color = new Color(0.15f, 0.16f, 0.18f);
-                _bodyRenderers.Add(wRenderer);
+                Debug.LogWarning($"[NetworkPlayer] Could not find {prefabResPath} in Resources. Falling back to PF_Operator_REX.");
+                operatorPrefab = Resources.Load<GameObject>("Art/Characters/PF_Operator_REX");
+            }
+
+            if (operatorPrefab != null)
+            {
+                _visualRoot = Instantiate(operatorPrefab, transform);
+                _visualRoot.name = "OperatorVisualRig";
+                _visualRoot.transform.localPosition = Vector3.zero;
+                _visualRoot.transform.localRotation = Quaternion.identity;
+
+                // Disable CharacterController on visual rig so it doesn't conflict with root CharacterController
+                var cc = _visualRoot.GetComponent<CharacterController>();
+                if (cc != null) cc.enabled = false;
+
+                _visualController = _visualRoot.GetComponent<OutrunAftermath.Client.Runtime.Character.OperatorVisualController>();
+                if (_visualController != null)
+                {
+                    _torsoRenderer = _visualController.BodyMesh;
+                }
+
+                // Headshot critical collider on Head bone
+                Transform headBone = _visualRoot.transform.Find("ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest/Neck/Head");
+                if (headBone != null)
+                {
+                    var headColGo = new GameObject("Head_Crit");
+                    headColGo.transform.SetParent(headBone, false);
+                    headColGo.transform.localPosition = Vector3.zero;
+                    var sc = headColGo.AddComponent<SphereCollider>();
+                    sc.radius = 0.16f;
+                    _headRenderer = headColGo.GetComponent<Renderer>();
+                }
+            }
+            else
+            {
+                _visualRoot = new GameObject("OperatorVisualRig");
+                _visualRoot.transform.SetParent(transform, false);
+            }
+
+            _bodyRenderers.Clear();
+            foreach (var r in _visualRoot.GetComponentsInChildren<Renderer>(true))
+            {
+                if (r.GetComponent<TextMesh>() == null) _bodyRenderers.Add(r);
             }
 
             // Overhead Nameplate for Remote Players
@@ -145,6 +168,32 @@ namespace OutrunAftermath.Client.Multiplayer
             _overheadLabel.anchor = TextAnchor.MiddleCenter;
             _overheadLabel.alignment = TextAlignment.Center;
             _overheadLabel.text = "OPERATOR";
+        }
+
+        public void RebuildVisualRig(string newOpId)
+        {
+            if (_visualRoot != null)
+            {
+                Destroy(_visualRoot);
+                _visualRoot = null;
+                _visualController = null;
+                _torsoRenderer = null;
+                _headRenderer = null;
+                _overheadLabel = null;
+                _bodyRenderers.Clear();
+            }
+
+            EnsureVisualRig();
+
+            if (_visualController != null)
+            {
+                string faction = NetFaction.Value == 0 ? "Rogue" : "Sentinel";
+                _visualController.Initialize(newOpId.ToLowerInvariant(), faction, _motor, _weapons, _health, _cameraRig, IsOwner);
+                if (_cameraRig != null)
+                {
+                    _visualController.SetPerspective(_cameraRig.Perspective);
+                }
+            }
         }
 
         public void ServerInitializePlayer(int faction, string callsign, string operatorId, Vector3 spawnPos, Quaternion spawnRot)
@@ -196,6 +245,11 @@ namespace OutrunAftermath.Client.Multiplayer
             NetOperatorId.OnValueChanged += (_, newId) =>
             {
                 if (_abilitySystem != null) _abilitySystem.SetOperator(newId.ToString());
+                string currentOp = _visualController != null ? _visualController.OperatorId : "";
+                if (!string.Equals(currentOp, newId.ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    RebuildVisualRig(newId.ToString());
+                }
                 UpdateFactionVisuals();
                 UpdateOverheadLabel();
             };
@@ -232,6 +286,14 @@ namespace OutrunAftermath.Client.Multiplayer
                 // Keep capsule/sphere colliders active so shots hit remote players!
                 var cc = GetComponent<CharacterController>();
                 if (cc != null) cc.enabled = false;
+
+                if (_visualController != null)
+                {
+                    string opUpper = (NetOperatorId.Value.IsEmpty ? "REX" : NetOperatorId.Value.ToString()).ToUpperInvariant();
+                    string faction = NetFaction.Value == 0 ? "Rogue" : "Sentinel";
+                    _visualController.Initialize(opUpper.ToLower(), faction, _motor, _weapons, _health, null, false);
+                    _visualController.ApplyPerspectiveMode(CameraPerspective.ThirdPerson);
+                }
             }
 
             OnReplicatedHealthChanged();
@@ -253,6 +315,14 @@ namespace OutrunAftermath.Client.Multiplayer
             _weapons.Initialize(_cameraRig, _motor, _health);
             _weapons.IsNetworkManaged = true;
             _weapons.OnNetworkFireRequested += HandleLocalFireRequest;
+
+            if (_visualController != null)
+            {
+                string opUpper = (NetOperatorId.Value.IsEmpty ? "REX" : NetOperatorId.Value.ToString()).ToUpperInvariant();
+                string opFaction = NetFaction.Value == 0 ? "Rogue" : "Sentinel";
+                _visualController.Initialize(opUpper.ToLower(), opFaction, _motor, _weapons, _health, _cameraRig, true);
+                _visualController.SetPerspective(_cameraRig.Perspective);
+            }
 
             // Remove any pre-existing HUD and bind ours
             var existingHud = FindAnyObjectByType<TacticalHUD>();
@@ -843,6 +913,11 @@ namespace OutrunAftermath.Client.Multiplayer
 
             _lastAppliedPerspective = _cameraRig.Perspective;
             bool isFps = _cameraRig.Perspective == CameraPerspective.FirstPerson;
+
+            if (_visualController != null)
+            {
+                _visualController.SetPerspective(_cameraRig.Perspective);
+            }
 
             foreach (var r in _bodyRenderers)
             {
