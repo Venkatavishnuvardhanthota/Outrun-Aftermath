@@ -369,8 +369,9 @@ namespace OutrunAftermath.Client.Multiplayer
             // Send verified test gameplay RPC
             Vector3 origin = localPlayer.transform.position + Vector3.up * 1.5f;
             Vector3 dir = localPlayer.transform.forward;
-            Debug.Log("[NET_TEST] Sending test gameplay RPC FireWeaponRpc to server...");
-            localPlayer.FireWeaponRpc(origin, dir, 0f, 0);
+            int testShotCorrelationId = 8801;
+            Debug.Log($"[NET_TEST] Sending test gameplay RPC FireWeaponRpc with ShotId={testShotCorrelationId} to server...");
+            localPlayer.FireWeaponRpc(origin, dir, 0f, 0, testShotCorrelationId);
 
             if (enemyPlayer != null)
             {
@@ -389,8 +390,9 @@ namespace OutrunAftermath.Client.Multiplayer
                     float aimHeight = enemyPlayer.NetLifeState.Value == 0 ? 1.4f : 0.85f;
                     Vector3 targetPos = enemyPlayer.transform.position + Vector3.up * aimHeight;
                     Vector3 eDir = (targetPos - origin).normalized;
+                    int enemyShotCorrelationId = 8810 + shot;
 
-                    localPlayer.FireWeaponRpc(origin, eDir, 0f, 0);
+                    localPlayer.FireWeaponRpc(origin, eDir, 0f, 0, enemyShotCorrelationId);
                     yield return new WaitForSeconds(0.22f);
                 }
 

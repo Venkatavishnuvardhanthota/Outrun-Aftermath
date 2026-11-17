@@ -238,37 +238,49 @@ try {
     # -------------------------------------------------------------
     Write-Host "`n--- [STAGE 3] Dedicated Server & Client Netcode Lifecycle (12 Stages) ---" -ForegroundColor Yellow
 
-    # Mandatory Executable Checks (No Silent Skips)
+    # Mandatory Executable Checks (Strict Separation - Universal Executables Prohibited)
     $srvTarget = $null
     if (Test-Path $ServerExePath) {
         $srvTarget = (Resolve-Path $ServerExePath).Path
         Report-Pass "Dedicated Server Executable Verified ($srvTarget)"
-        $netcodeStages["ServerExecutableCheck"] = @{ Status = "PASS"; Path = $srvTarget; Type = "Dedicated" }
-    } elseif (Test-Path $UniversalExePath) {
-        $srvTarget = (Resolve-Path $UniversalExePath).Path
-        Report-Pass "Dedicated Server Executable Verified (Fallback to Universal: $srvTarget)"
-        $netcodeStages["ServerExecutableCheck"] = @{ Status = "PASS"; Path = $srvTarget; Type = "UniversalFallback" }
+        $netcodeStages["ServerExecutableCheck"] = @{ 
+            Status = "PASS"
+            Path = $srvTarget
+            BuildType = "DedicatedServer"
+            Details = "Dedicated server binary verified at configured server path"
+        }
     } else {
-        Report-Fail "Dedicated Server Executable Missing" "Neither '$ServerExePath' nor '$UniversalExePath' exists on disk."
-        $netcodeStages["ServerExecutableCheck"] = @{ Status = "FAIL"; Path = $ServerExePath; Details = "File not found" }
+        Report-Fail "Dedicated Server Executable Missing" "Required dedicated server binary '$ServerExePath' not found. Universal executables are rejected."
+        $netcodeStages["ServerExecutableCheck"] = @{ 
+            Status = "FAIL"
+            Path = $ServerExePath
+            BuildType = "Missing"
+            Details = "Dedicated server binary missing at configured path"
+        }
     }
 
     $cltTarget = $null
     if (Test-Path $ClientExePath) {
         $cltTarget = (Resolve-Path $ClientExePath).Path
-        Report-Pass "Game Client Executable Verified ($cltTarget)"
-        $netcodeStages["ClientExecutableCheck"] = @{ Status = "PASS"; Path = $cltTarget; Type = "Client" }
-    } elseif (Test-Path $UniversalExePath) {
-        $cltTarget = (Resolve-Path $UniversalExePath).Path
-        Report-Pass "Game Client Executable Verified (Fallback to Universal: $cltTarget)"
-        $netcodeStages["ClientExecutableCheck"] = @{ Status = "PASS"; Path = $cltTarget; Type = "UniversalFallback" }
+        Report-Pass "Standalone Game Client Executable Verified ($cltTarget)"
+        $netcodeStages["ClientExecutableCheck"] = @{ 
+            Status = "PASS"
+            Path = $cltTarget
+            BuildType = "StandaloneClient"
+            Details = "Standalone client binary verified at configured client path"
+        }
     } else {
-        Report-Fail "Game Client Executable Missing" "Neither '$ClientExePath' nor '$UniversalExePath' exists on disk."
-        $netcodeStages["ClientExecutableCheck"] = @{ Status = "FAIL"; Path = $ClientExePath; Details = "File not found" }
+        Report-Fail "Standalone Game Client Executable Missing" "Required client binary '$ClientExePath' not found. Universal executables are rejected."
+        $netcodeStages["ClientExecutableCheck"] = @{ 
+            Status = "FAIL"
+            Path = $ClientExePath
+            BuildType = "Missing"
+            Details = "Standalone client binary missing at configured path"
+        }
     }
 
     if (-not $srvTarget -or -not $cltTarget) {
-        Report-Fail "Mandatory Binary Gate" "Cannot proceed with live multiplayer verification because required executables are missing."
+        Report-Fail "Mandatory Binary Gate" "Cannot proceed with live multiplayer verification because dedicated server or standalone client binary is missing."
         throw "Multiplayer binaries missing on disk."
     }
 
@@ -432,91 +444,169 @@ try {
     # Stage 5: Client Connection Handshake
     $assignedId = $null
     if ($clientLogContent -match "Client successfully connected to server! Assigned ClientId=(\d+)") {
-        $assignedId = $Matches[1]
+        $assignedId = [int]$Matches[1]
         Report-Pass "Stage 5: Client completed connection handshake (Assigned ClientId=$assignedId)"
-        $netcodeStages["Stage05_ClientHandshake"] = @{ Status = "PASS"; Details = "Assigned ClientId=$assignedId" }
+        $netcodeStages["Stage05_ClientHandshake"] = @{ 
+            Status = "PASS"
+            AssignedClientId = $assignedId
+            Details = "Handshake completed, Assigned ClientId=$assignedId" 
+        }
     } else {
         Report-Fail "Stage 5: Client Connection Handshake" "Connection confirmation missing in client log"
-        $netcodeStages["Stage05_ClientHandshake"] = @{ Status = "FAIL"; Details = "Confirmation missing in log" }
+        $netcodeStages["Stage05_ClientHandshake"] = @{ 
+            Status = "FAIL"
+            AssignedClientId = $null
+            Details = "Confirmation missing in log" 
+        }
     }
 
-    # Stage 6: Server Connection Callback
+    # Stage 6: Server Connection Callback & Identity Correlation
+    $srvClientId = $null
     if ($serverLogContent -match "Server received client connection callback for ClientId=(\d+)") {
-        $srvClientId = $Matches[1]
-        Report-Pass "Stage 6: Server received client connection callback (ClientId=$srvClientId)"
-        $netcodeStages["Stage06_ServerConnectionCallback"] = @{ Status = "PASS"; Details = "Callback received for ClientId=$srvClientId" }
-    } else {
-        Report-Fail "Stage 6: Server Connection Callback" "Client connection callback missing in server log"
-        $netcodeStages["Stage06_ServerConnectionCallback"] = @{ Status = "FAIL"; Details = "Callback missing in log" }
+        $srvClientId = [int]$Matches[1]
     }
 
-    # Stage 7: Server Spawns Authoritative NetworkPlayer
+    $stage6Match = ($assignedId -ne $null -and $srvClientId -ne $null -and $assignedId -eq $srvClientId)
+    if ($stage6Match) {
+        Report-Pass "Stage 6: Server connection callback verified with matched ClientId ($srvClientId == Expected $assignedId)"
+        $netcodeStages["Stage06_ServerConnectionCallback"] = @{ 
+            Status = "PASS"
+            ExpectedClientId = $assignedId
+            CallbackClientId = $srvClientId
+            IdentityMatchConfirmed = $true
+            Details = "Server callback ClientId matches client assigned ClientId ($srvClientId)" 
+        }
+    } else {
+        $reason = if (-not $srvClientId) { "Callback missing in server log" } else { "ClientId mismatch: Server reported $srvClientId, Expected $assignedId" }
+        Report-Fail "Stage 6: Server Connection Callback" $reason
+        $netcodeStages["Stage06_ServerConnectionCallback"] = @{ 
+            Status = "FAIL"
+            ExpectedClientId = $assignedId
+            CallbackClientId = $srvClientId
+            IdentityMatchConfirmed = $false
+            Details = $reason 
+        }
+    }
+
+    # Stage 7: Server Spawns Authoritative NetworkPlayer & Identity Correlation
+    $srvSpawnClientId = $null
     if ($serverLogContent -match "Spawned NetworkPlayer for client (\d+)") {
-        Report-Pass "Stage 7: Server spawned authoritative NetworkPlayer object"
-        $netcodeStages["Stage07_ServerSpawnPlayer"] = @{ Status = "PASS"; Details = "Authoritative NetworkPlayer spawned on server" }
-    } else {
-        Report-Fail "Stage 7: Server Player Spawn" "NetworkPlayer spawn record missing in server log"
-        $netcodeStages["Stage07_ServerSpawnPlayer"] = @{ Status = "FAIL"; Details = "Spawn record missing in log" }
+        $srvSpawnClientId = [int]$Matches[1]
     }
 
-    # Stage 8: Client Receives Replicated NetworkPlayer
-    if ($clientLogContent -match "Client/Server NetworkPlayer spawned! NetworkObjectId=(\d+)") {
-        $netObjId = $Matches[1]
-        Report-Pass "Stage 8: Client received and spawned replicated NetworkPlayer (NetworkObjectId=$netObjId)"
-        $netcodeStages["Stage08_ClientReceivePlayer"] = @{ Status = "PASS"; Details = "Replicated NetworkObjectId=$netObjId" }
+    $stage7Match = ($assignedId -ne $null -and $srvSpawnClientId -ne $null -and $assignedId -eq $srvSpawnClientId)
+    if ($stage7Match) {
+        Report-Pass "Stage 7: Server spawned authoritative NetworkPlayer for ClientId=$srvSpawnClientId (Matches Expected $assignedId)"
+        $netcodeStages["Stage07_ServerSpawnPlayer"] = @{ 
+            Status = "PASS"
+            ExpectedClientId = $assignedId
+            SpawnedClientId = $srvSpawnClientId
+            IdentityMatchConfirmed = $true
+            Details = "Authoritative player spawned on server for ClientId=$srvSpawnClientId" 
+        }
     } else {
-        Report-Fail "Stage 8: Client Player Replication" "Replicated player spawn confirmation missing in client log"
-        $netcodeStages["Stage08_ClientReceivePlayer"] = @{ Status = "FAIL"; Details = "Spawn confirmation missing in log" }
+        $reason = if (-not $srvSpawnClientId) { "Spawn record missing in server log" } else { "Spawned ClientId mismatch: Server spawned for $srvSpawnClientId, Expected $assignedId" }
+        Report-Fail "Stage 7: Server Player Spawn" $reason
+        $netcodeStages["Stage07_ServerSpawnPlayer"] = @{ 
+            Status = "FAIL"
+            ExpectedClientId = $assignedId
+            SpawnedClientId = $srvSpawnClientId
+            IdentityMatchConfirmed = $false
+            Details = $reason 
+        }
     }
 
-    # Stage 9: Complete RPC Request Proof (Client sent, Server processed)
-    $cSentRpc = $clientLogContent -match "Sending test gameplay RPC FireWeaponRpc to server"
-    $sProcRpc = if ($assignedId) {
-        $serverLogContent -match "Server processed gameplay RPC: FireWeaponRpc from ClientId=$assignedId"
-    } else {
-        $serverLogContent -match "Server processed gameplay RPC: FireWeaponRpc from ClientId="
+    # Stage 8: Client Receives Replicated NetworkPlayer & Confirms Ownership
+    $clientNetObjId = $null
+    $clientOwnerId = $null
+    if ($clientLogContent -match "Client/Server NetworkPlayer spawned! NetworkObjectId=(\d+),\s*OwnerClientId=(\d+)") {
+        $clientNetObjId = [int]$Matches[1]
+        $clientOwnerId = [int]$Matches[2]
+    } elseif ($clientLogContent -match "Client/Server NetworkPlayer spawned! NetworkObjectId=(\d+)") {
+        $clientNetObjId = [int]$Matches[1]
     }
+
+    $stage8Match = ($assignedId -ne $null -and $clientOwnerId -ne $null -and $assignedId -eq $clientOwnerId)
+    if ($stage8Match) {
+        Report-Pass "Stage 8: Client received replicated NetworkPlayer (NetworkObjectId=$clientNetObjId, OwnerClientId=$clientOwnerId == Expected $assignedId)"
+        $netcodeStages["Stage08_ClientReceivePlayer"] = @{ 
+            Status = "PASS"
+            ExpectedClientId = $assignedId
+            ReplicatedOwnerClientId = $clientOwnerId
+            NetworkObjectId = $clientNetObjId
+            IdentityMatchConfirmed = $true
+            Details = "Replicated player received and verified for OwnerClientId=$clientOwnerId" 
+        }
+    } else {
+        $reason = if (-not $clientNetObjId) { "Replicated player spawn confirmation missing in client log" } elseif (-not $clientOwnerId) { "OwnerClientId missing in client player spawn log" } else { "OwnerClientId mismatch: Client has $clientOwnerId, Expected $assignedId" }
+        Report-Fail "Stage 8: Client Player Replication" $reason
+        $netcodeStages["Stage08_ClientReceivePlayer"] = @{ 
+            Status = "FAIL"
+            ExpectedClientId = $assignedId
+            ReplicatedOwnerClientId = $clientOwnerId
+            NetworkObjectId = $clientNetObjId
+            IdentityMatchConfirmed = $false
+            Details = $reason 
+        }
+    }
+
+    # Extract Shot Correlation ID from Client Log
+    $shotCorrelationId = $null
+    if ($clientLogContent -match "Sending test gameplay RPC FireWeaponRpc with ShotId=(\d+)") {
+        $shotCorrelationId = [int]$Matches[1]
+    }
+
+    # Stage 9: Correlated RPC Request Proof (Client sent, Server processed)
+    $cSentRpc = ($shotCorrelationId -ne $null -and $clientLogContent -match "Sending test gameplay RPC FireWeaponRpc with ShotId=$shotCorrelationId")
+    $sProcRpc = ($assignedId -ne $null -and $shotCorrelationId -ne $null -and $serverLogContent -match "Server processed gameplay RPC: FireWeaponRpc from ClientId=$assignedId, WeaponSlot=\d+, ShotId=$shotCorrelationId")
 
     if ($cSentRpc -and $sProcRpc) {
-        Report-Pass "Stage 9: Complete RPC Request Proof (Client sent FireWeaponRpc and Server processed it for ClientId=$assignedId)"
+        Report-Pass "Stage 9: Correlated RPC Request Verified (Client sent FireWeaponRpc ShotId=$shotCorrelationId, Server processed for ClientId=$assignedId)"
         $netcodeStages["Stage09_ClientFireWeaponRpc"] = @{ 
             Status = "PASS"
-            Details = "Two-sided proof confirmed: Client sent FireWeaponRpc, Server authoritatively processed it"
+            Details = "Two-sided request proof confirmed with exact Shot Correlation ID"
             ClientSent = $true
             ServerProcessed = $true
             ClientId = $assignedId
+            ShotCorrelationId = $shotCorrelationId
         }
     } else {
-        $reason = if (-not $cSentRpc) { "Client send record missing" } elseif (-not $sProcRpc) { "Server processing record missing for ClientId=$assignedId" } else { "Unknown" }
+        $reason = if (-not $shotCorrelationId) { "Shot Correlation ID missing in client log" } elseif (-not $cSentRpc) { "Client send record missing for ShotId=$shotCorrelationId" } elseif (-not $sProcRpc) { "Server processing record missing for ClientId=$assignedId, ShotId=$shotCorrelationId" } else { "Unknown" }
         Report-Fail "Stage 9: FireWeaponRpc Processing" $reason
         $netcodeStages["Stage09_ClientFireWeaponRpc"] = @{ 
             Status = "FAIL"
             Details = $reason
             ClientSent = $cSentRpc
             ServerProcessed = $sProcRpc
+            ClientId = $assignedId
+            ShotCorrelationId = $shotCorrelationId
         }
     }
 
-    # Stage 10: Complete RPC Response Proof (Server fired effects, Client received PlayShotEffectsRpc)
-    $cReceivedEffects = $clientLogContent -match "Client processed PlayShotEffectsRpc from server confirming shot fired"
-    $cConfirmedRoundtrip = $clientLogContent -match "Test gameplay RPC successfully processed both on server and client"
+    # Stage 10: Correlated RPC Response Proof (Server broadcast effects, Client received PlayShotEffectsRpc for same ShotId)
+    $sBroadcastEffects = ($assignedId -ne $null -and $shotCorrelationId -ne $null -and $serverLogContent -match "Server broadcasting PlayShotEffectsRpc: ClientId=$assignedId,\s*ShotId=$shotCorrelationId")
+    $cReceivedEffects = ($shotCorrelationId -ne $null -and $clientLogContent -match "Client processed PlayShotEffectsRpc from server confirming shot fired! ShotId=$shotCorrelationId")
 
-    if ($sProcRpc -and ($cReceivedEffects -or $cConfirmedRoundtrip)) {
-        Report-Pass "Stage 10: Complete RPC Response Proof (Server fired effects and Client received PlayShotEffectsRpc)"
+    if ($sProcRpc -and $sBroadcastEffects -and $cReceivedEffects) {
+        Report-Pass "Stage 10: Correlated RPC Response Verified (Server broadcast and Client processed PlayShotEffectsRpc with ShotId=$shotCorrelationId)"
         $netcodeStages["Stage10_ClientPlayShotEffectsRpc"] = @{ 
             Status = "PASS"
-            Details = "Two-sided proof confirmed: Server processed shot, Client received PlayShotEffectsRpc confirmation"
-            ServerProcessed = $sProcRpc
-            ClientReceived = ($cReceivedEffects -or $cConfirmedRoundtrip)
+            Details = "Complete correlated round-trip verified: Server broadcast effects and Client confirmed receipt for ShotId=$shotCorrelationId"
+            ServerProcessed = $true
+            ServerBroadcast = $true
+            ClientReceived = $true
+            ShotCorrelationId = $shotCorrelationId
         }
     } else {
-        $reason = if (-not $sProcRpc) { "Server did not process shot" } else { "Client did not log receipt of PlayShotEffectsRpc" }
+        $reason = if (-not $sProcRpc) { "Server did not process request" } elseif (-not $sBroadcastEffects) { "Server did not broadcast PlayShotEffectsRpc for ShotId=$shotCorrelationId" } elseif (-not $cReceivedEffects) { "Client did not log receipt of PlayShotEffectsRpc for ShotId=$shotCorrelationId" } else { "Unknown failure" }
         Report-Fail "Stage 10: PlayShotEffectsRpc Reception" $reason
         $netcodeStages["Stage10_ClientPlayShotEffectsRpc"] = @{ 
             Status = "FAIL"
             Details = $reason
             ServerProcessed = $sProcRpc
+            ServerBroadcast = $sBroadcastEffects
             ClientReceived = $cReceivedEffects
+            ShotCorrelationId = $shotCorrelationId
         }
     }
 
@@ -635,7 +725,9 @@ try {
         Stage4_UnitSuites = $stage4Results
         ExecutionEnvironment = @{
             ServerExecutable = $srvTarget
+            ServerBuildType = "DedicatedServer"
             ClientExecutable = $cltTarget
+            ClientBuildType = "StandaloneClient"
             ServerPID = if ($serverProc) { $serverProc.Id } else { $null }
             ClientPID = if ($clientProc) { $clientProc.Id } else { $null }
             ServerExitCode = $serverExitCode
@@ -643,6 +735,14 @@ try {
             ServerCleanup = $serverCleanupType
             ClientCleanup = $clientCleanupType
             ServerTerminated = $serverTerminated
+            AssignedClientId = if ($assignedId) { [int]$assignedId } else { $null }
+            ServerCallbackClientId = if ($srvClientId) { [int]$srvClientId } else { $null }
+            ServerSpawnClientId = if ($srvSpawnClientId) { [int]$srvSpawnClientId } else { $null }
+            ClientReplicatedOwnerId = if ($clientOwnerId) { [int]$clientOwnerId } else { $null }
+            IdentityMatchConfirmed = ($stage6Match -and $stage7Match -and $stage8Match)
+            ShotCorrelationId = $shotCorrelationId
+            RpcRequestVerified = ($cSentRpc -and $sProcRpc)
+            RpcResponseVerified = ($sProcRpc -and $sBroadcastEffects -and $cReceivedEffects)
         }
     }
 

@@ -2,6 +2,24 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [1.3.4] - 2026-11-17 - Phase B.1.3: Final Multiplayer Verification Hardening & Evidence Closure
+
+### Added
+- **Strict Executable Separation Enforcement (`run_e2e_production_test.ps1`)**:
+  - Eliminated universal executable fallbacks: strictly requires dedicated server executable (`OutrunAftermath_Server.exe`, BuildType: `DedicatedServer`) and standalone client executable (`OutrunAftermath_Client.exe`, BuildType: `StandaloneClient`). Missing binaries fail immediately and halt test execution.
+- **Authoritative Multiplayer Client Identity Correlation**:
+  - Extracted client assigned ID (`ClientId=1`) from handshake.
+  - Correlated and verified that server connection callback (`ClientId=1`), server authoritative player spawn (`ClientId=1`), and client replicated player ownership (`OwnerClientId=1`) all match the assigned ID. Mismatches immediately fail the test.
+- **Complete Correlated RPC Round-Trip Verification**:
+  - Introduced unique test shot correlation identifier (`shotCorrelationId = 8801`) into `NetworkPlayerController.FireWeaponRpc` and `PlayShotEffectsRpc`.
+  - Stage 9 proves client sent `FireWeaponRpc` with `ShotId=8801` and server processed it for `ClientId=1` with `ShotId=8801`.
+  - Stage 10 proves server broadcast `PlayShotEffectsRpc` with `ShotId=8801` and client confirmed receipt of `PlayShotEffectsRpc` with matching `ShotId=8801`. Generic responses are prohibited.
+- **Dynamic Report Hardening (`e2e_production_test_report.json`)**:
+  - Added discrete identity and RPC correlation fields: `ExpectedClientId`, `CallbackClientId`, `SpawnedClientId`, `ReplicatedOwnerClientId`, `IdentityMatchConfirmed`, `ShotCorrelationId`, `ServerBroadcast`, and `ClientReceived`.
+  - Verified 23/23 dynamic test passes (100% PASS, 0 failed, 0 skipped).
+
+---
+
 ## [1.3.3] - 2026-11-17 - Phase B.1.2: Final E2E Test Integrity & Validation Enforcement
 
 ### Added

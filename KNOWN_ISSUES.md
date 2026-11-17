@@ -69,10 +69,15 @@
    - UDP socket ownership verification validates that local port `7799` is bound exclusively by the dedicated server PID via `Get-NetUDPEndpoint` and `netstat -ano -p UDP`.
    - Two-sided RPC roundtrip verification enforces mutual proof: Stage 9 requires client `FireWeaponRpc` send confirmation and matching server processing; Stage 10 requires server shot processing and client `PlayShotEffectsRpc` receive confirmation.
    - Dynamic JSON reporting eliminates all static strings; all 23 verification stages are computed dynamically (`e2e_production_test_report.json`), completing with 23/23 PASS (100%), 0 FAIL, 0 SKIPPED.
-12. **Character & Vehicle Animation Rigs**:
+12. **Phase B.1.3 Multiplayer Verification Hardening & Evidence Closure**:
+   - Strict executable separation prohibits universal fallback substitution; enforces dedicated server (`OutrunAftermath_Server.exe`, BuildType: `DedicatedServer`) and standalone client (`OutrunAftermath_Client.exe`, BuildType: `StandaloneClient`).
+   - Strict multiplayer identity correlation confirms client handshake `ClientId=1`, server callback `ClientId=1`, server authoritative spawn `ClientId=1`, and client replicated player `OwnerClientId=1` with zero ID discrepancies.
+   - Correlated RPC round-trip verification links client `FireWeaponRpc`, server processing, server `PlayShotEffectsRpc` broadcast, and client effect processing to the identical shot correlation identifier (`ShotId=8801`). Generic responses rejected.
+   - All 23 dynamic stages validated with clean exit codes (0), zero timeouts, graceful termination, and complete test suites (76 simulation tests, 12 API tests).
+13. **Character & Vehicle Animation Rigs**:
    - Player operators and vehicles currently utilize rigid modular compound hierarchies rather than skinned, bone-weighted skeletal meshes with Mecanim humanoid controllers and articulated suspension.
-13. Voice chat vendor not selected; no voice chat in any build.
-14. Aim assist, mobile HUD, and touch controls are specified but unimplemented (Phase 8).
+14. Voice chat vendor not selected; no voice chat in any build.
+15. Aim assist, mobile HUD, and touch controls are specified but unimplemented (Phase 8).
 
 ## Systems
 

@@ -468,15 +468,19 @@ namespace OutrunAftermath.Client.Multiplayer
             }
         }
 
+        private static int _nextCorrelationId = 1000;
+
         private void HandleLocalFireRequest(Ray aimRay, float spreadDeg, int slotIndex)
         {
-            FireWeaponRpc(aimRay.origin, aimRay.direction, spreadDeg, slotIndex);
+            int correlationId = System.Threading.Interlocked.Increment(ref _nextCorrelationId);
+            Debug.Log($"[NetworkPlayer] Client sending FireWeaponRpc: ClientId={OwnerClientId}, WeaponSlot={slotIndex}, ShotId={correlationId}");
+            FireWeaponRpc(aimRay.origin, aimRay.direction, spreadDeg, slotIndex, correlationId);
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
-        public void FireWeaponRpc(Vector3 origin, Vector3 direction, float clientSpreadDeg, int weaponSlot)
+        public void FireWeaponRpc(Vector3 origin, Vector3 direction, float clientSpreadDeg, int weaponSlot, int shotCorrelationId = 0)
         {
-            Debug.Log($"[NetworkPlayer] Server processed gameplay RPC: FireWeaponRpc from ClientId={OwnerClientId}, WeaponSlot={weaponSlot}, Origin={origin}");
+            Debug.Log($"[NetworkPlayer] Server processed gameplay RPC: FireWeaponRpc from ClientId={OwnerClientId}, WeaponSlot={weaponSlot}, ShotId={shotCorrelationId}, Origin={origin}");
 
             if (_health.State != PlayerLifeState.Alive) return;
             if (weaponSlot < 0 || weaponSlot >= _weapons.Loadout.Count) return;
@@ -570,7 +574,8 @@ namespace OutrunAftermath.Client.Multiplayer
                 }
             }
 
-            PlayShotEffectsRpc(_weapons.MuzzleWorldPosition, firstTracerEnd, anyHit, anyHeadshot);
+            Debug.Log($"[NetworkPlayer] Server broadcasting PlayShotEffectsRpc: ClientId={OwnerClientId}, ShotId={shotCorrelationId}, Start={_weapons.MuzzleWorldPosition}, End={firstTracerEnd}, Hit={anyHit}");
+            PlayShotEffectsRpc(_weapons.MuzzleWorldPosition, firstTracerEnd, anyHit, anyHeadshot, shotCorrelationId);
         }
 
         private bool TryRaycastExcludingSelf(Ray ray, float maxDist, out RaycastHit closestHit)
@@ -607,9 +612,9 @@ namespace OutrunAftermath.Client.Multiplayer
         }
 
         [Rpc(SendTo.ClientsAndHost)]
-        private void PlayShotEffectsRpc(Vector3 tracerStart, Vector3 tracerEnd, bool didHit, bool isHeadshot)
+        private void PlayShotEffectsRpc(Vector3 tracerStart, Vector3 tracerEnd, bool didHit, bool isHeadshot, int shotCorrelationId = 0)
         {
-            Debug.Log($"[NetworkPlayer] Client processed PlayShotEffectsRpc from server confirming shot fired! Start={tracerStart}, End={tracerEnd}, Hit={didHit}");
+            Debug.Log($"[NetworkPlayer] Client processed PlayShotEffectsRpc from server confirming shot fired! ShotId={shotCorrelationId}, Start={tracerStart}, End={tracerEnd}, Hit={didHit}");
 
             if (_weapons != null)
             {

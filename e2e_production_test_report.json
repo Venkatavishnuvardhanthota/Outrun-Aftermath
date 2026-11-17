@@ -1,5 +1,5 @@
 ﻿{
-    "Timestamp":  "2026-11-17T03:54:57.7330367Z",
+    "Timestamp":  "2026-11-17T04:22:08.5954336Z",
     "TestSuite":  "OUTRUN: AFTERMATH End-to-End Production Verification Suite",
     "OverallStatus":  "PASS",
     "Summary":  {
@@ -15,8 +15,8 @@
                                               },
                               "Registration":  {
                                                    "Status":  "PASS",
-                                                   "UserId":  "52271d69-17e2-4f03-a611-9843c66ccc93",
-                                                   "Callsign":  "Alpha_7764312d"
+                                                   "UserId":  "6c978f48-f3bf-4d8c-b3cd-7c0964d68b11",
+                                                   "Callsign":  "Alpha_06868437"
                                                },
                               "JwtIssuance":  {
                                                   "Status":  "PASS",
@@ -24,20 +24,20 @@
                                               },
                               "ProfileRetrieval":  {
                                                        "Status":  "PASS",
-                                                       "Callsign":  "Alpha_7764312d",
-                                                       "UserId":  "52271d69-17e2-4f03-a611-9843c66ccc93"
+                                                       "Callsign":  "Alpha_06868437",
+                                                       "UserId":  "6c978f48-f3bf-4d8c-b3cd-7c0964d68b11"
                                                    },
                               "RoomCreation":  {
                                                    "Status":  "PASS",
-                                                   "RoomCode":  "PATJ5F",
+                                                   "RoomCode":  "S4RBR8",
                                                    "MapId":  "deadcity"
                                                }
                           },
     "Stage2_SecurityHmac":  {
                                 "HmacValidation":  {
                                                        "Status":  "PASS",
-                                                       "Signature":  "4301eb5146817aa4cc83efc622f43addb4d0ef691162f0793beb36223ff53a3a",
-                                                       "MatchId":  "69874b56-8e11-4173-8f50-a4aeb8fb7ece"
+                                                       "Signature":  "a46db231c5558be0ec7edbd79e90be95e913f3aea4361794b6a5f7b89568244e",
+                                                       "MatchId":  "32898e4e-0caa-4a39-b11b-2a8f334f1aac"
                                                    },
                                 "StatsPersistence":  {
                                                          "XP":  395,
@@ -54,22 +54,24 @@
                                    "ServerExecutableCheck":  {
                                                                  "Status":  "PASS",
                                                                  "Path":  "D:\\projects\\outrun-aftermath\\client\\Builds\\WindowsServer\\OutrunAftermath_Server.exe",
-                                                                 "Type":  "Dedicated"
+                                                                 "Details":  "Dedicated server binary verified at configured server path",
+                                                                 "BuildType":  "DedicatedServer"
                                                              },
                                    "ClientExecutableCheck":  {
                                                                  "Status":  "PASS",
                                                                  "Path":  "D:\\projects\\outrun-aftermath\\client\\Builds\\WindowsClient\\OutrunAftermath_Client.exe",
-                                                                 "Type":  "Client"
+                                                                 "Details":  "Standalone client binary verified at configured client path",
+                                                                 "BuildType":  "StandaloneClient"
                                                              },
                                    "Stage01_ServerSpawn":  {
                                                                "Status":  "PASS",
-                                                               "PID":  10600,
+                                                               "PID":  32828,
                                                                "Details":  "Server process active",
                                                                "Path":  "D:\\projects\\outrun-aftermath\\client\\Builds\\WindowsServer\\OutrunAftermath_Server.exe"
                                                            },
                                    "Stage04_ClientSpawn":  {
                                                                "Status":  "PASS",
-                                                               "PID":  10044,
+                                                               "PID":  6300,
                                                                "Details":  "Client process active",
                                                                "Path":  "D:\\projects\\outrun-aftermath\\client\\Builds\\WindowsClient\\OutrunAftermath_Client.exe"
                                                            },
@@ -78,42 +80,56 @@
                                                            "Details":  "Confirmed in server log"
                                                        },
                                    "Stage03_SocketListening":  {
-                                                                   "ServerPID":  10600,
-                                                                   "OwningPID":  10600,
+                                                                   "ServerPID":  32828,
+                                                                   "OwningPID":  32828,
                                                                    "Details":  "UDP socket bound and owned by dedicated server process",
-                                                                   "Evidence":  "UDP endpoint 0.0.0.0:7799 owned by Server PID 10600",
+                                                                   "Evidence":  "UDP endpoint 0.0.0.0:7799 owned by Server PID 32828",
                                                                    "Endpoint":  "0.0.0.0:7799",
                                                                    "Port":  7799,
                                                                    "Status":  "PASS"
                                                                },
                                    "Stage05_ClientHandshake":  {
+                                                                   "AssignedClientId":  1,
                                                                    "Status":  "PASS",
-                                                                   "Details":  "Assigned ClientId=1"
+                                                                   "Details":  "Handshake completed, Assigned ClientId=1"
                                                                },
                                    "Stage06_ServerConnectionCallback":  {
                                                                             "Status":  "PASS",
-                                                                            "Details":  "Callback received for ClientId=1"
+                                                                            "IdentityMatchConfirmed":  true,
+                                                                            "Details":  "Server callback ClientId matches client assigned ClientId (1)",
+                                                                            "CallbackClientId":  1,
+                                                                            "ExpectedClientId":  1
                                                                         },
                                    "Stage07_ServerSpawnPlayer":  {
                                                                      "Status":  "PASS",
-                                                                     "Details":  "Authoritative NetworkPlayer spawned on server"
+                                                                     "IdentityMatchConfirmed":  true,
+                                                                     "Details":  "Authoritative player spawned on server for ClientId=1",
+                                                                     "SpawnedClientId":  1,
+                                                                     "ExpectedClientId":  1
                                                                  },
                                    "Stage08_ClientReceivePlayer":  {
-                                                                       "Status":  "PASS",
-                                                                       "Details":  "Replicated NetworkObjectId=3"
+                                                                       "NetworkObjectId":  3,
+                                                                       "Details":  "Replicated player received and verified for OwnerClientId=1",
+                                                                       "IdentityMatchConfirmed":  true,
+                                                                       "ReplicatedOwnerClientId":  1,
+                                                                       "ExpectedClientId":  1,
+                                                                       "Status":  "PASS"
                                                                    },
                                    "Stage09_ClientFireWeaponRpc":  {
-                                                                       "ClientSent":  true,
-                                                                       "Status":  "PASS",
                                                                        "ServerProcessed":  true,
-                                                                       "Details":  "Two-sided proof confirmed: Client sent FireWeaponRpc, Server authoritatively processed it",
-                                                                       "ClientId":  "1"
+                                                                       "ClientId":  1,
+                                                                       "Details":  "Two-sided request proof confirmed with exact Shot Correlation ID",
+                                                                       "ClientSent":  true,
+                                                                       "ShotCorrelationId":  8801,
+                                                                       "Status":  "PASS"
                                                                    },
                                    "Stage10_ClientPlayShotEffectsRpc":  {
-                                                                            "Status":  "PASS",
                                                                             "ServerProcessed":  true,
-                                                                            "Details":  "Two-sided proof confirmed: Server processed shot, Client received PlayShotEffectsRpc confirmation",
-                                                                            "ClientReceived":  true
+                                                                            "Details":  "Complete correlated round-trip verified: Server broadcast effects and Client confirmed receipt for ShotId=8801",
+                                                                            "ClientReceived":  true,
+                                                                            "ShotCorrelationId":  8801,
+                                                                            "Status":  "PASS",
+                                                                            "ServerBroadcast":  true
                                                                         },
                                    "Stage11_ClientCleanDisconnect":  {
                                                                          "TimedOut":  false,
@@ -148,14 +164,24 @@
                                                       }
                           },
     "ExecutionEnvironment":  {
-                                 "ServerExecutable":  "D:\\projects\\outrun-aftermath\\client\\Builds\\WindowsServer\\OutrunAftermath_Server.exe",
-                                 "ServerPID":  10600,
+                                 "ServerSpawnClientId":  1,
+                                 "ServerPID":  32828,
+                                 "IdentityMatchConfirmed":  true,
+                                 "ServerCallbackClientId":  1,
+                                 "ServerBuildType":  "DedicatedServer",
+                                 "ClientPID":  6300,
+                                 "ShotCorrelationId":  8801,
+                                 "AssignedClientId":  1,
+                                 "ClientExitCode":  0,
+                                 "ClientReplicatedOwnerId":  1,
+                                 "ServerTerminated":  true,
+                                 "RpcResponseVerified":  true,
+                                 "RpcRequestVerified":  true,
+                                 "ClientBuildType":  "StandaloneClient",
+                                 "ClientCleanup":  "Graceful",
+                                 "ClientExecutable":  "D:\\projects\\outrun-aftermath\\client\\Builds\\WindowsClient\\OutrunAftermath_Client.exe",
                                  "ServerCleanup":  "Graceful",
                                  "ServerExitCode":  0,
-                                 "ClientCleanup":  "Graceful",
-                                 "ClientExitCode":  0,
-                                 "ClientExecutable":  "D:\\projects\\outrun-aftermath\\client\\Builds\\WindowsClient\\OutrunAftermath_Client.exe",
-                                 "ClientPID":  10044,
-                                 "ServerTerminated":  true
+                                 "ServerExecutable":  "D:\\projects\\outrun-aftermath\\client\\Builds\\WindowsServer\\OutrunAftermath_Server.exe"
                              }
 }
