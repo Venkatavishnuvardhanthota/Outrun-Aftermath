@@ -9,7 +9,7 @@ namespace OutrunAftermath.Client.Runtime.Character
 {
     /// <summary>
     /// Manages the visual presentation, modular equipment sockets, first-person/third-person
-    /// presentation switching, and animation parameter synchronization for Operator characters.
+    /// presentation switching, weapon attachments, and animation parameter synchronization for Operator characters.
     /// </summary>
     [DisallowMultipleComponent]
     public class OperatorVisualController : MonoBehaviour
@@ -52,6 +52,9 @@ namespace OutrunAftermath.Client.Runtime.Character
         private CameraPerspective _currentPerspective = CameraPerspective.FirstPerson;
         private int _activeSlotIndex = 0;
         private float _fireAnimationTimer = 0f;
+
+        // Weapon attachment visual instances (slot -> visual GameObject)
+        private readonly Dictionary<int, GameObject> _weaponVisualInstances = new Dictionary<int, GameObject>();
 
         // Animator parameter hashes for high efficiency
         private static readonly int HashSpeed = Animator.StringToHash("Speed");
@@ -102,12 +105,14 @@ namespace OutrunAftermath.Client.Runtime.Character
             }
 
             DiscoverSocketsAndRenderers();
+            UpdateSocketedWeaponVisuals();
             ApplyPerspectiveMode(_currentPerspective);
         }
 
         private void Awake()
         {
             DiscoverSocketsAndRenderers();
+            UpdateSocketedWeaponVisuals();
         }
 
         private void OnDestroy()
@@ -154,7 +159,7 @@ namespace OutrunAftermath.Client.Runtime.Character
 
             if (headBone == null)
             {
-                headBone = transform.Find("Skeleton/Root/Hips/Spine/Chest/UpperChest/Neck/Head");
+                headBone = transform.Find("ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest/Neck/Head");
             }
 
             // Collect renderers
@@ -204,7 +209,11 @@ namespace OutrunAftermath.Client.Runtime.Character
             {
                 _fireAnimationTimer -= Time.deltaTime;
             }
-            UpdateAnimationParameters();
+
+            if (_isLocalOwner)
+            {
+                UpdateAnimationParameters();
+            }
         }
 
         private void UpdateAnimationParameters()
@@ -230,6 +239,35 @@ namespace OutrunAftermath.Client.Runtime.Character
             animator.SetBool(HashIsReviving, reviving);
         }
 
+        /// <summary>
+        /// Replicates animation parameters from network variables for remote player proxies.
+        /// </summary>
+        public void UpdateRemoteAnimationParameters(float speed, bool isGrounded, bool isCrouched, bool isAiming, bool isReloading, int activeSlot, int lifeState, bool isReviving)
+        {
+            if (_isLocalOwner) return; // Local owner uses local motor/camera/weapons
+            if (animator == null || !animator.gameObject.activeInHierarchy) return;
+
+            animator.SetFloat(HashSpeed, speed);
+            animator.SetBool(HashIsGrounded, isGrounded);
+            animator.SetBool(HashIsCrouched, isCrouched);
+            animator.SetBool(HashIsAiming, isAiming);
+            animator.SetBool(HashIsFiring, _fireAnimationTimer > 0f);
+            animator.SetBool(HashIsReloading, isReloading);
+            animator.SetInteger(HashLifeState, lifeState);
+            animator.SetBool(HashIsReviving, isReviving);
+
+            if (_activeSlotIndex != activeSlot)
+            {
+                SetActiveSlotIndex(activeSlot);
+            }
+        }
+
+        public void SetActiveSlotIndex(int slotIndex)
+        {
+            _activeSlotIndex = slotIndex;
+            UpdateSocketedWeaponVisuals();
+        }
+
         private void HandleWeaponSwitched(WeaponData weapon)
         {
             if (_weapons != null)
@@ -239,7 +277,7 @@ namespace OutrunAftermath.Client.Runtime.Character
             UpdateSocketedWeaponVisuals();
         }
 
-        private void HandleWeaponFired()
+        public void HandleWeaponFired()
         {
             _fireAnimationTimer = 0.15f;
             if (animator != null && animator.gameObject.activeInHierarchy)
@@ -248,12 +286,17 @@ namespace OutrunAftermath.Client.Runtime.Character
             }
         }
 
-        private void HandleDamaged(float dmg, Vector3 pt)
+        public void TriggerHitReaction()
         {
             if (animator != null && animator.gameObject.activeInHierarchy)
             {
                 animator.SetTrigger(HashHitTrigger);
             }
+        }
+
+        private void HandleDamaged(float dmg, Vector3 pt)
+        {
+            TriggerHitReaction();
         }
 
         public void SetPerspective(CameraPerspective perspective)
@@ -266,7 +309,7 @@ namespace OutrunAftermath.Client.Runtime.Character
         {
             if (!_isLocalOwner)
             {
-                // Remote clients always render in full Third-Person
+                // Remote clients always render in full Third-Person with full shadows
                 if (firstPersonRoot != null) firstPersonRoot.SetActive(false);
                 if (thirdPersonRoot != null) thirdPersonRoot.SetActive(true);
                 if (bodySkinnedMesh != null)
@@ -274,8 +317,9 @@ namespace OutrunAftermath.Client.Runtime.Character
                     bodySkinnedMesh.shadowCastingMode = ShadowCastingMode.On;
                     bodySkinnedMesh.enabled = true;
                 }
-                foreach (var r in headEquipmentRenderers) if (r != null) r.enabled = true;
-                foreach (var r in thirdPersonEquipmentRenderers) if (r != null) r.enabled = true;
+                foreach (var r in headEquipmentRenderers) if (r != null) { r.shadowCastingMode = ShadowCastingMode.On; r.enabled = true; }
+                foreach (var r in thirdPersonEquipmentRenderers) if (r != null) { r.shadowCastingMode = ShadowCastingMode.On; r.enabled = true; }
+                SetSocketedWeaponShadowMode(ShadowCastingMode.On);
                 return;
             }
 
@@ -285,7 +329,7 @@ namespace OutrunAftermath.Client.Runtime.Character
                 // Dedicated first-person arms viewmodel active
                 if (firstPersonRoot != null) firstPersonRoot.SetActive(true);
 
-                // Third-person body mesh casts shadows but doesn't occlude the local camera view
+                // Third-person body mesh casts shadows but does not clip the local camera
                 if (bodySkinnedMesh != null)
                 {
                     bodySkinnedMesh.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
@@ -302,6 +346,8 @@ namespace OutrunAftermath.Client.Runtime.Character
                 {
                     if (r != null) r.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
                 }
+
+                SetSocketedWeaponShadowMode(ShadowCastingMode.ShadowsOnly);
             }
             else
             {
@@ -333,21 +379,149 @@ namespace OutrunAftermath.Client.Runtime.Character
                         r.enabled = true;
                     }
                 }
+
+                SetSocketedWeaponShadowMode(ShadowCastingMode.On);
             }
         }
 
-        public void UpdateSocketedWeaponVisuals()
+        private void SetSocketedWeaponShadowMode(ShadowCastingMode mode)
         {
-            // Active weapon attached to RightHandWeaponSocket
-            // Secondary weapon attached to holster
-            // Handled dynamically based on active weapon slot
+            foreach (var kvp in _weaponVisualInstances)
+            {
+                if (kvp.Value == null) continue;
+                foreach (var r in kvp.Value.GetComponentsInChildren<Renderer>(true))
+                {
+                    r.shadowCastingMode = mode;
+                }
+            }
         }
 
-        public void TriggerHitReaction()
+        // ==============================================================================
+        // C.1.4 WEAPON ATTACHMENT SYSTEM IMPLEMENTATION
+        // ==============================================================================
+
+        /// <summary>
+        /// Updates the attachment of active and holstered weapon models across the 9 standardized sockets.
+        /// Ensures active weapon is in RightHand, inactive primary is slung on back, and sidearm is holstered on thigh.
+        /// Guarantees zero duplicate allocations on weapon switching.
+        /// </summary>
+        public void UpdateSocketedWeaponVisuals()
         {
-            if (animator != null && animator.gameObject.activeInHierarchy)
+            if (rightHandWeaponSocket == null)
             {
-                animator.SetTrigger(HashHitTrigger);
+                DiscoverSocketsAndRenderers();
+            }
+
+            // Ensure weapon instances for loadout slots 0 (AR), 1 (Shotgun), 2 (Pistol)
+            EnsureSocketedWeaponInstance(0, "PF_Weapon_Vanguard_AssaultRifle");
+            EnsureSocketedWeaponInstance(1, "PF_Weapon_Breacher_Shotgun");
+            EnsureSocketedWeaponInstance(2, "PF_Weapon_Sidekick_Pistol");
+
+            // Attach active weapon to RightHandWeaponSocket
+            if (_weaponVisualInstances.TryGetValue(_activeSlotIndex, out var activeVisual) && activeVisual != null)
+            {
+                if (rightHandWeaponSocket != null)
+                {
+                    activeVisual.transform.SetParent(rightHandWeaponSocket, false);
+                    activeVisual.transform.localPosition = GetWeaponHandOffset(_activeSlotIndex);
+                    activeVisual.transform.localRotation = GetWeaponHandRotation(_activeSlotIndex);
+                    activeVisual.transform.localScale = Vector3.one;
+                    activeVisual.SetActive(true);
+                }
+            }
+
+            // Attach inactive primary rifle/shotgun to PrimaryWeaponHolster (on back)
+            int inactivePrimarySlot = (_activeSlotIndex == 0) ? 1 : 0;
+            if (_weaponVisualInstances.TryGetValue(inactivePrimarySlot, out var holsteredPrimary) && holsteredPrimary != null)
+            {
+                if (primaryWeaponHolster != null)
+                {
+                    holsteredPrimary.transform.SetParent(primaryWeaponHolster, false);
+                    holsteredPrimary.transform.localPosition = Vector3.zero;
+                    holsteredPrimary.transform.localRotation = Quaternion.identity;
+                    holsteredPrimary.transform.localScale = Vector3.one;
+                    holsteredPrimary.SetActive(true);
+                }
+            }
+
+            // Attach sidearm pistol to SecondaryWeaponHolster (on thigh)
+            if (_activeSlotIndex != 2)
+            {
+                if (_weaponVisualInstances.TryGetValue(2, out var holsteredSidearm) && holsteredSidearm != null)
+                {
+                    if (secondaryWeaponHolster != null)
+                    {
+                        holsteredSidearm.transform.SetParent(secondaryWeaponHolster, false);
+                        holsteredSidearm.transform.localPosition = new Vector3(0.02f, 0.04f, 0f);
+                        holsteredSidearm.transform.localRotation = Quaternion.Euler(-10f, 0f, 0f);
+                        holsteredSidearm.transform.localScale = Vector3.one;
+                        holsteredSidearm.SetActive(true);
+                    }
+                }
+            }
+
+            // Refresh shadow casting mode based on current perspective
+            ShadowCastingMode currentMode = (_isLocalOwner && _currentPerspective == CameraPerspective.FirstPerson)
+                ? ShadowCastingMode.ShadowsOnly
+                : ShadowCastingMode.On;
+            SetSocketedWeaponShadowMode(currentMode);
+        }
+
+        private Vector3 GetWeaponHandOffset(int slotIndex)
+        {
+            return slotIndex switch
+            {
+                1 => new Vector3(0.02f, -0.04f, 0.12f), // Breacher-12 Shotgun
+                2 => new Vector3(0.01f, -0.03f, 0.08f), // Sidekick-9 Pistol
+                _ => new Vector3(0.02f, -0.04f, 0.14f)  // Vanguard-4 AR
+            };
+        }
+
+        private Quaternion GetWeaponHandRotation(int slotIndex)
+        {
+            return slotIndex switch
+            {
+                2 => Quaternion.Euler(0f, 90f, 0f),
+                _ => Quaternion.Euler(0f, 90f, 0f)
+            };
+        }
+
+        private void EnsureSocketedWeaponInstance(int slotIndex, string prefabName)
+        {
+            if (_weaponVisualInstances.TryGetValue(slotIndex, out var go) && go != null)
+            {
+                return;
+            }
+
+            // 1. Try loading production weapon prefab from Resources
+            var prefab = Resources.Load<GameObject>($"Art/Prefabs/{prefabName}");
+            if (prefab != null)
+            {
+                var inst = Instantiate(prefab, transform);
+                inst.name = $"{prefabName}_Socketed_{slotIndex}";
+                _weaponVisualInstances[slotIndex] = inst;
+                return;
+            }
+
+            // 2. Try loading Wavefront OBJ mesh as fallback
+            string objName = slotIndex switch
+            {
+                1 => "Weapon_Breacher_Shotgun",
+                2 => "Weapon_Sidekick_Pistol",
+                _ => "Weapon_Vanguard_AssaultRifle"
+            };
+
+            var mesh = Resources.Load<Mesh>($"Art/Meshes/Props/{objName}");
+            if (mesh != null)
+            {
+                var inst = new GameObject($"{objName}_Socketed_{slotIndex}");
+                inst.transform.SetParent(transform, false);
+                var mf = inst.AddComponent<MeshFilter>();
+                mf.sharedMesh = mesh;
+                var mr = inst.AddComponent<MeshRenderer>();
+                var mat = Resources.Load<Material>("Art/Materials/M_Weapon_TacticalSteel");
+                if (mat != null) mr.sharedMaterial = mat;
+                _weaponVisualInstances[slotIndex] = inst;
             }
         }
     }

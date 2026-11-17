@@ -1188,6 +1188,100 @@ Phase B.1.3: Final Multiplayer Verification Hardening & Evidence Closure — Str
 
 **PASS**: Phase C complete. Continuous humanoid skeletal rig, valid Unity humanoid avatar, 13-state 2-layer animator controller, modular equipment sockets, and dual presentation architecture verified in engine and across production multiplayer binaries.
 
+## Phase C.1 — 2026-11-17 (Character Quality and Animation Remediation)
+
+### Completed features
+
+- **Continuous Anatomical Humanoid Mesh Remediation**:
+  - Replaced the initial 18-box segmented mesh with a continuous, seamless, proportioned anatomical humanoid topology (`SK_Humanoid_Operator.asset`).
+  - **Metrics**: 974 vertices, 1,824 triangles, 974 multi-bone smooth skinning weights across all 25 bones, 25 valid bindposes.
+  - **Topology Features**: 16-slice lofted torso with chest/pectoral expansion and scapular contours, 12-slice cylindrical limbs with multi-ring elbow creases and patella rings, anatomical neck and contoured cranium.
+  - Validated in-engine mesh deformation under active bone rotations without polygon detachment, volume collapse, or vertex tearing.
+- **Authentic Skeletal Keyframed Animation System**:
+  - Replaced all static and single-key placeholder animation clips with authentic multi-key skeletal curves across the anatomical hierarchy.
+  - **Clips Audited (13 States, 0 Placeholders, 24-39 Curves Each)**:
+    - `Operator_Idle`: 33 curves, 2.0s, cyclic spine breathing rhythm and subtle pelvis balance sway.
+    - `Operator_Walk`: 39 curves, 1.0s, forward pelvic translation, reciprocal leg swing, and natural arm counter-swing.
+    - `Operator_Run`: 39 curves, 0.8s, forward athletic combat stride with pronounced spine flexion and knee drive.
+    - `Operator_Sprint`: 39 curves, 0.65s, aggressive sprint stride with low torso angle and rapid leg cycling.
+    - `Operator_Crouch`: 33 curves, 1.5s, lowered center-of-mass tactical crouch with deep knee compression.
+    - `Operator_Jump`: 27 curves, 0.9s, distinct 3-phase anticipation, apex tuck, and ground impact recovery.
+    - `Operator_Aim`: 24 curves, 1.0s, upper body shoulder tuck with sightline firearm stabilization.
+    - `Operator_Fire`: 24 curves, 0.25s, sharp muzzle kick, wrist rotation, and recoil recovery.
+    - `Operator_Reload`: 24 curves, 2.2s, tactical reload cycle with magazine drop, fresh insert, and bolt slap.
+    - `Operator_HitReaction`: 30 curves, 0.4s, directional flinch, torso twist, and combat recovery.
+    - `Operator_Downed`: 33 curves, 3.0s, prone combat crawl and wounded writhing on terrain.
+    - `Operator_Revive`: 33 curves, 2.5s, tactical push-up ascent back into combat ready stance.
+    - `Operator_Death`: 33 curves, 1.8s, kinetic ground collapse with limp limb settling.
+  - Layer 1 (`UpperBody_Combat`) configured with `Mask_UpperBody_Combat.mask` enabling seamless aiming, firing, and reloading while moving or crouching.
+- **Dynamic Weapon Attachment & Holster Management (`OperatorVisualController.cs`)**:
+  - Implemented `UpdateSocketedWeaponVisuals()` without duplicate GameObject or component allocations:
+    - Active weapon dynamically parented and oriented to `RightHandWeaponSocket`.
+    - Inactive primary firearm parented and oriented to `PrimaryWeaponHolster` (slung across operator back).
+    - Inactive secondary firearm parented and oriented to `SecondaryWeaponHolster` (thigh holster).
+  - Enforced zero memory leaks: validated that rapid slot switching (e.g. Primary -> Secondary -> Unarmed -> Primary) maintains an invariant child transform count (48 transforms baseline).
+- **Dual First-Person / Third-Person Presentation**:
+  - Implemented `ApplyPerspectiveMode()` in `OperatorVisualController`:
+    - First-Person: Enables high-detail viewmodel arms (`FP_Arms_REX`/`FP_Arms_TRACE`), switches full-body mesh and equipment to `ShadowCastingMode.ShadowsOnly` to cast authentic shadows without visual camera clipping.
+    - Third-Person: Restores full-body mesh and equipment to `ShadowCastingMode.On`, disables first-person viewmodel arms.
+- **Multiplayer Netcode Animation & State Replication (`NetworkPlayerController.cs`)**:
+  - Added synchronized owner-writable `NetworkVariable`s:
+    - `NetMoveSpeed` (`NetworkVariable<float>`)
+    - `NetIsGrounded` (`NetworkVariable<bool>`)
+    - `NetIsCrouched` (`NetworkVariable<bool>`)
+    - `NetIsAiming` (`NetworkVariable<bool>`)
+    - `NetIsReloading` (`NetworkVariable<bool>`)
+    - `NetActiveSlot` (`NetworkVariable<int>`)
+  - Remote proxies continuously synchronize animation parameters to local `OperatorVisualController` in `Update()`.
+  - Added RPC synchronization: `ClientTriggerHitReactionRpc()` broadcasts impact flinches; `PlayShotEffectsRpc()` triggers upper body fire animations on remote proxies.
+- **Automated Validation Pipeline (`CharacterValidationPipeline.cs`)**:
+  - Executed automated in-engine validation via Unity batchmode.
+  - Generated `character_validation_report.json` with status **PASS** (0 errors, 0 warnings).
+  - Verified 974 verts, 1,824 tris, valid deformation, 25 bones, valid avatar, 13/13 real animation states, 9 sockets, 8 equipment renderers per operator, 4 slot switches with 0 duplicates, presentation modes, and netcode sync.
+- **In-Engine Visual Evidence Capture (`CaptureCharacterVisuals.cs`)**:
+  - Captured 12 1080p screenshots directly inside Unity LTS 6000.6.9f1:
+    - `screenshot_rex_front.png`, `screenshot_rex_back.png`, `screenshot_rex_side.png`
+    - `screenshot_rex_firstperson.png`, `screenshot_rex_thirdperson.png`, `screenshot_rex_weapon_switch.png`
+    - `screenshot_rex_idle.png`, `screenshot_rex_walk.png`, `screenshot_rex_aim_fire.png`
+    - `screenshot_rex_crouch.png`, `screenshot_rex_reload.png`, `screenshot_rex_downed_death.png`
+  - All screenshots verified and mirrored to project root, `client/`, and conversation artifact storage.
+
+### Files created
+
+- `client/Assets/Editor/CaptureCharacterVisuals.cs`
+- `client/Assets/Editor/CaptureCharacterVisuals.cs.meta`
+
+### Files modified
+
+- `client/Assets/Art/Characters/Shared/Meshes/SK_Humanoid_Operator.asset`
+- `client/Assets/Art/Characters/Shared/Animations/OperatorAnimatorController.controller`
+- `client/Assets/Art/Characters/Shared/Animations/Operator_*.anim` (all 13 clips)
+- `client/Assets/Art/Characters/Operators/REX/Meshes/*.obj` (6 equipment models)
+- `client/Assets/Art/Characters/Operators/TRACE/Meshes/*.obj` (6 equipment models)
+- `client/Assets/Art/Textures/Characters/*/*.png` (9 PBR textures: Albedo, Normal, MaskMap)
+- `client/Assets/Art/Characters/Operators/REX/Prefabs/PF_Operator_REX.prefab`
+- `client/Assets/Art/Characters/Operators/TRACE/Prefabs/PF_Operator_TRACE.prefab`
+- `client/Assets/Resources/Art/Characters/PF_Operator_REX.prefab`
+- `client/Assets/Resources/Art/Characters/PF_Operator_TRACE.prefab`
+- `client/Assets/Editor/CharacterAssetPipeline.cs`
+- `client/Assets/Editor/CharacterValidationPipeline.cs`
+- `client/Assets/Game/Runtime/Character/OperatorVisualController.cs`
+- `client/Assets/Game/Multiplayer/NetworkPlayerController.cs`
+- `character_validation_report.json`
+- `docs/ASSET_REGISTER.md`
+- `DEVELOPMENT_PROGRESS.md`
+- `KNOWN_ISSUES.md`
+- `CHANGELOG.md`
+
+### Artifacts and evidence generated
+
+- `character_validation_report.json`: In-engine automated validation report (Status: PASS, 0 errors, 0 warnings).
+- 12 in-engine 1080p visual evidence screenshots (`screenshot_rex_*.png`).
+
+### Verification verdict
+
+**PASS**: Phase C.1 complete with 100% automated validation pass rate, continuous humanoid skinned mesh topology, 13 authentic keyframed animation clips with UpperBody combat blending, dynamic zero-allocation weapon socketing, dual first/third-person presentation, and owner-authoritative multiplayer netcode synchronization.
+
 
 
 

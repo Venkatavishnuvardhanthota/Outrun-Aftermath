@@ -43,6 +43,14 @@ namespace OutrunAftermath.Client.Multiplayer
         public NetworkVariable<int> NetKills = new NetworkVariable<int>(0);
         public NetworkVariable<int> NetDeaths = new NetworkVariable<int>(0);
 
+        // Phase C.1: Synchronized animation & stance variables
+        public NetworkVariable<float> NetMoveSpeed = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<bool> NetIsGrounded = new NetworkVariable<bool>(true, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<bool> NetIsCrouched = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<bool> NetIsAiming = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<bool> NetIsReloading = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<int> NetActiveSlot = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
         private CharacterMotor _motor;
         private PlayerHealth _health;
         private WeaponSystem _weapons;
@@ -258,6 +266,13 @@ namespace OutrunAftermath.Client.Multiplayer
             NetLifeState.OnValueChanged += (_, _) => OnReplicatedHealthChanged();
             NetBleedOutRemaining.OnValueChanged += (_, _) => OnReplicatedHealthChanged();
             NetReviveProgress.OnValueChanged += (_, _) => OnReplicatedHealthChanged();
+            NetActiveSlot.OnValueChanged += (_, newSlot) =>
+            {
+                if (_visualController != null)
+                {
+                    _visualController.SetActiveSlotIndex(newSlot);
+                }
+            };
 
             UpdateFactionVisuals();
             UpdateOverheadLabel();
@@ -293,6 +308,7 @@ namespace OutrunAftermath.Client.Multiplayer
                     string faction = NetFaction.Value == 0 ? "Rogue" : "Sentinel";
                     _visualController.Initialize(opUpper.ToLower(), faction, _motor, _weapons, _health, null, false);
                     _visualController.ApplyPerspectiveMode(CameraPerspective.ThirdPerson);
+                    _visualController.SetActiveSlotIndex(NetActiveSlot.Value);
                 }
             }
 
@@ -421,6 +437,22 @@ namespace OutrunAftermath.Client.Multiplayer
                 {
                     _overheadLabel.transform.rotation = Camera.main.transform.rotation;
                 }
+
+                // Phase C.1: Update remote proxy animation parameters from synchronized network variables
+                if (_visualController != null)
+                {
+                    bool isReviving = NetLifeState.Value == (int)PlayerLifeState.BeingRevived;
+                    _visualController.UpdateRemoteAnimationParameters(
+                        NetMoveSpeed.Value,
+                        NetIsGrounded.Value,
+                        NetIsCrouched.Value,
+                        NetIsAiming.Value,
+                        NetIsReloading.Value,
+                        NetActiveSlot.Value,
+                        NetLifeState.Value,
+                        isReviving
+                    );
+                }
             }
         }
 
@@ -479,6 +511,23 @@ namespace OutrunAftermath.Client.Multiplayer
             if (!isInsideVehicle)
             {
                 _weapons.ProcessWeapons(input);
+            }
+
+            // Phase C.1: Synchronize local player animation variables to remote proxies
+            if (_motor != null)
+            {
+                NetMoveSpeed.Value = _motor.Velocity.magnitude;
+                NetIsGrounded.Value = _motor.IsGrounded;
+                NetIsCrouched.Value = (_motor.Stance == MovementStance.Crouching || _motor.Stance == MovementStance.Sliding);
+            }
+            if (_cameraRig != null)
+            {
+                NetIsAiming.Value = _cameraRig.IsAiming;
+            }
+            if (_weapons != null)
+            {
+                NetIsReloading.Value = _weapons.IsReloading;
+                NetActiveSlot.Value = _weapons.ActiveSlotIndex;
             }
 
             // Trigger Abilities
@@ -704,6 +753,11 @@ namespace OutrunAftermath.Client.Multiplayer
                     Runtime.Audio.AudioManager.Instance.PlayHitMarker(isHeadshot, false);
                 }
             }
+
+            if (_visualController != null)
+            {
+                _visualController.HandleWeaponFired();
+            }
         }
 
         public void ApplyServerDamage(float amount, Vector3 hitPoint, ulong attackerClientId, bool isHeadshot)
@@ -714,7 +768,17 @@ namespace OutrunAftermath.Client.Multiplayer
             _lastHitWasHeadshot = isHeadshot;
             _health.TakeDamage(amount, hitPoint);
             SyncHealthVariablesFromServer();
+            ClientTriggerHitReactionRpc();
             Debug.Log($"[ServerCombat] {NetCallsign.Value} hit by Client {attackerClientId} for {amount:F1} dmg (headshot={isHeadshot}) -> HP={_health.CurrentHealth:F1}, Armor={_health.CurrentArmor:F1}, State={_health.State}");
+        }
+
+        [Rpc(SendTo.ClientsAndHost)]
+        private void ClientTriggerHitReactionRpc()
+        {
+            if (_visualController != null)
+            {
+                _visualController.TriggerHitReaction();
+            }
         }
 
         [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]

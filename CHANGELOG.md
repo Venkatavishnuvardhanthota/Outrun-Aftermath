@@ -2,6 +2,36 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [1.4.1] - 2026-11-17 - Phase C.1: Character Quality and Animation Remediation
+
+### Added
+- **Continuous Anatomical Humanoid Mesh**:
+  - Replaced 18-box segmented mesh with continuous, seamless anatomical humanoid topology `SK_Humanoid_Operator.asset` (974 vertices, 1,824 triangles, 25 bindposes, 4-bone smooth skinning weights).
+  - Lofted torso with pectoral/scapular contours, multi-slice limbs with elbow creases and patella rings, contoured cranium and neck.
+  - Validated deformation across active bone rotations without polygon detachment or volume collapse.
+- **Authentic Skeletal Keyframed Animation System**:
+  - Replaced single-key placeholder curves with authentic keyframed skeletal curves across all 13 states (24-39 curves each, 0 placeholders).
+  - Authored cyclic motion for `Idle` (33 curves, breathing/balance), `Walk` (39 curves, step cycle), `Run` (39 curves, athletic stride), `Sprint` (39 curves, sprint drive), `Crouch` (33 curves, tactical crouch), `Jump` (27 curves, 3-phase jump), `Aim` (24 curves, sightline stabilization), `Fire` (24 curves, recoil kick), `Reload` (24 curves, magazine insert & bolt slap), `HitReaction` (30 curves, directional flinch), `Downed` (33 curves, combat crawl), `Revive` (33 curves, push-up ascent), `Death` (33 curves, ground collapse).
+  - Configured 2-layer Mecanim controller with `Mask_UpperBody_Combat.mask` enabling seamless aiming, firing, and reloading while moving.
+- **Dynamic Zero-Allocation Weapon Socketing (`OperatorVisualController.cs`)**:
+  - Implemented dynamic weapon parenting in `UpdateSocketedWeaponVisuals()`:
+    - Active weapon parented to `RightHandWeaponSocket`.
+    - Inactive primary firearm parented to `PrimaryWeaponHolster` (slung on back).
+    - Inactive secondary firearm parented to `SecondaryWeaponHolster` (thigh holster).
+  - Validated zero duplicate allocations during rapid slot switching (invariant child transform count: 48).
+- **Dual First/Third-Person Presentation**:
+  - Viewmodel arms enabled in first-person mode with full-body mesh and equipment set to `ShadowCastingMode.ShadowsOnly` to cast authentic shadows without viewport clipping.
+  - Full-body mesh restored to `ShadowCastingMode.On` in third-person and for remote multiplayer proxies.
+- **Multiplayer Netcode Animation Synchronization (`NetworkPlayerController.cs`)**:
+  - Added owner-writable `NetworkVariable`s: `NetMoveSpeed`, `NetIsGrounded`, `NetIsCrouched`, `NetIsAiming`, `NetIsReloading`, `NetActiveSlot`.
+  - Remote proxies continuously synchronize animation parameters to local `OperatorVisualController` in `Update()`.
+  - Added RPC synchronization: `ClientTriggerHitReactionRpc()` broadcasts impact flinches; `PlayShotEffectsRpc()` triggers upper body fire animations on remote proxies.
+- **Automated Validation Pipeline & In-Engine Visual Evidence**:
+  - Updated `CharacterValidationPipeline.cs` to produce `character_validation_report.json` with 100% PASS status (0 errors, 0 warnings).
+  - Created `CaptureCharacterVisuals.cs` capturing 12 1080p screenshots (`screenshot_rex_*.png`) in Unity Editor.
+
+---
+
 ## [1.4.0] - 2026-11-17 - Phase C: Character Foundation — Rigged Operators, Modular Equipment & Animation Architecture
 
 ### Added

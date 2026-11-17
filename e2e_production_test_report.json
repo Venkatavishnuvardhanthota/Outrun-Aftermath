@@ -1,5 +1,5 @@
 ﻿{
-    "Timestamp":  "2026-11-17T05:39:55.5852162Z",
+    "Timestamp":  "2026-11-17T09:07:34.3891029Z",
     "TestSuite":  "OUTRUN: AFTERMATH End-to-End Production Verification Suite",
     "OverallStatus":  "PASS",
     "Summary":  {
@@ -15,8 +15,8 @@
                                               },
                               "Registration":  {
                                                    "Status":  "PASS",
-                                                   "UserId":  "6e286001-67c4-4d0c-87c6-6549bd14968e",
-                                                   "Callsign":  "Alpha_9866082e"
+                                                   "UserId":  "67e23d2b-1a26-46f6-a283-dff8551157be",
+                                                   "Callsign":  "Alpha_1fd3b5ee"
                                                },
                               "JwtIssuance":  {
                                                   "Status":  "PASS",
@@ -24,20 +24,20 @@
                                               },
                               "ProfileRetrieval":  {
                                                        "Status":  "PASS",
-                                                       "Callsign":  "Alpha_9866082e",
-                                                       "UserId":  "6e286001-67c4-4d0c-87c6-6549bd14968e"
+                                                       "Callsign":  "Alpha_1fd3b5ee",
+                                                       "UserId":  "67e23d2b-1a26-46f6-a283-dff8551157be"
                                                    },
                               "RoomCreation":  {
                                                    "Status":  "PASS",
-                                                   "RoomCode":  "BFZZZT",
+                                                   "RoomCode":  "FYDLB2",
                                                    "MapId":  "deadcity"
                                                }
                           },
     "Stage2_SecurityHmac":  {
                                 "HmacValidation":  {
                                                        "Status":  "PASS",
-                                                       "Signature":  "c6a129f847b18cb4693b790a40f6232942564b8a2faf8414abbf6437ea803adf",
-                                                       "MatchId":  "d85644b5-31f2-482c-b9af-f44a7e376b7f"
+                                                       "Signature":  "ae6430eee25698c561cd47a70cf67881c36f65e8ec1962a4b7e747f5e235a976",
+                                                       "MatchId":  "9cc5e775-6608-481d-8496-8cf5f18e0adc"
                                                    },
                                 "StatsPersistence":  {
                                                          "XP":  395,
@@ -71,7 +71,7 @@
                                                            },
                                    "Stage04_ClientSpawn":  {
                                                                "Status":  "PASS",
-                                                               "PID":  21276,
+                                                               "PID":  19048,
                                                                "Details":  "Client process active",
                                                                "Path":  "D:\\projects\\outrun-aftermath\\client\\Builds\\WindowsClient\\OutrunAftermath_Client.exe"
                                                            },
@@ -169,7 +169,7 @@
                                  "IdentityMatchConfirmed":  true,
                                  "ServerCallbackClientId":  1,
                                  "ServerBuildType":  "DedicatedServer",
-                                 "ClientPID":  21276,
+                                 "ClientPID":  19048,
                                  "ShotCorrelationId":  8801,
                                  "AssignedClientId":  1,
                                  "ClientExitCode":  0,

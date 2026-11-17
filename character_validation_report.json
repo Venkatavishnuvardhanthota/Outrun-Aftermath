@@ -1,7 +1,27 @@
 {
-    "timestamp": "2026-11-17T05:24:25.4243494Z",
-    "phase": "Phase C: Character Foundation",
+    "timestamp": "2026-11-17T08:42:13.1047031Z",
+    "phase": "Phase C.1: Character Quality and Animation Remediation",
     "status": "PASS",
+    "unityVersion": "6000.6.9f1",
+    "platform": "WindowsEditor",
+    "geometry": {
+        "valid": true,
+        "meshName": "SK_Humanoid_Operator",
+        "vertexCount": 974,
+        "triangleCount": 1824,
+        "boneWeightCount": 974,
+        "bindPoseCount": 25,
+        "boundsSize": {
+            "x": 1.6799999475479126,
+            "y": 1.7799999713897705,
+            "z": 0.3050000071525574
+        },
+        "hasNormals": true,
+        "hasUVs": true,
+        "hasTangents": true,
+        "deformationTestPassed": true,
+        "topologyQuality": "Continuous Anatomical"
+    },
     "skeleton": {
         "valid": true,
         "expectedBoneCount": 25,
@@ -35,14 +55,6 @@
         ],
         "missingBones": []
     },
-    "mesh": {
-        "valid": true,
-        "meshName": "SK_Humanoid_Operator",
-        "vertexCount": 144,
-        "triangleCount": 216,
-        "boneWeightCount": 144,
-        "bindPoseCount": 25
-    },
     "avatar": {
         "valid": true,
         "avatarName": "OperatorHumanoidAvatar",
@@ -74,7 +86,101 @@
             "HitReaction"
         ],
         "missingStates": [],
-        "hasUpperBodyMask": true
+        "hasUpperBodyMask": true,
+        "clipAudits": [
+            {
+                "stateName": "Idle",
+                "curveCount": 33,
+                "lengthSeconds": 2.0,
+                "isPlaceholder": false,
+                "hasRealCurves": true
+            },
+            {
+                "stateName": "Walk",
+                "curveCount": 39,
+                "lengthSeconds": 1.0,
+                "isPlaceholder": false,
+                "hasRealCurves": true
+            },
+            {
+                "stateName": "Run",
+                "curveCount": 27,
+                "lengthSeconds": 0.75,
+                "isPlaceholder": false,
+                "hasRealCurves": true
+            },
+            {
+                "stateName": "Sprint",
+                "curveCount": 27,
+                "lengthSeconds": 0.6000000238418579,
+                "isPlaceholder": false,
+                "hasRealCurves": true
+            },
+            {
+                "stateName": "Crouch",
+                "curveCount": 33,
+                "lengthSeconds": 1.5,
+                "isPlaceholder": false,
+                "hasRealCurves": true
+            },
+            {
+                "stateName": "Jump",
+                "curveCount": 21,
+                "lengthSeconds": 0.8999999761581421,
+                "isPlaceholder": false,
+                "hasRealCurves": true
+            },
+            {
+                "stateName": "Aim",
+                "curveCount": 24,
+                "lengthSeconds": 1.0,
+                "isPlaceholder": false,
+                "hasRealCurves": true
+            },
+            {
+                "stateName": "Fire",
+                "curveCount": 12,
+                "lengthSeconds": 0.25,
+                "isPlaceholder": false,
+                "hasRealCurves": true
+            },
+            {
+                "stateName": "Reload",
+                "curveCount": 12,
+                "lengthSeconds": 2.200000047683716,
+                "isPlaceholder": false,
+                "hasRealCurves": true
+            },
+            {
+                "stateName": "HitReaction",
+                "curveCount": 9,
+                "lengthSeconds": 0.4000000059604645,
+                "isPlaceholder": false,
+                "hasRealCurves": true
+            },
+            {
+                "stateName": "Downed",
+                "curveCount": 36,
+                "lengthSeconds": 2.0,
+                "isPlaceholder": false,
+                "hasRealCurves": true
+            },
+            {
+                "stateName": "Revive",
+                "curveCount": 24,
+                "lengthSeconds": 2.5,
+                "isPlaceholder": false,
+                "hasRealCurves": true
+            },
+            {
+                "stateName": "Death",
+                "curveCount": 27,
+                "lengthSeconds": 1.5,
+                "isPlaceholder": false,
+                "hasRealCurves": true
+            }
+        ],
+        "detectedPlaceholders": 0
     },
     "materials": {
         "valid": true,
@@ -84,6 +190,36 @@
             "M_Operator_TRACE_Recon"
         ],
         "missingMaterials": []
+    },
+    "equipment": {
+        "valid": true,
+        "weaponSwitchingTestPassed": true,
+        "testedWeaponSwitches": 4,
+        "noDuplicateWeapons": true
+    },
+    "presentation": {
+        "valid": true,
+        "firstPersonModeVerified": true,
+        "thirdPersonModeVerified": true,
+        "shadowCastingModesVerified": true
+    },
+    "networking": {
+        "valid": true,
+        "verifiedNetworkVariables": [
+            "NetMoveSpeed",
+            "NetIsGrounded",
+            "NetIsCrouched",
+            "NetIsAiming",
+            "NetIsReloading",
+            "NetActiveSlot",
+            "NetLifeState"
+        ],
+        "verifiedRpcs": [
+            "FireWeaponRpc",
+            "PlayShotEffectsRpc",
+            "ClientTriggerHitReactionRpc"
+        ],
+        "remoteAnimationSyncSupported": true
     },
     "rex": {
         "valid": true,
@@ -108,15 +244,16 @@
             "UtilityBeltSocket"
         ],
         "missingSockets": [],
-        "equipmentCount": 8,
+        "equipmentCount": 9,
         "equipmentRenderers": [
             "REX_Helmet_Combat",
-            "Vanguard_AR_Hand",
+            "PF_Weapon_Vanguard_AssaultRifle_Socketed_0",
             "REX_Backpack_Assault",
             "REX_Pauldrons_Armored",
-            "Holstered_Weapon",
+            "PF_Weapon_Breacher_Shotgun_Socketed_1",
             "REX_Vest_TacticalAssault",
             "REX_Holster_Sidearm",
+            "PF_Weapon_Sidekick_Pistol_Socketed_2",
             "FP_Arms_REX"
         ]
     },
@@ -143,15 +280,16 @@
             "UtilityBeltSocket"
         ],
         "missingSockets": [],
-        "equipmentCount": 8,
+        "equipmentCount": 9,
         "equipmentRenderers": [
             "TRACE_Headset_ReconComms",
-            "Vanguard_AR_Hand",
+            "PF_Weapon_Vanguard_AssaultRifle_Socketed_0",
             "TRACE_Backpack_ReconComms",
+            "PF_Weapon_Breacher_Shotgun_Socketed_1",
             "TRACE_Harness_ReconChest",
             "TRACE_Pouches_UtilityLeg",
             "TRACE_Holster_Recon",
-            "Holstered_Weapon",
+            "PF_Weapon_Sidekick_Pistol_Socketed_2",
             "FP_Arms_TRACE"
         ]
     },

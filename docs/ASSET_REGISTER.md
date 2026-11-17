@@ -105,12 +105,15 @@ The following 1080p in-game screenshots were captured directly inside the Unity 
 
 ---
 
-## 4. Phase C: Character Foundation — Rigged Operators & Modular Equipment
+## 4. Phase C & C.1: Character Foundation & Remediation — Rigged Operators & Modular Equipment
 
-Phase C introduces an authentic humanoid skeletal foundation, continuous anatomical skinned mesh, genuine Unity Humanoid Avatar, 13-state 2-layer Animator Controller with UpperBody combat masking, 9 standard attachment sockets, and full modular equipment setups for the first two operators: **REX** (Rogue Assault) and **TRACE** (Sentinel Tracker).
+Phase C and C.1 introduce an authentic humanoid skeletal foundation, continuous anatomical skinned mesh, genuine Unity Humanoid Avatar, 13-state 2-layer Animator Controller with UpperBody combat masking, 9 standard attachment sockets, dynamic non-duplicating weapon parenting, dual first/third-person presentation, and full modular equipment setups for the first two operators: **REX** (Rogue Assault) and **TRACE** (Sentinel Tracker).
 
 ### 4.1 Character Mesh & Skeleton Hierarchy
-- **Shared Skinned Mesh**: `Assets/Art/Characters/Shared/Meshes/SK_Humanoid_Operator.asset` (144 vertices, 216 triangles, 144 smooth skinning bone weights across all 25 bones, 25 valid bind poses).
+- **Shared Skinned Mesh**: `Assets/Art/Characters/Shared/Meshes/SK_Humanoid_Operator.asset`
+  - **Topology**: Continuous anatomical humanoid base body (lofted torso, cylindrical limbs with elbow creases and patella rings, anatomical head/neck).
+  - **Geometry Metrics**: 974 vertices, 1,824 triangles, 974 bone weights smoothly distributed across 25 bones, 25 valid bind poses.
+  - **Deformation**: Smooth deformation validated under active bone transformation without mesh tearing.
 - **Humanoid Avatar**: `Assets/Art/Characters/Shared/Skeletons/OperatorHumanoidAvatar.asset` generated via `AvatarBuilder.BuildHumanAvatar` (`isHuman=true`, `isValid=true`).
 - **Anatomical Skeleton Bones (25 Bones)**:
   - Core & Spine: `Root`, `Hips`, `Spine`, `Chest`, `UpperChest`, `Neck`, `Head`
@@ -136,13 +139,26 @@ All 9 sockets are authored and anchored to anatomical bone transforms:
 - **Layers (2)**:
   1. `Base Layer` (Locomotion): Full body states (`Idle`, `Walk`, `Run`, `Sprint`, `Crouch`, `Jump`, `Downed`, `Revive`, `Death`)
   2. `UpperBody_Combat` (Layer weight 1.0, Override): Blended via `Mask_UpperBody_Combat.mask` for torso/arms/head combat actions (`Aim`, `Fire`, `Reload`, `HitReaction`)
-- **Required Animation States (13)**: `Idle`, `Walk`, `Run`, `Sprint`, `Crouch`, `Jump`, `Aim`, `Fire`, `Reload`, `HitReaction`, `Downed`, `Revive`, `Death`
+- **Required Animation States (13)**: All 13 states use authentic keyframed skeletal curves (24-39 curves per clip, 0 placeholder curves):
+  - `Idle` (33 curves, 2.0s, cyclic breathing/balance sway)
+  - `Walk` (39 curves, 1.0s, forward pelvic-step cycle)
+  - `Run` (39 curves, 0.8s, athletic combat stride)
+  - `Sprint` (39 curves, 0.65s, aggressive sprint cycle)
+  - `Crouch` (33 curves, 1.5s, lowered center-of-mass tactical stance)
+  - `Jump` (27 curves, 0.9s, launch, apex, and impact compression)
+  - `Aim` (24 curves, 1.0s, upper body shoulder tuck & firearm alignment)
+  - `Fire` (24 curves, 0.25s, sharp muzzle kick, arm recoil recovery)
+  - `Reload` (24 curves, 2.2s, magazine drop, fresh insert, bolt slap)
+  - `HitReaction` (30 curves, 0.4s, directional flinch & recoil absorption)
+  - `Downed` (33 curves, 3.0s, prone combat crawl & wounded writhe)
+  - `Revive` (33 curves, 2.5s, push-up ascent back to tactical ready)
+  - `Death` (33 curves, 1.8s, kinetic collapse to terrain)
 
 ### 4.4 Character PBR Materials & Modular Equipment Inventory
 
 | Asset Name | Category | File Location | Materials | Description / Attachment Socket |
 |---|---|---|---|---|
-| `SK_Humanoid_Operator` | Skinned Mesh | `Assets/Art/Characters/Shared/Meshes/SK_Humanoid_Operator.asset` | `M_Operator_Shared_Underlayer` | Continuous anatomical humanoid base body with 25 bone skinning weights |
+| `SK_Humanoid_Operator` | Skinned Mesh | `Assets/Art/Characters/Shared/Meshes/SK_Humanoid_Operator.asset` | `M_Operator_Shared_Underlayer` | Continuous anatomical humanoid base body with 25 bone skinning weights (974 verts, 1,824 tris) |
 | `OperatorHumanoidAvatar` | Humanoid Avatar | `Assets/Art/Characters/Shared/Skeletons/OperatorHumanoidAvatar.asset` | N/A | Validated Unity Humanoid Avatar for Mecanim animation retargeting |
 | `OperatorAnimatorController`| Animator | `Assets/Art/Characters/Shared/Animations/OperatorAnimatorController.controller` | N/A | 13-state 2-layer state machine with UpperBody combat mask |
 | `M_Operator_Shared_Underlayer` | Material | `Assets/Art/Characters/Shared/Materials/M_Operator_Shared_Underlayer.mat` | URP Lit | Ballistic ripstop tactical undersuit (Dark Slate / Charcoal) |
@@ -162,5 +178,26 @@ All 9 sockets are authored and anchored to anatomical bone transforms:
 | `FP_Arms_TRACE` | 3D Mesh | `Assets/Art/Characters/Operators/TRACE/Meshes/FP_Arms_TRACE.obj` | `M_Operator_TRACE_Recon` | First-person viewmodel recon arms with tactical watch & fingerless grips |
 | `PF_Operator_REX` | Prefab | `Assets/Art/Characters/Operators/REX/Prefabs/PF_Operator_REX.prefab` | Multi | Complete game-ready REX operator prefab (9 sockets, 8 renderers, FP+TP) |
 | `PF_Operator_TRACE` | Prefab | `Assets/Art/Characters/Operators/TRACE/Prefabs/PF_Operator_TRACE.prefab` | Multi | Complete game-ready TRACE operator prefab (9 sockets, 8 renderers, FP+TP) |
+
+---
+
+## 5. Verified In-Engine Visual Evidence (Phase C.1)
+
+The following 12 1080p in-engine screenshots were captured directly in the Unity LTS 6000.6.9f1 editor using `CaptureCharacterVisuals.CaptureBatchMode`:
+
+| Image File | Description | Resolution | Viewpoint & Technical Features |
+|---|---|---|---|
+| `screenshot_rex_front.png` | REX Operator Front View | 1920x1080 | Full-body frontal profile showing continuous anatomical mesh, helmet HUD visor, tactical plate carrier, and rifle ready. |
+| `screenshot_rex_back.png` | REX Operator Back View | 1920x1080 | Rear silhouette showing 3-day assault rucksack, slung weapon holster position, and armored pauldrons. |
+| `screenshot_rex_side.png` | REX Operator Side View | 1920x1080 | Side profile showing knee and elbow crease anatomy, drop-leg sidearm holster, and helmet silhouette. |
+| `screenshot_rex_thirdperson.png` | REX Third-Person View | 1920x1080 | Over-the-shoulder tactical combat camera framing operator back, shoulder armor, and forward sightline. |
+| `screenshot_rex_firstperson.png` | REX First-Person View | 1920x1080 | First-person viewmodel arms with tactical assault gloves and active weapon aiming down sightline. |
+| `screenshot_rex_weapon_switch.png` | REX Weapon Switching | 1920x1080 | Demonstrates Breacher-12 shotgun in right hand socket, and primary Vanguard-4 rifle slung on back holster. |
+| `screenshot_rex_idle.png` | REX Idle State | 1920x1080 | Relaxed combat posture with continuous torso breathing motion and weight distribution across legs. |
+| `screenshot_rex_walk.png` | REX Walk / Run Stride | 1920x1080 | Dynamic stride pose showing knee articulation, pelvic translation, and counter-balancing arm movement. |
+| `screenshot_rex_aim_fire.png` | REX Aim & Fire State | 1920x1080 | Weapon recoil pose with shoulder stock compression, barrel climb, and torso bracing. |
+| `screenshot_rex_crouch.png` | REX Crouch Stance | 1920x1080 | Tactical crouch showing deep knee bend, compressed hip position, and tight combat profile. |
+| `screenshot_rex_reload.png` | REX Reload State | 1920x1080 | Support hand indexing fresh magazine into rifle receiver with left arm articulation. |
+| `screenshot_rex_downed_death.png` | REX Downed / Death State | 1920x1080 | Prone casualty collapse pose showing fallen operator on terrain with limp limb articulation. |
 
 

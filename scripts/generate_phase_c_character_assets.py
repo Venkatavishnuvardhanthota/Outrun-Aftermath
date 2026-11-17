@@ -1,5 +1,5 @@
 """
-OUTRUN: AFTERMATH - Phase C Character Asset Generation Engine
+OUTRUN: AFTERMATH - Phase C.1 Character Asset Generation Engine
 Procedurally authors authentic, high-quality PBR textures and 3D Wavefront OBJ models
 for Operator REX (Rogue Assault) and Operator TRACE (Sentinel Tracker).
 """
@@ -38,7 +38,7 @@ def ensure_dirs():
 # 1. PBR TEXTURE UTILITIES
 # ==============================================================================
 
-def generate_normal_map(height_map: np.ndarray, strength: float = 2.0) -> Image.Image:
+def generate_normal_map(height_map: np.ndarray, strength: float = 2.5) -> Image.Image:
     """Computes tangent-space normal map from a grayscale height map using Sobel filter."""
     h, w = height_map.shape
     sobel_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=np.float32)
@@ -82,7 +82,7 @@ def create_mask_map(metallic: np.ndarray, ao: np.ndarray, smoothness: np.ndarray
     return Image.fromarray(rgba, mode='RGBA')
 
 # ==============================================================================
-# 2. TEXTURE GENERATION
+# 2. PBR TEXTURE GENERATION
 # ==============================================================================
 
 def generate_character_textures():
@@ -93,131 +93,105 @@ def generate_character_textures():
     # 1. SHARED OPERATOR UNDERSUIT (Tactical Ripstop Fabric)
     # -------------------------------------------------------------
     np.random.seed(101)
-    # Dark charcoal base with ballistic micro-weave
-    undersuit_albedo = np.full((size, size, 3), [42, 44, 48], dtype=np.float32)
-    
-    # Hexagonal / diamond micro-grid weave
+    undersuit_albedo = np.full((size, size, 3), [40, 42, 46], dtype=np.float32)
     y_coords, x_coords = np.indices((size, size))
-    weave_x = (x_coords % 8 < 2).astype(np.float32)
-    weave_y = (y_coords % 8 < 2).astype(np.float32)
-    weave = np.clip(weave_x + weave_y, 0, 1) * 12.0
-    undersuit_albedo += weave[:, :, np.newaxis]
-    
-    # Reinforced knee/elbow patches (darker composite rubber pads)
-    pad_mask = np.zeros((size, size), dtype=np.float32)
-    pad_mask[128:384, 128:384] = 1.0 # patch 1
-    pad_mask[512:768, 512:768] = 1.0 # patch 2
-    undersuit_albedo[pad_mask > 0.5] = [28, 30, 32]
-    
-    # Micro noise
-    noise = np.random.normal(0, 4, (size, size, 3))
+    grid_pattern = ((x_coords // 12) + (y_coords // 12)) % 2 == 0
+    undersuit_albedo[grid_pattern] += [6, 6, 8]
+
+    # Reinforced Kevlar knee and elbow patches
+    kneepad_mask = ((y_coords > 600) & (y_coords < 800) & (x_coords > 300) & (x_coords < 724))
+    undersuit_albedo[kneepad_mask] = [28, 30, 33]
+
+    noise = np.random.normal(0, 3.5, (size, size, 3))
     undersuit_albedo = np.clip(undersuit_albedo + noise, 0, 255)
-    
+
     undersuit_height = np.full((size, size), 128, dtype=np.float32)
-    undersuit_height += weave * 2.5
-    undersuit_height += np.random.normal(0, 6, (size, size))
+    undersuit_height[grid_pattern] += 12.0
+    undersuit_height[kneepad_mask] += 30.0
+    undersuit_height += np.random.normal(0, 4, (size, size))
     undersuit_height = np.clip(undersuit_height, 0, 255)
-    
+
     undersuit_albedo_img = Image.fromarray(undersuit_albedo.astype(np.uint8), mode='RGB')
     undersuit_normal_img = generate_normal_map(undersuit_height, strength=2.2)
-    undersuit_mask = create_mask_map(
-        np.full((size, size), 20, dtype=np.uint8),
-        np.full((size, size), 210, dtype=np.uint8),
-        np.full((size, size), 75, dtype=np.uint8)
-    )
-    
+    undersuit_metallic = np.where(kneepad_mask, 40, 15).astype(np.uint8)
+    undersuit_smoothness = np.where(kneepad_mask, 110, 65).astype(np.uint8)
+    undersuit_ao = np.full((size, size), 235, dtype=np.uint8)
+    undersuit_ao[kneepad_mask] = 200
+    undersuit_mask = create_mask_map(undersuit_metallic, undersuit_ao, undersuit_smoothness)
+
     undersuit_albedo_img.save(f"{TEXTURES_CHAR_ROOT}/Shared/T_Operator_Shared_Albedo.png")
     undersuit_normal_img.save(f"{TEXTURES_CHAR_ROOT}/Shared/T_Operator_Shared_Normal.png")
     undersuit_mask.save(f"{TEXTURES_CHAR_ROOT}/Shared/T_Operator_Shared_MaskMap.png")
 
     # -------------------------------------------------------------
-    # 2. OPERATOR REX (Rogue Assault: Charcoal, Carbon Steel, Burnt Amber)
+    # 2. OPERATOR REX (Rogue Assault: Matte Charcoal, Amber Accents)
     # -------------------------------------------------------------
-    np.random.seed(202)
-    rex_albedo = np.full((size, size, 3), [38, 40, 44], dtype=np.float32) # Dark tactical grey
-    
-    # Rogue faction accents: burnt amber / tactical orange markings [225, 115, 30]
-    orange_color = np.array([225, 115, 30], dtype=np.float32)
-    # Add tactical stripes and hazard chevron markings
-    stripe_mask = ((x_coords + y_coords) % 64 < 14) & (x_coords < 256)
-    rex_albedo[stripe_mask] = orange_color
-    
-    # Ballistic plate segments (carbon composite)
-    plate_mask = ((x_coords % 128 < 118) & (y_coords % 128 < 118)).astype(np.float32)
-    plate_color = np.array([32, 34, 38], dtype=np.float32)
-    rex_albedo = rex_albedo * (1 - plate_mask[:, :, np.newaxis] * 0.2)
-    
-    # Steel hardware and buckles [165, 170, 175]
-    buckle_mask = (x_coords % 64 < 8) & (y_coords % 64 < 8)
-    rex_albedo[buckle_mask] = [170, 175, 180]
-    
-    noise = np.random.normal(0, 5, (size, size, 3))
+    np.random.seed(102)
+    rex_albedo = np.full((size, size, 3), [48, 50, 54], dtype=np.float32)
+
+    # Burnt amber accent hazard stripes
+    accent_stripes = ((x_coords + y_coords) // 48) % 8 == 0
+    amber_color = np.array([218, 108, 28], dtype=np.float32)
+    rex_albedo[accent_stripes] = amber_color
+
+    # Carbon steel armor plate zones
+    plate_zones = ((x_coords > 200) & (x_coords < 824) & (y_coords > 150) & (y_coords < 850))
+    rex_albedo[plate_zones & ~accent_stripes] = [36, 38, 42]
+
+    # Ballistic visor zone
+    visor_zone = ((y_coords > 80) & (y_coords < 150) & (x_coords > 350) & (x_coords < 674))
+    rex_albedo[visor_zone] = [235, 120, 20]
+
+    noise = np.random.normal(0, 4, (size, size, 3))
     rex_albedo = np.clip(rex_albedo + noise, 0, 255)
-    
+
     rex_height = np.full((size, size), 128, dtype=np.float32)
-    rex_height += plate_mask * 20.0
-    rex_height[buckle_mask] += 35.0
-    rex_height += np.random.normal(0, 5, (size, size))
+    rex_height[plate_zones] += 35.0
+    rex_height[accent_stripes] += 15.0
+    rex_height[visor_zone] += 25.0
+    rex_height += np.random.normal(0, 4, (size, size))
     rex_height = np.clip(rex_height, 0, 255)
-    
+
     rex_albedo_img = Image.fromarray(rex_albedo.astype(np.uint8), mode='RGB')
     rex_normal_img = generate_normal_map(rex_height, strength=2.8)
-    rex_metallic = np.where(buckle_mask, 210, 40).astype(np.uint8)
-    rex_smoothness = np.where(buckle_mask, 180, np.where(stripe_mask, 130, 95)).astype(np.uint8)
-    rex_mask = create_mask_map(
-        rex_metallic,
-        np.full((size, size), 220, dtype=np.uint8),
-        rex_smoothness
-    )
-    
+    rex_metallic = np.where(plate_zones, 190, np.where(visor_zone, 85, 30)).astype(np.uint8)
+    rex_smoothness = np.where(visor_zone, 245, np.where(plate_zones, 160, 95)).astype(np.uint8)
+    rex_ao = np.full((size, size), 225, dtype=np.uint8)
+    rex_ao[plate_zones] = 245
+    rex_mask = create_mask_map(rex_metallic, rex_ao, rex_smoothness)
+
     rex_albedo_img.save(f"{TEXTURES_CHAR_ROOT}/REX/T_Operator_REX_Albedo.png")
     rex_normal_img.save(f"{TEXTURES_CHAR_ROOT}/REX/T_Operator_REX_Normal.png")
     rex_mask.save(f"{TEXTURES_CHAR_ROOT}/REX/T_Operator_REX_MaskMap.png")
 
     # -------------------------------------------------------------
-    # 3. OPERATOR TRACE (Sentinel Tracker: Matte Navy, Slate, Cyan / Teal)
+    # 3. OPERATOR TRACE (Sentinel Tracker: Slate Blue, Recon Cyan/Yellow)
     # -------------------------------------------------------------
-    np.random.seed(303)
-    trace_albedo = np.full((size, size, 3), [34, 46, 62], dtype=np.float32) # Matte navy slate
-    
-    # Sentinel faction accents: tactical cyan / electric teal [45, 195, 215]
-    cyan_color = np.array([45, 195, 215], dtype=np.float32)
-    
-    # Digital sensor traces & indicator stripes
-    trace_stripe = ((x_coords - y_coords) % 48 < 10) & (y_coords < 384)
-    trace_albedo[trace_stripe] = cyan_color
-    
-    # Optical lens circles (sensor suite)
-    lens_centers = [(128, 128), (128, 256), (256, 128)]
-    lens_mask = np.zeros((size, size), dtype=bool)
-    for cx, cy in lens_centers:
-        dist = np.sqrt((x_coords - cx)**2 + (y_coords - cy)**2)
-        lens_mask |= (dist < 32)
-    trace_albedo[lens_mask] = [20, 210, 230]
-    
-    # Titanium hardware and clips [180, 190, 200]
-    clip_mask = (x_coords % 64 > 56) & (y_coords % 64 > 56)
+    np.random.seed(103)
+    trace_albedo = np.full((size, size, 3), [52, 64, 78], dtype=np.float32)
+
+    # Sensor optic lenses and telemetry lines
+    lens_mask = ((x_coords > 400) & (x_coords < 624) & (y_coords > 180) & (y_coords < 340))
+    trace_albedo[lens_mask] = [45, 195, 235]
+
+    clip_mask = ((x_coords // 32) % 4 == 0) & ((y_coords > 400) & (y_coords < 800))
     trace_albedo[clip_mask] = [185, 195, 205]
-    
+
     noise = np.random.normal(0, 4, (size, size, 3))
     trace_albedo = np.clip(trace_albedo + noise, 0, 255)
-    
+
     trace_height = np.full((size, size), 128, dtype=np.float32)
     trace_height[lens_mask] += 40.0
     trace_height[clip_mask] += 30.0
     trace_height += np.random.normal(0, 4, (size, size))
     trace_height = np.clip(trace_height, 0, 255)
-    
+
     trace_albedo_img = Image.fromarray(trace_albedo.astype(np.uint8), mode='RGB')
     trace_normal_img = generate_normal_map(trace_height, strength=2.6)
     trace_metallic = np.where(clip_mask, 220, np.where(lens_mask, 80, 45)).astype(np.uint8)
     trace_smoothness = np.where(lens_mask, 240, np.where(clip_mask, 190, 110)).astype(np.uint8)
-    trace_mask = create_mask_map(
-        trace_metallic,
-        np.full((size, size), 230, dtype=np.uint8),
-        trace_smoothness
-    )
-    
+    trace_mask = create_mask_map(trace_metallic, np.full((size, size), 230, dtype=np.uint8), trace_smoothness)
+
     trace_albedo_img.save(f"{TEXTURES_CHAR_ROOT}/TRACE/T_Operator_TRACE_Albedo.png")
     trace_normal_img.save(f"{TEXTURES_CHAR_ROOT}/TRACE/T_Operator_TRACE_Normal.png")
     trace_mask.save(f"{TEXTURES_CHAR_ROOT}/TRACE/T_Operator_TRACE_MaskMap.png")
@@ -225,7 +199,7 @@ def generate_character_textures():
     print("Character PBR Textures successfully generated!")
 
 # ==============================================================================
-# 3. 3D OBJ MESH GENERATOR
+# 3. 3D OBJ MESH GENERATOR UTILITIES
 # ==============================================================================
 
 class ObjMeshBuilder:
@@ -236,15 +210,15 @@ class ObjMeshBuilder:
         self.normals = []
         self.faces = []
 
-    def add_vertex(self, x: float, y: float, z: float):
+    def add_vertex(self, x: float, y: float, z: float) -> int:
         self.vertices.append((x, y, z))
         return len(self.vertices)
 
-    def add_uv(self, u: float, v: float):
+    def add_uv(self, u: float, v: float) -> int:
         self.uvs.append((u, v))
         return len(self.uvs)
 
-    def add_normal(self, nx: float, ny: float, nz: float):
+    def add_normal(self, nx: float, ny: float, nz: float) -> int:
         length = math.sqrt(nx*nx + ny*ny + nz*nz)
         if length > 1e-6:
             nx, ny, nz = nx / length, ny / length, nz / length
@@ -301,7 +275,6 @@ class ObjMeshBuilder:
                 top_verts.append(self.add_vertex(cx + hh, cy + ca, cz + sa))
                 bot_verts.append(self.add_vertex(cx - hh, cy + ca, cz + sa))
 
-        # Side quads
         for i in range(segments):
             next_i = (i + 1) % segments
             v_t1 = top_verts[i]
@@ -340,75 +313,92 @@ def generate_rex_equipment():
 
     # 1. REX Combat Helmet (Assault ballistic helmet with visor & ear covers)
     m = ObjMeshBuilder("REX_Helmet_Combat")
-    # Main helmet shell
-    m.add_box(0.0, 0.08, -0.02, 0.28, 0.22, 0.32)
-    # Front visor brow
-    m.add_box(0.0, 0.04, 0.14, 0.24, 0.08, 0.08)
-    # Tinted visor lens
-    m.add_box(0.0, 0.01, 0.15, 0.22, 0.06, 0.04)
-    # Side communications ear covers
-    m.add_box(0.14, 0.02, -0.02, 0.04, 0.12, 0.14)
-    m.add_box(-0.14, 0.02, -0.02, 0.04, 0.12, 0.14)
-    # NVG mount shroud on forehead
-    m.add_box(0.0, 0.12, 0.13, 0.08, 0.08, 0.04)
+    # Main helmet dome shell
+    m.add_cylinder(0.0, 0.08, 0.0, 0.14, 0.16, segments=16, axis='y')
+    m.add_box(0.0, 0.12, 0.0, 0.24, 0.08, 0.26)
+    # Front visor brow / sun visor
+    m.add_box(0.0, 0.06, 0.13, 0.22, 0.04, 0.06)
+    # Tinted tactical visor lens
+    m.add_box(0.0, 0.02, 0.14, 0.20, 0.05, 0.03)
+    # Side communications ear cups
+    m.add_cylinder(0.14, 0.02, -0.01, 0.045, 0.03, segments=10, axis='x')
+    m.add_cylinder(-0.14, 0.02, -0.01, 0.045, 0.03, segments=10, axis='x')
+    # Forehead NVG shroud mount
+    m.add_box(0.0, 0.11, 0.13, 0.06, 0.06, 0.03)
+    # Chin strap buckle
+    m.add_box(0.0, -0.10, 0.04, 0.08, 0.02, 0.04)
     m.write_obj(f"{CHARACTERS_ROOT}/Operators/REX/Meshes/REX_Helmet_Combat.obj")
 
-    # 2. REX Tactical Assault Vest (Heavy plate carrier with triple mag pouches)
+    # 2. REX Tactical Assault Vest (Heavy plate carrier with triple mag pouches & radio)
     m = ObjMeshBuilder("REX_Vest_TacticalAssault")
-    # Front chest plate
-    m.add_box(0.0, 0.0, 0.11, 0.34, 0.40, 0.10)
+    # Front ESAPI chest plate
+    m.add_box(0.0, 0.0, 0.12, 0.32, 0.38, 0.08)
     # Back armor plate
-    m.add_box(0.0, 0.0, -0.11, 0.34, 0.40, 0.10)
-    # Side cummerbund straps
-    m.add_box(0.18, -0.04, 0.0, 0.06, 0.24, 0.24)
-    m.add_box(-0.18, -0.04, 0.0, 0.06, 0.24, 0.24)
-    # Triple magazine pouches (front)
-    m.add_box(-0.09, -0.10, 0.17, 0.07, 0.16, 0.06)
-    m.add_box(0.0, -0.10, 0.17, 0.07, 0.16, 0.06)
-    m.add_box(0.09, -0.10, 0.17, 0.07, 0.16, 0.06)
-    # Tactical radio with antenna (left chest)
-    m.add_box(-0.14, 0.12, 0.15, 0.06, 0.12, 0.05)
-    m.add_cylinder(-0.14, 0.24, 0.15, 0.008, 0.16, segments=6, axis='y')
+    m.add_box(0.0, 0.0, -0.12, 0.32, 0.38, 0.08)
+    # Padded shoulder straps
+    m.add_box(-0.13, 0.20, 0.0, 0.08, 0.05, 0.24)
+    m.add_box(0.13, 0.20, 0.0, 0.08, 0.05, 0.24)
+    # Cummerbund side straps
+    m.add_box(0.17, -0.04, 0.0, 0.04, 0.22, 0.22)
+    m.add_box(-0.17, -0.04, 0.0, 0.04, 0.22, 0.22)
+    # Triple magazine pouches (front chest)
+    m.add_box(-0.09, -0.08, 0.17, 0.065, 0.15, 0.05)
+    m.add_box(0.0, -0.08, 0.17, 0.065, 0.15, 0.05)
+    m.add_box(0.09, -0.08, 0.17, 0.065, 0.15, 0.05)
+    # MOLLE webbing ribs across front
+    m.add_box(0.0, 0.06, 0.165, 0.28, 0.02, 0.015)
+    m.add_box(0.0, 0.01, 0.165, 0.28, 0.02, 0.015)
+    # Tactical radio with antenna (left upper chest)
+    m.add_box(-0.13, 0.10, 0.15, 0.055, 0.12, 0.045)
+    m.add_cylinder(-0.13, 0.22, 0.15, 0.007, 0.14, segments=6, axis='y')
     m.write_obj(f"{CHARACTERS_ROOT}/Operators/REX/Meshes/REX_Vest_TacticalAssault.obj")
 
-    # 3. REX Armored Pauldrons (Left & Right shoulder armor plates)
+    # 3. REX Armored Pauldrons (Articulated assault shoulder plates)
     m = ObjMeshBuilder("REX_Pauldrons_Armored")
-    # Right shoulder plate
-    m.add_box(0.24, 0.0, 0.0, 0.12, 0.16, 0.16)
-    # Left shoulder plate
-    m.add_box(-0.24, 0.0, 0.0, 0.12, 0.16, 0.16)
+    # Right shoulder curved plate
+    m.add_box(0.24, 0.01, 0.0, 0.11, 0.16, 0.15)
+    m.add_box(0.26, -0.04, 0.0, 0.08, 0.10, 0.13)
+    # Left shoulder curved plate
+    m.add_box(-0.24, 0.01, 0.0, 0.11, 0.16, 0.15)
+    m.add_box(-0.26, -0.04, 0.0, 0.08, 0.10, 0.13)
     m.write_obj(f"{CHARACTERS_ROOT}/Operators/REX/Meshes/REX_Pauldrons_Armored.obj")
 
-    # 4. REX Assault Backpack (Rucksack with bedroll)
+    # 4. REX Assault Backpack (Rucksack with bedroll & side pods)
     m = ObjMeshBuilder("REX_Backpack_Assault")
     # Main rucksack body
-    m.add_box(0.0, 0.0, -0.16, 0.32, 0.42, 0.20)
-    # Top bedroll cylinder
-    m.add_cylinder(0.0, 0.24, -0.16, 0.08, 0.34, segments=10, axis='x')
-    # Left utility pouch
-    m.add_box(-0.18, -0.04, -0.16, 0.08, 0.22, 0.14)
-    # Right utility pouch
-    m.add_box(0.18, -0.04, -0.16, 0.08, 0.22, 0.14)
+    m.add_box(0.0, 0.0, -0.16, 0.30, 0.40, 0.18)
+    # Top roll / sleeping pad
+    m.add_cylinder(0.0, 0.23, -0.16, 0.065, 0.32, segments=12, axis='x')
+    # Left & right utility pods
+    m.add_box(-0.17, -0.04, -0.16, 0.07, 0.20, 0.13)
+    m.add_box(0.17, -0.04, -0.16, 0.07, 0.20, 0.13)
+    # Hydration tube guide
+    m.add_cylinder(0.08, 0.12, -0.08, 0.01, 0.16, segments=6, axis='y')
     m.write_obj(f"{CHARACTERS_ROOT}/Operators/REX/Meshes/REX_Backpack_Assault.obj")
 
     # 5. REX Drop-Leg Sidearm Holster
     m = ObjMeshBuilder("REX_Holster_Sidearm")
     # Thigh mounting plate
-    m.add_box(0.02, 0.0, 0.0, 0.04, 0.22, 0.14)
-    # Holster bucket
-    m.add_box(0.05, -0.02, 0.0, 0.06, 0.18, 0.10)
+    m.add_box(0.02, 0.0, 0.0, 0.035, 0.20, 0.13)
+    # Kydex retention bucket
+    m.add_box(0.05, -0.02, 0.0, 0.055, 0.16, 0.09)
+    # Dual leg straps with buckle
+    m.add_box(0.0, 0.06, 0.0, 0.04, 0.025, 0.16)
+    m.add_box(0.0, -0.06, 0.0, 0.04, 0.025, 0.16)
     m.write_obj(f"{CHARACTERS_ROOT}/Operators/REX/Meshes/REX_Holster_Sidearm.obj")
 
     # 6. REX First-Person Arms
     m = ObjMeshBuilder("FP_Arms_REX")
-    # Right forearm (heavy combat sleeve)
-    m.add_box(0.24, -0.18, 0.32, 0.10, 0.10, 0.36)
-    # Right gloved hand holding rifle grip
-    m.add_box(0.24, -0.16, 0.52, 0.09, 0.10, 0.12)
-    # Left forearm reaching forward for rifle handguard
-    m.add_box(-0.12, -0.22, 0.45, 0.10, 0.10, 0.32)
-    # Left hand supporting barrel
-    m.add_box(-0.06, -0.18, 0.62, 0.09, 0.09, 0.12)
+    # Right forearm (combat sleeve)
+    m.add_cylinder(0.24, -0.18, 0.34, 0.055, 0.34, segments=12, axis='z')
+    # Right tactical glove with carbon knuckle protector
+    m.add_box(0.24, -0.16, 0.52, 0.085, 0.08, 0.12)
+    m.add_box(0.24, -0.13, 0.52, 0.075, 0.025, 0.06) # Knuckle plate
+    # Left forearm reaching forward to support handguard
+    m.add_cylinder(-0.14, -0.22, 0.44, 0.052, 0.32, segments=12, axis='z')
+    # Left tactical glove
+    m.add_box(-0.08, -0.18, 0.60, 0.08, 0.08, 0.12)
+    m.add_box(-0.08, -0.15, 0.60, 0.07, 0.025, 0.06) # Knuckle plate
     m.write_obj(f"{CHARACTERS_ROOT}/Operators/REX/Meshes/FP_Arms_REX.obj")
 
 def generate_trace_equipment():
@@ -416,73 +406,64 @@ def generate_trace_equipment():
 
     # 1. TRACE Recon Comms Headset (Cap with comms & optical monocle)
     m = ObjMeshBuilder("TRACE_Headset_ReconComms")
-    # Low profile tactical cap
-    m.add_box(0.0, 0.08, -0.02, 0.24, 0.16, 0.28)
-    # Backward brim
-    m.add_box(0.0, 0.04, -0.18, 0.18, 0.03, 0.10)
+    m.add_cylinder(0.0, 0.06, 0.0, 0.13, 0.12, segments=16, axis='y')
+    # Backward cap brim
+    m.add_box(0.0, 0.02, -0.16, 0.16, 0.02, 0.08)
     # Headset ear cups
-    m.add_box(0.13, 0.02, -0.02, 0.04, 0.10, 0.10)
-    m.add_box(-0.13, 0.02, -0.02, 0.04, 0.10, 0.10)
+    m.add_cylinder(0.13, 0.01, -0.01, 0.04, 0.03, segments=10, axis='x')
+    m.add_cylinder(-0.13, 0.01, -0.01, 0.04, 0.03, segments=10, axis='x')
     # Boom mic arm curving around mouth
-    m.add_box(0.12, -0.06, 0.08, 0.02, 0.02, 0.14)
-    m.add_box(0.06, -0.06, 0.15, 0.08, 0.02, 0.02)
-    # Optical recon monocle over right eye
-    m.add_box(0.06, 0.04, 0.15, 0.05, 0.05, 0.06)
-    m.add_cylinder(0.06, 0.04, 0.18, 0.022, 0.03, segments=8, axis='z')
+    m.add_box(0.12, -0.06, 0.07, 0.015, 0.015, 0.12)
+    m.add_box(0.06, -0.06, 0.14, 0.07, 0.015, 0.02)
+    # Recon optical monocle over right eye
+    m.add_box(0.055, 0.03, 0.14, 0.045, 0.045, 0.05)
+    m.add_cylinder(0.055, 0.03, 0.17, 0.018, 0.025, segments=8, axis='z')
     m.write_obj(f"{CHARACTERS_ROOT}/Operators/TRACE/Meshes/TRACE_Headset_ReconComms.obj")
 
     # 2. TRACE Recon Chest Harness (Sleek chest rig with sensor unit)
     m = ObjMeshBuilder("TRACE_Harness_ReconChest")
-    # Center sensor pack housing
-    m.add_box(0.0, 0.02, 0.10, 0.22, 0.24, 0.08)
-    # Multi-spectrum sensor lenses on chest
-    m.add_cylinder(-0.05, 0.04, 0.14, 0.025, 0.02, segments=8, axis='z')
-    m.add_cylinder(0.05, 0.04, 0.14, 0.025, 0.02, segments=8, axis='z')
-    m.add_cylinder(0.0, -0.04, 0.14, 0.020, 0.02, segments=8, axis='z')
+    m.add_box(0.0, 0.02, 0.10, 0.22, 0.24, 0.07)
+    # Triple sensor lenses
+    m.add_cylinder(-0.05, 0.04, 0.14, 0.022, 0.02, segments=8, axis='z')
+    m.add_cylinder(0.05, 0.04, 0.14, 0.022, 0.02, segments=8, axis='z')
+    m.add_cylinder(0.0, -0.04, 0.14, 0.018, 0.02, segments=8, axis='z')
     # Cross webbing harness straps
-    m.add_box(0.12, 0.0, 0.08, 0.05, 0.32, 0.04)
-    m.add_box(-0.12, 0.0, 0.08, 0.05, 0.32, 0.04)
-    # Dual compact mag pouches
-    m.add_box(0.16, -0.08, 0.10, 0.06, 0.14, 0.06)
-    m.add_box(-0.16, -0.08, 0.10, 0.06, 0.14, 0.06)
+    m.add_box(0.11, 0.0, 0.08, 0.04, 0.30, 0.03)
+    m.add_box(-0.11, 0.0, 0.08, 0.04, 0.30, 0.03)
+    # Compact mag pouches
+    m.add_box(0.15, -0.06, 0.09, 0.05, 0.13, 0.05)
+    m.add_box(-0.15, -0.06, 0.09, 0.05, 0.13, 0.05)
     m.write_obj(f"{CHARACTERS_ROOT}/Operators/TRACE/Meshes/TRACE_Harness_ReconChest.obj")
 
     # 3. TRACE Recon Electronics Backpack (with whip antenna)
     m = ObjMeshBuilder("TRACE_Backpack_ReconComms")
-    # Compact telemetry pack
-    m.add_box(0.0, 0.04, -0.14, 0.26, 0.34, 0.14)
-    # Cooling heat-sink ribs
-    m.add_box(0.0, 0.04, -0.22, 0.20, 0.26, 0.04)
-    # High-gain whip antenna on right side extending up
-    m.add_cylinder(0.11, 0.20, -0.14, 0.016, 0.08, segments=8, axis='y')
-    m.add_cylinder(0.11, 0.48, -0.14, 0.006, 0.50, segments=6, axis='y')
+    m.add_box(0.0, 0.04, -0.14, 0.24, 0.32, 0.13)
+    # Heat sink fins
+    m.add_box(0.0, 0.04, -0.21, 0.18, 0.24, 0.03)
+    # Whip antenna
+    m.add_cylinder(0.10, 0.18, -0.14, 0.014, 0.07, segments=8, axis='y')
+    m.add_cylinder(0.10, 0.44, -0.14, 0.005, 0.46, segments=6, axis='y')
     m.write_obj(f"{CHARACTERS_ROOT}/Operators/TRACE/Meshes/TRACE_Backpack_ReconComms.obj")
 
     # 4. TRACE Thigh Utility & Sensor Probe Pouch
     m = ObjMeshBuilder("TRACE_Pouches_UtilityLeg")
-    # Left thigh utility pouch
-    m.add_box(-0.02, 0.0, 0.0, 0.04, 0.20, 0.12)
-    # Scanning probe cylinder in pouch
-    m.add_cylinder(-0.04, 0.04, 0.0, 0.02, 0.18, segments=8, axis='y')
+    m.add_box(-0.02, 0.0, 0.0, 0.035, 0.18, 0.11)
+    m.add_cylinder(-0.035, 0.03, 0.0, 0.016, 0.16, segments=8, axis='y')
     m.write_obj(f"{CHARACTERS_ROOT}/Operators/TRACE/Meshes/TRACE_Pouches_UtilityLeg.obj")
 
     # 5. TRACE Hip Holster
     m = ObjMeshBuilder("TRACE_Holster_Recon")
-    m.add_box(0.02, 0.0, 0.0, 0.04, 0.18, 0.10)
+    m.add_box(0.02, 0.0, 0.0, 0.035, 0.17, 0.09)
     m.write_obj(f"{CHARACTERS_ROOT}/Operators/TRACE/Meshes/TRACE_Holster_Recon.obj")
 
     # 6. TRACE First-Person Arms
     m = ObjMeshBuilder("FP_Arms_TRACE")
-    # Right forearm (streamlined sleeve with wrist terminal)
-    m.add_box(0.24, -0.18, 0.32, 0.09, 0.09, 0.36)
-    # Wrist terminal data pad on left forearm
-    m.add_box(-0.12, -0.16, 0.38, 0.07, 0.03, 0.12)
-    # Right gloved hand holding rifle grip
-    m.add_box(0.24, -0.16, 0.52, 0.08, 0.09, 0.12)
-    # Left forearm reaching forward
-    m.add_box(-0.12, -0.22, 0.45, 0.09, 0.09, 0.32)
-    # Left hand supporting barrel
-    m.add_box(-0.06, -0.18, 0.62, 0.08, 0.08, 0.12)
+    m.add_cylinder(0.24, -0.18, 0.34, 0.05, 0.34, segments=12, axis='z')
+    # Left wrist data-pad display
+    m.add_box(-0.12, -0.15, 0.38, 0.06, 0.025, 0.11)
+    m.add_box(0.24, -0.16, 0.52, 0.075, 0.08, 0.11)
+    m.add_cylinder(-0.14, -0.22, 0.44, 0.048, 0.32, segments=12, axis='z')
+    m.add_box(-0.08, -0.18, 0.60, 0.075, 0.075, 0.11)
     m.write_obj(f"{CHARACTERS_ROOT}/Operators/TRACE/Meshes/FP_Arms_TRACE.obj")
 
 def main():
@@ -490,7 +471,7 @@ def main():
     generate_character_textures()
     generate_rex_equipment()
     generate_trace_equipment()
-    print("\n>>> All Phase C Character Assets Generated Successfully! <<<")
+    print("\n>>> All Phase C.1 Character Assets Generated Successfully! <<<")
 
 if __name__ == "__main__":
     main()

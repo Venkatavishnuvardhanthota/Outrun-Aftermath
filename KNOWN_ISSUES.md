@@ -82,10 +82,17 @@
    - Standardized 9 modular equipment attachment sockets across both operator prefabs (`PF_Operator_REX`, `PF_Operator_TRACE`) and 12 modular 3D equipment models.
    - Integrated dual-perspective rendering in `OperatorVisualController.cs` (`FirstPersonPresentation` viewmodel arms vs `ThirdPersonPresentation` full body with `ShadowCastingMode.ShadowsOnly` local culling).
    - Validated across NGO dedicated server and client builds, verified with automated batchmode validator (`character_validation_report.json`), passing 23/23 E2E multiplayer stages with 0 errors.
-14. **Vehicle Articulation**:
+14. **Phase C.1 Complete: Character Quality and Animation Remediation**:
+   - **Humanoid Geometry Remediation**: Skinned mesh `SK_Humanoid_Operator.asset` upgraded from 18-box segmented mesh to continuous, seamless anatomical humanoid topology (974 vertices, 1,824 triangles, 25 bones, 4-bone smooth skinning weights) with seamless joint deformation and zero polygon detachment.
+   - **Procedural Model vs DCC Asset Boundary**: While the continuous humanoid mesh and 12 equipment models provide fully functional in-engine topology, valid deformation, and zero box-primitives, they remain procedurally synthesized geometry. Final AAA fidelity will require bespoke high-poly sculpts from external DCC packages (Blender/ZBrush/Marvelous Designer) with baked tangent normal maps.
+   - **Authentic Animation System**: Replaced static single-key placeholder curves with 13 authentic keyframed skeletal clips (24-39 curves each, 0 placeholders) across 2-layer Mecanim controller with upper-body combat mask.
+   - **Dynamic Zero-Allocation Weapon Socketing**: Dynamic parenting in `UpdateSocketedWeaponVisuals()` without duplicate allocations across rapid weapon switching.
+   - **Dual First/Third-Person Presentation**: High-detail viewmodel arms in FPS, `ShadowCastingMode.ShadowsOnly` local culling, `ShadowCastingMode.On` for TPS/remote.
+   - **Multiplayer Netcode Replication**: Owner-writable `NetworkVariable`s (`NetMoveSpeed`, `NetIsGrounded`, `NetIsCrouched`, `NetIsAiming`, `NetIsReloading`, `NetActiveSlot`) with remote proxy sync in `Update()`, `ClientTriggerHitReactionRpc()`, and weapon fired sync.
+15. **Vehicle Articulation**:
    - Vehicles utilize rigid compound hierarchies and arcade physics rather than fully articulated skeletal suspension meshes (scheduled for future vehicle visual upgrade phase).
-14. Voice chat vendor not selected; no voice chat in any build.
-15. Aim assist, mobile HUD, and touch controls are specified but unimplemented (Phase 8).
+16. Voice chat vendor not selected; no voice chat in any build.
+17. Aim assist, mobile HUD, and touch controls are specified but unimplemented (Phase 8).
 
 ## Systems
 
