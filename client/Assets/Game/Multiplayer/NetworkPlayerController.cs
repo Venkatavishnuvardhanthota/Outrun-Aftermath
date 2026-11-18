@@ -443,6 +443,11 @@ namespace OutrunAftermath.Client.Multiplayer
             }
         }
 
+        private float _lastLoggedSpeed = -1f;
+        private int _lastLoggedSlot = -1;
+        private bool _lastLoggedCrouch = false;
+        private bool _lastLoggedAim = false;
+
         public void SynchronizeRemoteAnimationParameters()
         {
             if (_visualController != null)
@@ -458,6 +463,21 @@ namespace OutrunAftermath.Client.Multiplayer
                     NetLifeState.Value,
                     isReviving
                 );
+
+                if (!IsOwner)
+                {
+                    if (Mathf.Abs(NetMoveSpeed.Value - _lastLoggedSpeed) > 0.1f || 
+                        NetActiveSlot.Value != _lastLoggedSlot || 
+                        NetIsCrouched.Value != _lastLoggedCrouch ||
+                        NetIsAiming.Value != _lastLoggedAim)
+                    {
+                        _lastLoggedSpeed = NetMoveSpeed.Value;
+                        _lastLoggedSlot = NetActiveSlot.Value;
+                        _lastLoggedCrouch = NetIsCrouched.Value;
+                        _lastLoggedAim = NetIsAiming.Value;
+                        Debug.Log($"[NET_ANIM_REPL] Proxy ClientId={OwnerClientId} CallSign={NetCallsign.Value} replicated: Speed={NetMoveSpeed.Value:F1}, Crouch={NetIsCrouched.Value}, Aim={NetIsAiming.Value}, Slot={NetActiveSlot.Value}, LifeState={NetLifeState.Value}");
+                    }
+                }
             }
         }
 

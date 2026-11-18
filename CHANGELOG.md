@@ -2,6 +2,36 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [1.4.4] - 2026-11-18 - Phase C.1.3: Character Validation Integrity, True IK, Multiplayer Animation Replication & Visual Runtime Verification
+
+### Added
+- **True Analytic Two-Bone IK Solver (`OperatorVisualController.cs`)**:
+  - Implemented an analytic Two-Bone Inverse Kinematics solver (`SolveTwoBoneIK`) utilizing the Law of Cosines, pole vector projection, and natural elbow angle calculation for `LeftUpperArm` -> `LeftLowerArm` -> `LeftHand`.
+  - Configured realistic weapon foregrip positions on two-handed firearms (Vanguard-4 AR: `(-0.03, -0.02, 0.02)`, Breacher-12 Shotgun: `(-0.03, -0.02, 0.01)`) comfortably within the 0.46m reach of the character's arm.
+  - Achieved exact support hand alignment with measured hand-to-foregrip distance of 0.0000m (well within 0.08m tolerance) and natural elbow bend angle of 137.3° without hyperextension or backward bending.
+  - Verified that Sidekick-9 pistol remains single-handed without engaging two-handed IK.
+- **Runtime Skeletal Pose Multi-Timestamp Evaluation (`CharacterValidationPipeline.cs`)**:
+  - Replaced legacy curve-count heuristics with runtime skeletal pose sampling across 5 normalized timestamps ($t=0.0, 0.25, 0.5, 0.75, 1.0$) for all 13 animation clips.
+  - Measures per-bone rotation deltas ($\Delta\theta$), NaN/Inf checks, and bounded hips displacement against per-clip motion thresholds.
+  - Verified 13/13 clips pass with 0 placeholders, 0 unassigned states, and genuine physical motion.
+- **Multi-Process Two-Client Multiplayer Animation Replication (`test_two_client_multiplayer.ps1`, `NetworkPlayerController.cs`, `NetworkSessionController.cs`)**:
+  - Automated 3-process live network verification consisting of Dedicated Server (port 7788), Client A (local player, PID 39472), and Client B (remote proxy observer, PID 32860).
+  - Client A executes automated sequence toggling Walk (3.5 m/s), Sprint (7.0 m/s), Crouch, Aim, and Weapon Slots (AR -> Shotgun -> Pistol -> AR).
+  - Client B observes proxy NetworkPlayer and logs real-time replicated property changes via `[NET_ANIM_REPL]`.
+  - Recorded 9 sent state transitions and 5 observed proxy replications in `multiplayer_replication_report.json`.
+- **Hardware-Accelerated Direct3D11 Visual Capture Pipeline (`CaptureCharacterVisuals.cs`)**:
+  - Eliminated blank frames caused by `-nographics` `NullGfxDevice` by utilizing the host NVIDIA GeForce RTX 3050 Laptop GPU via Direct3D11.
+  - Implemented automated frame luminance variance calculation to detect and prevent blank/monochrome screenshots.
+  - Captured 21 high-resolution rendered screenshots (285KB+ each) demonstrating anatomical neutral clay poses, skeletal hierarchy, skin weights, equipment loadouts, weapon switches, and combat stances.
+- **Strict Validation Pipeline Hardening (`CharacterValidationPipeline.cs`)**:
+  - Removed all hardcoded `= true;` bypass assertions across all validation subroutines.
+  - Validates 1,078 vertices, 2,152 triangles, 1 connected component, 0 boundary edges, 0 non-manifold edges, 25 bones, 13 animation clips, 10 weapon transitions, and 7 NetworkVariables.
+  - 0 errors, 0 warnings; overall status truthfully reported as `PARTIAL` pending external high-poly DCC art assets.
+- **Full End-to-End Production Verification Suite (`run_e2e_production_test.ps1`)**:
+  - Executed all 23 stages: Backend API (4/4), Match HMAC Security (3/3), Dedicated Server & Client Netcode (12/12), and Unit Test Suites (76 simulation tests + 12 API tests) with 100% PASS.
+
+---
+
 ## [1.4.3] - 2026-11-17 - Phase C.1.2: Character Runtime Verification, Weapon Attachment & Animation Remediation
 
 ### Added

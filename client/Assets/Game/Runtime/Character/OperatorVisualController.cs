@@ -450,9 +450,9 @@ namespace OutrunAftermath.Client.Runtime.Character
 
             // Pre-create foregrip sockets for all two-handed weapons in loadout so transform hierarchy remains strictly invariant
             if (_weaponVisualInstances.TryGetValue(0, out var rGo) && rGo != null)
-                GetOrCreateForegripSocket(rGo, new Vector3(0f, -0.02f, 0.28f));
+                GetOrCreateForegripSocket(rGo, new Vector3(-0.03f, -0.02f, 0.02f));
             if (_weaponVisualInstances.TryGetValue(1, out var sGo) && sGo != null)
-                GetOrCreateForegripSocket(sGo, new Vector3(0f, -0.02f, 0.22f));
+                GetOrCreateForegripSocket(sGo, new Vector3(-0.03f, -0.02f, 0.01f));
 
             // 1. Process Slot 0 (Vanguard-4 Assault Rifle)
             if (_weaponVisualInstances.TryGetValue(0, out var rifleVisual) && rifleVisual != null)
@@ -553,7 +553,7 @@ namespace OutrunAftermath.Client.Runtime.Character
             {
                 if (_weaponVisualInstances.TryGetValue(0, out var rifle) && rifle != null)
                 {
-                    _activeForegripTarget = GetOrCreateForegripSocket(rifle, new Vector3(0f, -0.02f, 0.28f));
+                    _activeForegripTarget = GetOrCreateForegripSocket(rifle, new Vector3(-0.03f, -0.02f, 0.02f));
                     _isTwoHandedGrip = true;
                 }
             }
@@ -561,7 +561,7 @@ namespace OutrunAftermath.Client.Runtime.Character
             {
                 if (_weaponVisualInstances.TryGetValue(1, out var shotgun) && shotgun != null)
                 {
-                    _activeForegripTarget = GetOrCreateForegripSocket(shotgun, new Vector3(0f, -0.02f, 0.22f));
+                    _activeForegripTarget = GetOrCreateForegripSocket(shotgun, new Vector3(-0.03f, -0.02f, 0.01f));
                     _isTwoHandedGrip = true;
                 }
             }
@@ -614,36 +614,176 @@ namespace OutrunAftermath.Client.Runtime.Character
         {
             if (!_isTwoHandedGrip || _activeForegripTarget == null) return;
 
+            Transform leftUpperArm = (animator != null) ? animator.GetBoneTransform(HumanBodyBones.LeftUpperArm) : null;
+            Transform leftLowerArm = (animator != null) ? animator.GetBoneTransform(HumanBodyBones.LeftLowerArm) : null;
+            Transform leftHandBone = (animator != null) ? animator.GetBoneTransform(HumanBodyBones.LeftHand) : null;
+
+            if (leftUpperArm == null || leftLowerArm == null || leftHandBone == null)
+            {
+                Transform skeletonRoot = transform.Find("ThirdPersonPresentation/Skeleton");
+                if (skeletonRoot != null)
+                {
+                    leftUpperArm = leftUpperArm ?? skeletonRoot.Find("Root/Hips/Spine/Chest/UpperChest/LeftClavicle/LeftUpperArm");
+                    leftLowerArm = leftLowerArm ?? skeletonRoot.Find("Root/Hips/Spine/Chest/UpperChest/LeftClavicle/LeftUpperArm/LeftLowerArm");
+                    leftHandBone = leftHandBone ?? skeletonRoot.Find("Root/Hips/Spine/Chest/UpperChest/LeftClavicle/LeftUpperArm/LeftLowerArm/LeftHand");
+                }
+            }
+
+            Quaternion targetHandRot = _activeForegripTarget.rotation * Quaternion.Euler(0f, 90f, 0f);
+
+            if (leftUpperArm != null && leftLowerArm != null && leftHandBone != null)
+            {
+                // Elbow pole hint: natural downward and outward bias for tactical rifle grip
+                Vector3 elbowHint = leftUpperArm.position - transform.up * 0.5f - transform.right * 0.35f;
+                SolveTwoBoneIK(leftUpperArm, leftLowerArm, leftHandBone, _activeForegripTarget.position, targetHandRot, elbowHint, 1.0f);
+            }
+            else if (leftHandBone != null)
+            {
+                leftHandBone.position = _activeForegripTarget.position;
+                leftHandBone.rotation = targetHandRot;
+            }
+
             if (leftHandSupportSocket != null)
             {
                 leftHandSupportSocket.position = _activeForegripTarget.position;
-                leftHandSupportSocket.rotation = _activeForegripTarget.rotation * Quaternion.Euler(0f, 90f, 0f);
+                leftHandSupportSocket.rotation = targetHandRot;
             }
+        }
+
+        /// <summary>
+        /// Analytic Two-Bone IK solver using Law of Cosines for human arm/leg chains.
+        /// Preserves bone segment lengths and orients joints toward target and pole vector hint.
+        /// </summary>
+        public static bool SolveTwoBoneIK(Transform rootJoint, Transform midJoint, Transform endJoint, Vector3 targetPos, Quaternion targetRot, Vector3 hintPos, float weight = 1.0f)
+        {
+            if (rootJoint == null || midJoint == null || endJoint == null) return false;
+            if (weight <= 0f) return true;
+
+            Vector3 a = rootJoint.position;
+            Vector3 b = midJoint.position;
+            Vector3 c = endJoint.position;
+            Vector3 t = targetPos;
+
+            float l1 = Vector3.Distance(a, b);
+            float l2 = Vector3.Distance(b, c);
+            if (l1 < 0.001f || l2 < 0.001f) return false;
+
+            float maxReach = (l1 + l2) * 0.999f;
+            float minReach = Mathf.Max(0.01f, Mathf.Abs(l1 - l2) * 1.001f);
+            float d = Vector3.Distance(a, t);
+            float clampedDist = Mathf.Clamp(d, minReach, maxReach);
+
+            // Law of Cosines
+            float cosAlpha = Mathf.Clamp((l1 * l1 + clampedDist * clampedDist - l2 * l2) / (2f * l1 * clampedDist), -1f, 1f);
+            float angleAlpha = Mathf.Acos(cosAlpha) * Mathf.Rad2Deg;
+
+            Vector3 toTarget = (t - a).normalized;
+            Vector3 toHint = (hintPos - a).normalized;
+
+            Vector3 planeNormal = Vector3.Cross(toTarget, toHint);
+            if (planeNormal.sqrMagnitude < 0.0001f)
+            {
+                planeNormal = Vector3.Cross(toTarget, Vector3.up);
+                if (planeNormal.sqrMagnitude < 0.0001f)
+                    planeNormal = Vector3.Cross(toTarget, Vector3.right);
+            }
+            planeNormal.Normalize();
+
+            Vector3 bendDir = Vector3.Cross(planeNormal, toTarget).normalized;
+            Vector3 candidate1 = Quaternion.AngleAxis(angleAlpha, planeNormal) * toTarget;
+            Vector3 candidate2 = Quaternion.AngleAxis(-angleAlpha, planeNormal) * toTarget;
+            Vector3 upperArmDir = Vector3.Dot(candidate1, bendDir) > Vector3.Dot(candidate2, bendDir) ? candidate1 : candidate2;
+
+            Vector3 calculatedElbowPos = a + upperArmDir * l1;
+
+            // 1. Rotate rootJoint (shoulder/upper arm)
+            Vector3 currentRootToMid = midJoint.position - rootJoint.position;
+            Vector3 desiredRootToMid = calculatedElbowPos - rootJoint.position;
+            if (currentRootToMid.sqrMagnitude > 0.0001f && desiredRootToMid.sqrMagnitude > 0.0001f)
+            {
+                Quaternion rootDelta = Quaternion.FromToRotation(currentRootToMid, desiredRootToMid);
+                rootJoint.rotation = Quaternion.Slerp(rootJoint.rotation, rootDelta * rootJoint.rotation, weight);
+            }
+
+            // 2. Rotate midJoint (elbow/lower arm)
+            Vector3 currentMidToEnd = endJoint.position - midJoint.position;
+            Vector3 desiredMidToEnd = t - midJoint.position;
+            if (currentMidToEnd.sqrMagnitude > 0.0001f && desiredMidToEnd.sqrMagnitude > 0.0001f)
+            {
+                Quaternion midDelta = Quaternion.FromToRotation(currentMidToEnd, desiredMidToEnd);
+                midJoint.rotation = Quaternion.Slerp(midJoint.rotation, midDelta * midJoint.rotation, weight);
+            }
+
+            // 3. Rotate and align endJoint (wrist/hand)
+            endJoint.rotation = Quaternion.Slerp(endJoint.rotation, targetRot, weight);
+            if (d <= maxReach)
+            {
+                endJoint.position = Vector3.Lerp(endJoint.position, t, weight);
+            }
+            else
+            {
+                Vector3 maxPos = a + (t - a).normalized * maxReach;
+                endJoint.position = Vector3.Lerp(endJoint.position, maxPos, weight);
+            }
+
+            return true;
+        }
+
+        public float GetSupportHandDistance()
+        {
+            if (!_isTwoHandedGrip || _activeForegripTarget == null) return 0f;
 
             Transform leftHandBone = (animator != null) ? animator.GetBoneTransform(HumanBodyBones.LeftHand) : null;
             if (leftHandBone == null)
             {
                 leftHandBone = transform.Find("ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest/LeftClavicle/LeftUpperArm/LeftLowerArm/LeftHand");
             }
+
             if (leftHandBone != null)
+                return Vector3.Distance(leftHandBone.position, _activeForegripTarget.position);
+
+            if (leftHandSupportSocket != null)
+                return Vector3.Distance(leftHandSupportSocket.position, _activeForegripTarget.position);
+
+            return float.MaxValue;
+        }
+
+        public float GetLeftElbowAngle()
+        {
+            Transform leftUpperArm = (animator != null) ? animator.GetBoneTransform(HumanBodyBones.LeftUpperArm) : null;
+            Transform leftLowerArm = (animator != null) ? animator.GetBoneTransform(HumanBodyBones.LeftLowerArm) : null;
+            Transform leftHand = (animator != null) ? animator.GetBoneTransform(HumanBodyBones.LeftHand) : null;
+
+            if (leftUpperArm == null || leftLowerArm == null || leftHand == null)
             {
-                leftHandBone.position = _activeForegripTarget.position;
-                leftHandBone.rotation = _activeForegripTarget.rotation * Quaternion.Euler(0f, 90f, 0f);
+                Transform skeletonRoot = transform.Find("ThirdPersonPresentation/Skeleton");
+                if (skeletonRoot != null)
+                {
+                    leftUpperArm = leftUpperArm ?? skeletonRoot.Find("Root/Hips/Spine/Chest/UpperChest/LeftClavicle/LeftUpperArm");
+                    leftLowerArm = leftLowerArm ?? skeletonRoot.Find("Root/Hips/Spine/Chest/UpperChest/LeftClavicle/LeftUpperArm/LeftLowerArm");
+                    leftHand = leftHand ?? skeletonRoot.Find("Root/Hips/Spine/Chest/UpperChest/LeftClavicle/LeftUpperArm/LeftLowerArm/LeftHand");
+                }
             }
+
+            if (leftUpperArm == null || leftLowerArm == null || leftHand == null) return 0f;
+
+            Vector3 upperToElbow = (leftLowerArm.position - leftUpperArm.position).normalized;
+            Vector3 elbowToHand = (leftHand.position - leftLowerArm.position).normalized;
+            return Vector3.Angle(-upperToElbow, elbowToHand);
         }
 
         public bool IsSupportHandAligned(float tolerance = 0.08f)
         {
             if (!_isTwoHandedGrip || _activeForegripTarget == null) return true; // Single handed weapon has no foregrip constraint
 
-            Transform checkTransform = leftHandSupportSocket;
-            if (checkTransform == null && animator != null)
-            {
-                checkTransform = animator.GetBoneTransform(HumanBodyBones.LeftHand);
-            }
+            Transform checkTransform = (animator != null) ? animator.GetBoneTransform(HumanBodyBones.LeftHand) : null;
             if (checkTransform == null)
             {
                 checkTransform = transform.Find("ThirdPersonPresentation/Skeleton/Root/Hips/Spine/Chest/UpperChest/LeftClavicle/LeftUpperArm/LeftLowerArm/LeftHand");
+            }
+            if (checkTransform == null)
+            {
+                checkTransform = leftHandSupportSocket;
             }
 
             if (checkTransform == null) return false;

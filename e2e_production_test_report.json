@@ -1,5 +1,5 @@
 ﻿{
-    "Timestamp":  "2026-11-17T14:44:57.0263643Z",
+    "Timestamp":  "2026-11-18T12:22:36.2641275Z",
     "TestSuite":  "OUTRUN: AFTERMATH End-to-End Production Verification Suite",
     "OverallStatus":  "PASS",
     "Summary":  {
@@ -15,8 +15,8 @@
                                               },
                               "Registration":  {
                                                    "Status":  "PASS",
-                                                   "UserId":  "544a46be-8f6f-4e54-be2e-6d95624f38bf",
-                                                   "Callsign":  "Alpha_9144aea8"
+                                                   "UserId":  "1c76cdf7-b850-4a56-98de-5ee98eabadca",
+                                                   "Callsign":  "Alpha_a3e75912"
                                                },
                               "JwtIssuance":  {
                                                   "Status":  "PASS",
@@ -24,20 +24,20 @@
                                               },
                               "ProfileRetrieval":  {
                                                        "Status":  "PASS",
-                                                       "Callsign":  "Alpha_9144aea8",
-                                                       "UserId":  "544a46be-8f6f-4e54-be2e-6d95624f38bf"
+                                                       "Callsign":  "Alpha_a3e75912",
+                                                       "UserId":  "1c76cdf7-b850-4a56-98de-5ee98eabadca"
                                                    },
                               "RoomCreation":  {
                                                    "Status":  "PASS",
-                                                   "RoomCode":  "SHULZL",
+                                                   "RoomCode":  "B4U8ZX",
                                                    "MapId":  "deadcity"
                                                }
                           },
     "Stage2_SecurityHmac":  {
                                 "HmacValidation":  {
                                                        "Status":  "PASS",
-                                                       "Signature":  "5c7535e85267eadd44942c1167c4a5aa73390ebc8fcb960aef3a72d1c1229b83",
-                                                       "MatchId":  "a9318cd6-2b67-4b2c-a473-159418cff890"
+                                                       "Signature":  "45402f7e910a72cfb15527f76657118bf77a3c1acd2705f28c90fd191d1f2e61",
+                                                       "MatchId":  "07bb7cae-dff6-4839-8f72-82fd9b19af67"
                                                    },
                                 "StatsPersistence":  {
                                                          "XP":  395,
@@ -65,13 +65,13 @@
                                                              },
                                    "Stage01_ServerSpawn":  {
                                                                "Status":  "PASS",
-                                                               "PID":  14792,
+                                                               "PID":  7316,
                                                                "Details":  "Server process active",
                                                                "Path":  "D:\\projects\\outrun-aftermath\\client\\Builds\\WindowsServer\\OutrunAftermath_Server.exe"
                                                            },
                                    "Stage04_ClientSpawn":  {
                                                                "Status":  "PASS",
-                                                               "PID":  30956,
+                                                               "PID":  4648,
                                                                "Details":  "Client process active",
                                                                "Path":  "D:\\projects\\outrun-aftermath\\client\\Builds\\WindowsClient\\OutrunAftermath_Client.exe"
                                                            },
@@ -80,10 +80,10 @@
                                                            "Details":  "Confirmed in server log"
                                                        },
                                    "Stage03_SocketListening":  {
-                                                                   "ServerPID":  14792,
-                                                                   "OwningPID":  14792,
+                                                                   "ServerPID":  7316,
+                                                                   "OwningPID":  7316,
                                                                    "Details":  "UDP socket bound and owned by dedicated server process",
-                                                                   "Evidence":  "UDP endpoint 0.0.0.0:7799 owned by Server PID 14792",
+                                                                   "Evidence":  "UDP endpoint 0.0.0.0:7799 owned by Server PID 7316",
                                                                    "Endpoint":  "0.0.0.0:7799",
                                                                    "Port":  7799,
                                                                    "Status":  "PASS"
@@ -165,11 +165,11 @@
                           },
     "ExecutionEnvironment":  {
                                  "ServerSpawnClientId":  1,
-                                 "ServerPID":  14792,
+                                 "ServerPID":  7316,
                                  "IdentityMatchConfirmed":  true,
                                  "ServerCallbackClientId":  1,
                                  "ServerBuildType":  "DedicatedServer",
-                                 "ClientPID":  30956,
+                                 "ClientPID":  4648,
                                  "ShotCorrelationId":  8801,
                                  "AssignedClientId":  1,
                                  "ClientExitCode":  0,

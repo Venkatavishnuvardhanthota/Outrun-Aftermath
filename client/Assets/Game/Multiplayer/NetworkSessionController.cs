@@ -36,6 +36,7 @@ namespace OutrunAftermath.Client.Multiplayer
         public int ActiveGameMode { get; private set; } = 0; // 0 = Ground, 1 = Convoy
         public bool IsSessionStarted { get; private set; }
         public bool AutoTestShootEnabled { get; private set; }
+        public bool AutoTestAnimEnabled { get; private set; }
         private float _autoQuitSeconds;
         public float AutoQuitSeconds => _autoQuitSeconds;
 
@@ -91,6 +92,10 @@ namespace OutrunAftermath.Client.Multiplayer
                 else if (arg.Equals("-autotest-shoot", StringComparison.OrdinalIgnoreCase))
                 {
                     AutoTestShootEnabled = true;
+                }
+                else if (arg.Equals("-autotest-anim", StringComparison.OrdinalIgnoreCase))
+                {
+                    AutoTestAnimEnabled = true;
                 }
                 else if (arg.Equals("-autoclose", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length && float.TryParse(args[++i], out float secs))
                 {
@@ -236,7 +241,7 @@ namespace OutrunAftermath.Client.Multiplayer
                 Debug.Log("[NetworkSession] Host initialized NGO NetworkManager successfully.");
                 Debug.Log($"[NetworkSession] Host active on UDP :{port}");
                 OnStatusUpdated?.Invoke($"HOST ACTIVE ON :{port}");
-                if (AutoTestShootEnabled) StartCoroutine(RunAutoTestCombatRoutine());
+                if (AutoTestShootEnabled || AutoTestAnimEnabled) StartCoroutine(RunAutoTestCombatRoutine());
             }
             else
             {
@@ -258,7 +263,7 @@ namespace OutrunAftermath.Client.Multiplayer
             {
                 Debug.Log("[NetworkSession] Client initialized NGO NetworkManager successfully.");
                 OnStatusUpdated?.Invoke($"CONNECTING TO {ip}:{port}...");
-                if (AutoTestShootEnabled) StartCoroutine(RunAutoTestCombatRoutine());
+                if (AutoTestShootEnabled || AutoTestAnimEnabled) StartCoroutine(RunAutoTestCombatRoutine());
             }
             else
             {
@@ -372,6 +377,49 @@ namespace OutrunAftermath.Client.Multiplayer
             int testShotCorrelationId = 8801;
             Debug.Log($"[NET_TEST] Sending test gameplay RPC FireWeaponRpc with ShotId={testShotCorrelationId} to server...");
             localPlayer.FireWeaponRpc(origin, dir, 0f, 0, testShotCorrelationId);
+
+            if (AutoTestAnimEnabled)
+            {
+                Debug.Log("[NET_ANIM] Executing automated animation state replication sequence...");
+                // Step 1: Walk
+                localPlayer.NetMoveSpeed.Value = 3.5f;
+                Debug.Log("[NET_ANIM] Local client set NetMoveSpeed=3.5 (Walk)");
+                yield return new WaitForSeconds(0.6f);
+
+                // Step 2: Sprint
+                localPlayer.NetMoveSpeed.Value = 7.0f;
+                Debug.Log("[NET_ANIM] Local client set NetMoveSpeed=7.0 (Sprint)");
+                yield return new WaitForSeconds(0.6f);
+
+                // Step 3: Crouch
+                localPlayer.NetMoveSpeed.Value = 0f;
+                localPlayer.NetIsCrouched.Value = true;
+                Debug.Log("[NET_ANIM] Local client set NetIsCrouched=true (Crouch)");
+                yield return new WaitForSeconds(0.6f);
+
+                // Step 4: Aim
+                localPlayer.NetIsAiming.Value = true;
+                Debug.Log("[NET_ANIM] Local client set NetIsAiming=true (Aim)");
+                yield return new WaitForSeconds(0.6f);
+
+                // Step 5: Weapon switch to Shotgun (slot 1)
+                localPlayer.NetActiveSlot.Value = 1;
+                Debug.Log("[NET_ANIM] Local client switched NetActiveSlot=1 (Shotgun)");
+                yield return new WaitForSeconds(0.6f);
+
+                // Step 6: Weapon switch to Pistol (slot 2)
+                localPlayer.NetActiveSlot.Value = 2;
+                Debug.Log("[NET_ANIM] Local client switched NetActiveSlot=2 (Pistol)");
+                yield return new WaitForSeconds(0.6f);
+
+                // Step 7: Weapon switch back to AR (slot 0)
+                localPlayer.NetActiveSlot.Value = 0;
+                localPlayer.NetIsAiming.Value = false;
+                localPlayer.NetIsCrouched.Value = false;
+                Debug.Log("[NET_ANIM] Local client reset to NetActiveSlot=0 (AR)");
+                yield return new WaitForSeconds(0.6f);
+                Debug.Log("[NET_ANIM] Automated animation replication sequence completed successfully.");
+            }
 
             if (enemyPlayer != null)
             {

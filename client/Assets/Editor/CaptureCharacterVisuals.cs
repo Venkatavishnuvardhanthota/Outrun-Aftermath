@@ -13,10 +13,15 @@ namespace OutrunAftermath.Client.Editor
     {
         private const string BrainArtifactsDir = @"C:\Users\vishn\.gemini\antigravity\brain\4dca56ca-91c2-47c5-bfb3-fb99b4b8a1c5";
 
-        [MenuItem("Outrun/Capture Character Visual Evidence (Phase C.1.1)")]
+        [MenuItem("Outrun/Capture Character Visual Evidence (Phase C.1.3)")]
         public static void CaptureAllEvidence()
         {
-            Debug.Log("[CaptureCharacterVisuals] Setting up calibrated capture studio...");
+            Debug.Log($"[CaptureCharacterVisuals] Setting up calibrated capture studio... Device: {SystemInfo.graphicsDeviceType}, Name: {SystemInfo.graphicsDeviceName}, Vendor: {SystemInfo.graphicsDeviceVendor}");
+
+            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
+            {
+                Debug.LogWarning("[CaptureCharacterVisuals] WARNING: Graphics device is Null (running under -nographics). Frame rendering produces blank buffers in batchmode. Run Unity batchmode with graphics to enable hardware GPU rendering.");
+            }
 
             // Create temporary studio environment
             var studioGo = new GameObject("CaptureStudio");
@@ -539,8 +544,29 @@ namespace OutrunAftermath.Client.Editor
             RenderTexture.active = null;
             RenderTexture.ReleaseTemporary(rt);
 
+            // Sample center pixels to verify non-blank render
+            Color[] samples = tex.GetPixels(w / 4, h / 4, 100, 100);
+            float minLum = 1f, maxLum = 0f;
+            for (int i = 0; i < samples.Length; i++)
+            {
+                float lum = samples[i].grayscale;
+                if (lum < minLum) minLum = lum;
+                if (lum > maxLum) maxLum = lum;
+            }
+            float lumVariance = maxLum - minLum;
+
             byte[] bytes = tex.EncodeToPNG();
             UnityEngine.Object.DestroyImmediate(tex);
+
+            bool isBlank = (bytes.Length < 35000 && lumVariance < 0.02f);
+            if (isBlank)
+            {
+                Debug.LogWarning($"[CaptureCharacterVisuals] WARNING: Saved frame '{filename}' appears blank (size: {bytes.Length} bytes, lum delta: {lumVariance:F3}, Device: {SystemInfo.graphicsDeviceType})");
+            }
+            else
+            {
+                Debug.Log($"[CaptureCharacterVisuals] Rendered valid frame '{filename}' (size: {bytes.Length} bytes, lum delta: {lumVariance:F3})");
+            }
 
             // Determine root paths
             string projectDir = Directory.GetCurrentDirectory(); // d:\projects\outrun-aftermath\client

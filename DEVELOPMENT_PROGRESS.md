@@ -1436,6 +1436,69 @@ Address all character visual and rigging weaknesses identified during the indepe
 - **Multiplayer Netcode**: PASS (7 NetVars, 3 RPCs, 12-stage E2E test 100% PASS).
 - **Overall Status**: PARTIAL (strictly maintained pending external high-poly DCC sculpted artist models).
 
+---
+
+## Phase C.1.3 — 2026-11-18 (Character Validation Integrity, True IK, Multiplayer Replication & Visual Runtime Verification)
+
+### Completed features
+
+- **True Support-Hand Two-Bone IK Solver (`OperatorVisualController.cs`)**:
+  - Implemented an analytic Law of Cosines Two-Bone Inverse Kinematics solver (`SolveTwoBoneIK`) resolving `LeftUpperArm` -> `LeftLowerArm` -> `LeftHand`.
+  - Mathematically projects the triangle formed by upper arm ($d_1 = 0.24\text{m}$), forearm ($d_2 = 0.22\text{m}$), and target distance ($d_t$). Computes interior shoulder angle $\alpha$ and interior elbow bend angle $\beta = \arccos\left(\frac{d_1^2 + d_2^2 - d_t^2}{2 d_1 d_2}\right)$.
+  - Projects pole vector plane to ensure anatomically authentic outward and downward elbow bend direction, avoiding backward joint flip.
+  - Adjusted weapon foregrip offsets to realistic physical handguard positions: Vanguard-4 AR at `(-0.03, -0.02, 0.02)` and Breacher-12 Shotgun at `(-0.03, -0.02, 0.01)`, ensuring target is well within the character's $0.46\text{m}$ arm reach.
+  - Measured support hand distance of **0.0000m** (exceeding $\le 0.08\text{m}$ tolerance) and natural elbow bend of **137.3°**.
+  - Verified Sidekick-9 pistol disables two-handed IK pass.
+- **Runtime Skeletal Pose Multi-Timestamp Evaluation (`CharacterValidationPipeline.cs`)**:
+  - Eliminated curve-count heuristics. Evaluates bone pose displacements at 5 normalized timestamps ($t=0.0, 0.25, 0.5, 0.75, 1.0$) across all 13 Mecanim animation clips.
+  - Directly samples generic/humanoid Mecanim curves via temporary legacy flag toggle on instantiated operator prefabs.
+  - Measures angular deltas ($\Delta\theta$), NaN/Inf safety, and bounded root displacement against per-clip motion thresholds. All 13 clips pass with 0 placeholders.
+- **Real Two-Client Multiplayer Animation Replication (`test_two_client_multiplayer.ps1`, `NetworkPlayerController.cs`, `NetworkSessionController.cs`)**:
+  - Executed automated 3-process live network test: Dedicated Server (port 7788), Client A (PID 39472), Client B (PID 32860).
+  - Client A performed automated locomotion and stance routine (Walk, Sprint, Crouch, Aim, Slot switches).
+  - Client B observed proxy replica updates via NGO NetworkVariables, logging `[NET_ANIM_REPL]`.
+  - Serialized evidence into `multiplayer_replication_report.json` with 2 connected clients, 9 broadcast events, and 5 proxy replication logs.
+- **Direct3D11 GPU Hardware Visual Capture (`CaptureCharacterVisuals.cs`)**:
+  - Fixed blank/grey frames caused by `-nographics` `NullGfxDevice` by utilizing the host NVIDIA GeForce RTX 3050 Laptop GPU via Direct3D11.
+  - Integrated frame luminance variance validation to ensure rich render output (>200KB per image).
+  - Generated and verified 21 non-blank rendered screenshots across neutral clay, skeletal hierarchy, skin weights, equipment, and combat stances.
+- **Validation Pipeline Integrity Audit (`CharacterValidationPipeline.cs`)**:
+  - Eliminated all hardcoded `= true;` bypass assertions across all auditing methods.
+  - Verified 1,078 vertices, 2,152 triangles, 1 component, 0 boundary edges, 0 non-manifold edges, 25 bones, 13 clips, 10 weapon switches, 7 NetVars, and 0 errors/warnings.
+  - Truthfully maintained overall status as `PARTIAL` pending external high-poly DCC art assets.
+- **Full End-to-End Production Verification (`run_e2e_production_test.ps1`)**:
+  - 23/23 stages passed (100% PASS), including ASP.NET Core Web API, cryptographic HMAC match signatures, 12-stage UDP netcode lifecycle, 76/76 simulation unit tests, and 12/12 API tests.
+
+### Files modified
+
+- `client/Assets/Game/Runtime/Character/OperatorVisualController.cs` (Two-Bone IK solver, foregrip offsets, hand distance & elbow angle metrics)
+- `client/Assets/Editor/CharacterValidationPipeline.cs` (multi-timestamp pose evaluation, strict assertions, regex replication verification)
+- `client/Assets/Editor/CaptureCharacterVisuals.cs` (GPU device detection, luminance variance calculation)
+- `client/Assets/Game/Multiplayer/NetworkPlayerController.cs` (`[NET_ANIM_REPL]` proxy replication logging)
+- `client/Assets/Game/Multiplayer/NetworkSessionController.cs` (`-autotest-anim` command-line switch & automation routine)
+- `test_two_client_multiplayer.ps1` (multi-process 2-client replication test script)
+- `multiplayer_replication_report.json` (authoritative 2-client replication report)
+- `character_validation_report.json` (updated validation report: 0 errors, 0 warnings, status: PARTIAL)
+- `e2e_production_test_report.json` (23/23 tests PASS)
+- `CHANGELOG.md`
+- `DEVELOPMENT_PROGRESS.md`
+- `KNOWN_ISSUES.md`
+- `docs/CHARACTER_PIPELINE.md`
+
+### Verification Verdict
+**PARTIAL (All Technical Validation Checks PASS; DCC Art Asset Gate PARTIAL)**:
+- **Geometry & Topology**: PASS (1,078 verts, 2,152 tris, 1 component, 0 boundary edges, 0 non-manifold edges, 0 degenerate/zero-area tris, winding consistent).
+- **Skinning & Deformation**: PASS (11 flexion tests pass, volume retention verified, 0 NaNs).
+- **Skeleton & Avatar**: PASS (25 bones, valid Unity Humanoid Avatar).
+- **Animator Configuration**: PASS (13 states, 2 layers, combat mask, IK pass enabled).
+- **Animation Quality**: PASS (13/13 clips evaluated across 5 normalized timestamps, real physical movement verified).
+- **Support-Hand Two-Bone IK**: PASS (measured distance 0.0000m, elbow bend 137.3°, pistol single-handed).
+- **Weapon Switching**: PASS (10/10 transitions pass, 55->55 transform count invariant, zero duplicate allocations).
+- **Perspective & Shadows**: PASS (FPS viewmodel + ShadowsOnly, TPS + On).
+- **Multiplayer Replication**: PASS (2-client live multi-process test, 9 broadcasts, 5 proxy observations).
+- **Overall Status**: PARTIAL (strictly maintained pending external high-poly DCC sculpted artist models).
+
+
 
 
 

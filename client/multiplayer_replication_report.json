@@ -1,0 +1,44 @@
+{
+    "Timestamp":  "2026-11-18T17:48:28.4997487+05:30",
+    "Phase":  "Phase C.1.3: Two-Client Multiplayer Animation Replication",
+    "ReplicationPassed":  true,
+    "Server":  {
+                   "PID":  32724,
+                   "Port":  7788,
+                   "ExitCode":  0,
+                   "ConnectedClientIds":  [
+                                              1,
+                                              2
+                                          ]
+               },
+    "ClientA":  {
+                    "PID":  39472,
+                    "Connected":  true,
+                    "ExitCode":  0,
+                    "StateTransitionsSent":  9,
+                    "Evidence":  [
+                                     "[NET_ANIM] Executing automated animation state replication sequence...",
+                                     "[NET_ANIM] Local client set NetMoveSpeed=3.5 (Walk)",
+                                     "[NET_ANIM] Local client set NetMoveSpeed=7.0 (Sprint)",
+                                     "[NET_ANIM] Local client set NetIsCrouched=true (Crouch)",
+                                     "[NET_ANIM] Local client set NetIsAiming=true (Aim)",
+                                     "[NET_ANIM] Local client switched NetActiveSlot=1 (Shotgun)",
+                                     "[NET_ANIM] Local client switched NetActiveSlot=2 (Pistol)",
+                                     "[NET_ANIM] Local client reset to NetActiveSlot=0 (AR)",
+                                     "[NET_ANIM] Automated animation replication sequence completed successfully."
+                                 ]
+                },
+    "ClientB":  {
+                    "PID":  32860,
+                    "Connected":  true,
+                    "ExitCode":  0,
+                    "ReplicationsObserved":  5,
+                    "Evidence":  [
+                                     "[NET_ANIM_REPL] Proxy ClientId=1 CallSign=OP-02 replicated: Speed=0.0, Crouch=False, Aim=False, Slot=0, LifeState=0",
+                                     "[NET_ANIM_REPL] Proxy ClientId=1 CallSign=SquadBravo_3696 replicated: Speed=7.0, Crouch=False, Aim=False, Slot=0, LifeState=0",
+                                     "[NET_ANIM_REPL] Proxy ClientId=1 CallSign=SquadBravo_3696 replicated: Speed=0.0, Crouch=False, Aim=False, Slot=0, LifeState=0",
+                                     "[NET_ANIM_REPL] Proxy ClientId=1 CallSign=SquadBravo_3696 replicated: Speed=0.0, Crouch=False, Aim=False, Slot=2, LifeState=0",
+                                     "[NET_ANIM_REPL] Proxy ClientId=1 CallSign=SquadBravo_3696 replicated: Speed=0.0, Crouch=False, Aim=False, Slot=0, LifeState=0"
+                                 ]
+                }
+}
