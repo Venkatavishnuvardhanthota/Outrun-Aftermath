@@ -584,26 +584,42 @@ namespace OutrunAftermath.Client.Runtime.Character
             return foregrip.transform;
         }
 
+        // ==============================================================================
+        // TWO-BONE INVERSE KINEMATICS & FOREGRIP SUPPORT-HAND ALIGNMENT
+        // ==============================================================================
+
+        [Serializable]
+        public struct TwoBoneIKResult
+        {
+            public bool success;
+            public float initialUpperArmLength;
+            public float finalUpperArmLength;
+            public float initialForearmLength;
+            public float finalForearmLength;
+            public float targetDistance;
+            public float achievedHandDistance;
+            public float residualError;
+            public float elbowAngle;
+            public bool isReachable;
+        }
+
+        public TwoBoneIKResult LastIKResult { get; private set; }
+
         private void OnAnimatorIK(int layerIndex)
         {
-            if (animator == null || !enableSupportHandIk) return;
-
-            if (_isTwoHandedGrip && _activeForegripTarget != null)
-            {
-                animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 1.0f);
-                animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 1.0f);
-                animator.SetIKPosition(AvatarIKGoal.LeftHand, _activeForegripTarget.position);
-                animator.SetIKRotation(AvatarIKGoal.LeftHand, _activeForegripTarget.rotation * Quaternion.Euler(0f, 90f, 0f));
-            }
-            else
-            {
-                animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 0.0f);
-                animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 0.0f);
-            }
+            // Authoritative IK ownership architecture:
+            // Mecanim's built-in SetIKPosition/SetIKRotation on AvatarIKGoal.LeftHand is intentionally bypassed.
+            // OperatorVisualController's custom analytic Two-Bone IK solver in LateUpdate() is the sole authoritative
+            // system responsible for left-hand foregrip placement across both first-person shadow casting and third-person
+            // rendering. Bypassing Mecanim IK prevents competing solvers from fighting over the same joint chain in the
+            // same frame, guarantees strict bone segment length preservation, and ensures deterministic alignment after
+            // all locomotion and combat blend layers evaluate.
         }
 
         private void LateUpdate()
         {
+            // Authoritative IK execution: runs post-Mecanim in LateUpdate to adapt the animated arm pose
+            // to the active weapon's physical foregrip socket without bone stretching or joint jitter.
             if (enableSupportHandIk && _isTwoHandedGrip && _activeForegripTarget != null)
             {
                 AlignSupportHandToForegrip();
@@ -635,7 +651,7 @@ namespace OutrunAftermath.Client.Runtime.Character
             {
                 // Elbow pole hint: natural downward and outward bias for tactical rifle grip
                 Vector3 elbowHint = leftUpperArm.position - transform.up * 0.5f - transform.right * 0.35f;
-                SolveTwoBoneIK(leftUpperArm, leftLowerArm, leftHandBone, _activeForegripTarget.position, targetHandRot, elbowHint, 1.0f);
+                LastIKResult = SolveTwoBoneIKDetailed(leftUpperArm, leftLowerArm, leftHandBone, _activeForegripTarget.position, targetHandRot, elbowHint, 1.0f);
             }
             else if (leftHandBone != null)
             {
@@ -652,81 +668,166 @@ namespace OutrunAftermath.Client.Runtime.Character
 
         /// <summary>
         /// Analytic Two-Bone IK solver using Law of Cosines for human arm/leg chains.
-        /// Preserves bone segment lengths and orients joints toward target and pole vector hint.
+        /// Preserves bone segment lengths strictly through pure joint rotations.
+        /// Does NOT distort the skeleton by directly translating the end joint.
         /// </summary>
         public static bool SolveTwoBoneIK(Transform rootJoint, Transform midJoint, Transform endJoint, Vector3 targetPos, Quaternion targetRot, Vector3 hintPos, float weight = 1.0f)
         {
-            if (rootJoint == null || midJoint == null || endJoint == null) return false;
-            if (weight <= 0f) return true;
+            var res = SolveTwoBoneIKDetailed(rootJoint, midJoint, endJoint, targetPos, targetRot, hintPos, weight);
+            return res.success;
+        }
+
+        /// <summary>
+        /// Comprehensive analytic Two-Bone IK solver returning full numerical metrics for verification.
+        /// Strict length preservation: finalUpperArmLength == initialUpperArmLength and finalForearmLength == initialForearmLength.
+        /// </summary>
+        public static TwoBoneIKResult SolveTwoBoneIKDetailed(Transform rootJoint, Transform midJoint, Transform endJoint, Vector3 targetPos, Quaternion targetRot, Vector3 hintPos, float weight = 1.0f)
+        {
+            var result = new TwoBoneIKResult();
+            if (rootJoint == null || midJoint == null || endJoint == null)
+            {
+                result.success = false;
+                return result;
+            }
 
             Vector3 a = rootJoint.position;
             Vector3 b = midJoint.position;
             Vector3 c = endJoint.position;
-            Vector3 t = targetPos;
 
             float l1 = Vector3.Distance(a, b);
             float l2 = Vector3.Distance(b, c);
-            if (l1 < 0.001f || l2 < 0.001f) return false;
+            result.initialUpperArmLength = l1;
+            result.initialForearmLength = l2;
 
-            float maxReach = (l1 + l2) * 0.999f;
-            float minReach = Mathf.Max(0.01f, Mathf.Abs(l1 - l2) * 1.001f);
-            float d = Vector3.Distance(a, t);
+            if (l1 < 0.001f || l2 < 0.001f)
+            {
+                result.success = false;
+                return result;
+            }
+
+            float d = Vector3.Distance(a, targetPos);
+            result.targetDistance = d;
+
+            // Strict reachability boundaries (with numerical stability epsilon)
+            float maxReach = (l1 + l2) * 0.9999f;
+            float minReach = Mathf.Max(0.001f, Mathf.Abs(l1 - l2) * 1.0001f);
+            result.isReachable = (d >= minReach && d <= maxReach);
+
             float clampedDist = Mathf.Clamp(d, minReach, maxReach);
+            result.residualError = Mathf.Abs(d - clampedDist);
 
-            // Law of Cosines
+            if (weight <= 0f)
+            {
+                result.success = true;
+                result.finalUpperArmLength = l1;
+                result.finalForearmLength = l2;
+                result.achievedHandDistance = Vector3.Distance(endJoint.position, targetPos);
+                Vector3 u0 = (a - b).normalized;
+                Vector3 v0 = (c - b).normalized;
+                result.elbowAngle = Vector3.Angle(u0, v0);
+                return result;
+            }
+
+            // Direction to target (with safe fallback for near-zero distance target)
+            Vector3 toTarget = (targetPos - a);
+            if (d < 0.0001f)
+            {
+                toTarget = rootJoint.forward;
+            }
+            else
+            {
+                toTarget = toTarget.normalized;
+            }
+
+            Vector3 clampedTargetPos = a + toTarget * clampedDist;
+
+            // Law of Cosines for shoulder angle alpha
             float cosAlpha = Mathf.Clamp((l1 * l1 + clampedDist * clampedDist - l2 * l2) / (2f * l1 * clampedDist), -1f, 1f);
             float angleAlpha = Mathf.Acos(cosAlpha) * Mathf.Rad2Deg;
 
-            Vector3 toTarget = (t - a).normalized;
-            Vector3 toHint = (hintPos - a).normalized;
+            // Law of Cosines for elbow interior angle beta
+            float cosBeta = Mathf.Clamp((l1 * l1 + l2 * l2 - clampedDist * clampedDist) / (2f * l1 * l2), -1f, 1f);
+            float angleBeta = Mathf.Acos(cosBeta) * Mathf.Rad2Deg;
+            result.elbowAngle = angleBeta;
+
+            // Determine bend plane using pole vector hint
+            Vector3 toHint = (hintPos - a);
+            if (toHint.sqrMagnitude < 0.0001f)
+            {
+                toHint = -rootJoint.up - rootJoint.right * 0.5f;
+            }
+            else
+            {
+                toHint = toHint.normalized;
+            }
 
             Vector3 planeNormal = Vector3.Cross(toTarget, toHint);
             if (planeNormal.sqrMagnitude < 0.0001f)
             {
-                planeNormal = Vector3.Cross(toTarget, Vector3.up);
+                planeNormal = Vector3.Cross(toTarget, rootJoint.up);
                 if (planeNormal.sqrMagnitude < 0.0001f)
-                    planeNormal = Vector3.Cross(toTarget, Vector3.right);
+                    planeNormal = Vector3.Cross(toTarget, rootJoint.right);
             }
             planeNormal.Normalize();
 
             Vector3 bendDir = Vector3.Cross(planeNormal, toTarget).normalized;
-            Vector3 candidate1 = Quaternion.AngleAxis(angleAlpha, planeNormal) * toTarget;
-            Vector3 candidate2 = Quaternion.AngleAxis(-angleAlpha, planeNormal) * toTarget;
+            if (Vector3.Dot(bendDir, toHint) < 0f)
+            {
+                bendDir = -bendDir;
+            }
+
+            // Calculate elbow position in bend plane
+            Vector3 candidate1 = (Quaternion.AngleAxis(angleAlpha, planeNormal) * toTarget).normalized;
+            Vector3 candidate2 = (Quaternion.AngleAxis(-angleAlpha, planeNormal) * toTarget).normalized;
             Vector3 upperArmDir = Vector3.Dot(candidate1, bendDir) > Vector3.Dot(candidate2, bendDir) ? candidate1 : candidate2;
 
-            Vector3 calculatedElbowPos = a + upperArmDir * l1;
+            Vector3 desiredElbowPos = a + upperArmDir * l1;
 
-            // 1. Rotate rootJoint (shoulder/upper arm)
-            Vector3 currentRootToMid = midJoint.position - rootJoint.position;
-            Vector3 desiredRootToMid = calculatedElbowPos - rootJoint.position;
-            if (currentRootToMid.sqrMagnitude > 0.0001f && desiredRootToMid.sqrMagnitude > 0.0001f)
+            // Record original rotations for smooth weighting
+            Quaternion origRootRot = rootJoint.rotation;
+            Quaternion origMidRot = midJoint.rotation;
+            Quaternion origEndRot = endJoint.rotation;
+
+            // 1. Rotate rootJoint so midJoint points towards desiredElbowPos
+            Vector3 currentRootToMid = (midJoint.position - a);
+            Vector3 desiredRootToMid = (desiredElbowPos - a);
+            if (currentRootToMid.sqrMagnitude > 0.00001f && desiredRootToMid.sqrMagnitude > 0.00001f)
             {
                 Quaternion rootDelta = Quaternion.FromToRotation(currentRootToMid, desiredRootToMid);
-                rootJoint.rotation = Quaternion.Slerp(rootJoint.rotation, rootDelta * rootJoint.rotation, weight);
+                rootJoint.rotation = rootDelta * rootJoint.rotation;
             }
 
-            // 2. Rotate midJoint (elbow/lower arm)
-            Vector3 currentMidToEnd = endJoint.position - midJoint.position;
-            Vector3 desiredMidToEnd = t - midJoint.position;
-            if (currentMidToEnd.sqrMagnitude > 0.0001f && desiredMidToEnd.sqrMagnitude > 0.0001f)
+            // 2. Rotate midJoint so endJoint points towards clampedTargetPos
+            Vector3 currentMidToEnd = (endJoint.position - midJoint.position);
+            Vector3 desiredMidToEnd = (clampedTargetPos - midJoint.position);
+            if (currentMidToEnd.sqrMagnitude > 0.00001f && desiredMidToEnd.sqrMagnitude > 0.00001f)
             {
                 Quaternion midDelta = Quaternion.FromToRotation(currentMidToEnd, desiredMidToEnd);
-                midJoint.rotation = Quaternion.Slerp(midJoint.rotation, midDelta * midJoint.rotation, weight);
+                midJoint.rotation = midDelta * midJoint.rotation;
             }
 
-            // 3. Rotate and align endJoint (wrist/hand)
-            endJoint.rotation = Quaternion.Slerp(endJoint.rotation, targetRot, weight);
-            if (d <= maxReach)
+            // Store full solved rotations
+            Quaternion solvedRootRot = rootJoint.rotation;
+            Quaternion solvedMidRot = midJoint.rotation;
+
+            // Blend with weight if weight < 1.0
+            if (weight < 1.0f)
             {
-                endJoint.position = Vector3.Lerp(endJoint.position, t, weight);
-            }
-            else
-            {
-                Vector3 maxPos = a + (t - a).normalized * maxReach;
-                endJoint.position = Vector3.Lerp(endJoint.position, maxPos, weight);
+                rootJoint.rotation = Quaternion.Slerp(origRootRot, solvedRootRot, weight);
+                midJoint.rotation = Quaternion.Slerp(origMidRot, solvedMidRot, weight);
             }
 
-            return true;
+            // 3. Rotate endJoint (wrist orientation) without moving its position
+            endJoint.rotation = Quaternion.Slerp(origEndRot, targetRot, weight);
+
+            // CRITICAL VERIFICATION: DO NOT set endJoint.position directly!
+            // Rigid joint rotations strictly preserve upper arm length and forearm length.
+            result.finalUpperArmLength = Vector3.Distance(rootJoint.position, midJoint.position);
+            result.finalForearmLength = Vector3.Distance(midJoint.position, endJoint.position);
+            result.achievedHandDistance = Vector3.Distance(endJoint.position, targetPos);
+            result.success = true;
+
+            return result;
         }
 
         public float GetSupportHandDistance()

@@ -196,12 +196,14 @@ namespace OutrunAftermath.Client.Editor
                 PositionCamera(cam, new Vector3(0.55f, 1.45f, -1.8f), new Vector3(0.15f, 1.35f, 2.0f));
                 CaptureFrame(cam, "screenshot_rex_thirdperson.png");
                 CaptureFrame(cam, "screenshot_rex_thirdperson_rifle.png");
+                CaptureFrame(cam, "rex_thirdperson_rifle.png");
 
                 // First-Person View (Viewmodel arms, hands on weapon, no clipping)
                 vc.ApplyPerspectiveMode(CameraPerspective.FirstPerson);
                 PositionCamera(cam, new Vector3(0f, 1.55f, 0.15f), new Vector3(0f, 1.55f, 3.0f));
                 CaptureFrame(cam, "screenshot_rex_firstperson.png");
                 CaptureFrame(cam, "screenshot_rex_firstperson_rifle.png");
+                CaptureFrame(cam, "rex_firstperson_rifle.png");
 
                 // Weapon Switching & Holster Views
                 vc.ApplyPerspectiveMode(CameraPerspective.ThirdPerson);
@@ -211,6 +213,7 @@ namespace OutrunAftermath.Client.Editor
                 PositionCamera(cam, new Vector3(0.75f, 1.25f, 1.8f), new Vector3(0f, 1.10f, 0f));
                 CaptureFrame(cam, "screenshot_rex_weapon_switch.png");
                 CaptureFrame(cam, "screenshot_rex_shotgun_equipped.png");
+                CaptureFrame(cam, "rex_shotgun_grip.png");
 
                 // Rifle Holstered Close-up (Rear view of rifle slung on back)
                 PositionCamera(cam, new Vector3(-0.35f, 1.35f, -1.2f), new Vector3(-0.05f, 1.25f, 0f));
@@ -220,6 +223,7 @@ namespace OutrunAftermath.Client.Editor
                 vc.SetActiveSlotIndex(2); // Sidekick-9 Pistol
                 PositionCamera(cam, new Vector3(0.65f, 1.20f, 1.6f), new Vector3(0f, 1.10f, 0f));
                 CaptureFrame(cam, "screenshot_rex_pistol_equipped.png");
+                CaptureFrame(cam, "rex_pistol_grip.png");
 
                 // Shotgun Holstered Close-up (Rear view with shotgun on back)
                 PositionCamera(cam, new Vector3(0.35f, 1.35f, -1.2f), new Vector3(0.05f, 1.25f, 0f));
@@ -235,6 +239,12 @@ namespace OutrunAftermath.Client.Editor
                 // Support Hand Foregrip Grip Close-up (Left hand on rifle foregrip)
                 PositionCamera(cam, new Vector3(0.25f, 1.22f, 0.85f), new Vector3(0.08f, 1.18f, 0.25f));
                 CaptureFrame(cam, "screenshot_rex_support_hand_grip.png");
+
+                PositionCamera(cam, new Vector3(0.55f, 1.25f, 0.45f), new Vector3(0.08f, 1.18f, 0.25f));
+                CaptureFrame(cam, "rex_support_hand_ik_side.png");
+
+                PositionCamera(cam, new Vector3(-0.45f, 1.25f, 0.55f), new Vector3(-0.25f, 1.20f, 0.15f));
+                CaptureFrame(cam, "rex_ik_elbow_bend_closeup.png");
 
                 // Detailed Equipment Close-Ups
                 PositionCamera(cam, new Vector3(0.15f, 1.62f, 0.95f), new Vector3(0f, 1.60f, 0f));
@@ -270,11 +280,17 @@ namespace OutrunAftermath.Client.Editor
                 SampleClip(rex, $"{animDir}/Operator_Walk.anim", 0.45f);
                 PositionCamera(cam, new Vector3(1.6f, 1.15f, 1.8f), new Vector3(0f, 1.0f, 0f));
                 CaptureFrame(cam, "screenshot_rex_walk.png");
+                CaptureFrame(cam, "rex_walk_pose.png");
 
                 // 16. Run Cycle (Athletic forward lean, arm swing, knee drive)
                 SampleClip(rex, $"{animDir}/Operator_Run.anim", 0.35f);
                 PositionCamera(cam, new Vector3(1.8f, 1.15f, 1.6f), new Vector3(0f, 1.0f, 0f));
                 CaptureFrame(cam, "screenshot_rex_run.png");
+
+                // 16b. Sprint Pose
+                SampleClip(rex, $"{animDir}/Operator_Sprint.anim", 0.35f);
+                PositionCamera(cam, new Vector3(1.8f, 1.15f, 1.6f), new Vector3(0f, 1.0f, 0f));
+                CaptureFrame(cam, "rex_sprint_pose.png");
 
                 // 17. Crouch Pose (Low center of gravity, knee bend, compact tactical profile)
                 SampleClip(rex, $"{animDir}/Operator_Crouch.anim", 0.5f);
@@ -291,6 +307,7 @@ namespace OutrunAftermath.Client.Editor
                 SampleClip(rex, $"{animDir}/Operator_Reload.anim", 1.20f);
                 PositionCamera(cam, new Vector3(0.65f, 1.30f, 1.6f), new Vector3(0f, 1.20f, 0f));
                 CaptureFrame(cam, "screenshot_rex_reload.png");
+                CaptureFrame(cam, "rex_reload_pose.png");
 
                 // 20. Hit Reaction State (Upper torso twist, head snap, shoulder flinch)
                 SampleClip(rex, $"{animDir}/Operator_HitReaction.anim", 0.12f);
@@ -302,16 +319,19 @@ namespace OutrunAftermath.Client.Editor
                 PositionCamera(cam, new Vector3(1.3f, 0.95f, 1.5f), new Vector3(0f, 0.35f, 0f));
                 CaptureFrame(cam, "screenshot_rex_downed_death.png");
                 CaptureFrame(cam, "screenshot_rex_downed.png");
+                CaptureFrame(cam, "rex_downed_pose.png");
 
                 // 22. Revive State (Push-up ascent from downed posture)
                 SampleClip(rex, $"{animDir}/Operator_Revive.anim", 0.5f);
                 PositionCamera(cam, new Vector3(1.1f, 0.85f, 1.5f), new Vector3(0f, 0.45f, 0f));
                 CaptureFrame(cam, "screenshot_rex_revive.png");
+                CaptureFrame(cam, "rex_revive_pose.png");
 
                 // 23. Death State (Full ground collapse)
                 SampleClip(rex, $"{animDir}/Operator_Death.anim", 1.2f);
                 PositionCamera(cam, new Vector3(1.4f, 0.90f, 1.4f), new Vector3(0f, 0.25f, 0f));
                 CaptureFrame(cam, "screenshot_rex_death.png");
+                CaptureFrame(cam, "rex_death_pose.png");
 
                 // Reset pose
                 SampleClip(rex, $"{animDir}/Operator_Idle.anim", 0f);
@@ -344,8 +364,32 @@ namespace OutrunAftermath.Client.Editor
                 PositionCamera(cam, new Vector3(0f, 1.55f, 0f), proxyGo.transform.position + Vector3.up * 1.3f);
                 CaptureFrame(cam, "screenshot_rex_multiplayer_proxy.png");
                 CaptureFrame(cam, "screenshot_rex_remote_multiplayer.png");
+                CaptureFrame(cam, "rex_remote_player_replication.png");
 
                 UnityEngine.Object.DestroyImmediate(proxyGo);
+
+                // 25. TRACE Third-Person Presentation (Recon Operator with scout rig, sensor visor, and combat camo)
+                string tracePrefabPath = "Assets/Art/Characters/Operators/TRACE/Prefabs/PF_Operator_TRACE.prefab";
+                var tracePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(tracePrefabPath);
+                if (tracePrefab != null)
+                {
+                    var traceGo = UnityEngine.Object.Instantiate(tracePrefab);
+                    traceGo.transform.position = Vector3.zero;
+                    traceGo.transform.rotation = Quaternion.identity;
+                    var traceVc = traceGo.GetComponent<OperatorVisualController>();
+                    if (traceVc != null)
+                    {
+                        traceVc.Initialize("trace", "Wraith", null, null, null, null, true);
+                        traceVc.DiscoverSocketsAndRenderers();
+                        traceVc.ApplyPerspectiveMode(CameraPerspective.ThirdPerson);
+                    }
+                    PositionCamera(cam, new Vector3(0.55f, 1.45f, -1.8f), new Vector3(0.15f, 1.35f, 2.0f));
+                    CaptureFrame(cam, "trace_thirdperson_presentation.png");
+                    CaptureFrame(cam, "screenshot_trace_thirdperson.png");
+                    UnityEngine.Object.DestroyImmediate(traceGo);
+                }
+
+                Debug.Log("[CaptureCharacterVisuals] All character screenshots successfully captured!");
 
                 Debug.Log("[CaptureCharacterVisuals] All character screenshots successfully captured!");
             }
@@ -574,6 +618,22 @@ namespace OutrunAftermath.Client.Editor
 
             string rootPath = Path.Combine(workspaceRoot, filename);
             string clientPath = Path.Combine(projectDir, filename);
+            string evidenceDir = Path.Combine(workspaceRoot, "docs", "evidence", "phase-c1.3.1");
+
+            try
+            {
+                if (!Directory.Exists(evidenceDir))
+                {
+                    Directory.CreateDirectory(evidenceDir);
+                }
+                string evidencePath = Path.Combine(evidenceDir, filename);
+                File.WriteAllBytes(evidencePath, bytes);
+                Debug.Log($"[CaptureCharacterVisuals] Saved evidence: {evidencePath}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[CaptureCharacterVisuals] Failed writing evidence: {ex.Message}");
+            }
 
             try
             {

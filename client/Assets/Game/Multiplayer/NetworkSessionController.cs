@@ -380,44 +380,98 @@ namespace OutrunAftermath.Client.Multiplayer
 
             if (AutoTestAnimEnabled)
             {
-                Debug.Log("[NET_ANIM] Executing automated animation state replication sequence...");
-                // Step 1: Walk
+                string runId = System.Guid.NewGuid().ToString("N").Substring(0, 8);
+                ulong ownerId = localPlayer.OwnerClientId;
+                Debug.Log($"[NET_ANIM] Executing automated animation state replication sequence... RunId={runId} ClientId={ownerId}");
+
+                int seq = 0;
+
+                // Scenario 1: Walk speed change
                 localPlayer.NetMoveSpeed.Value = 3.5f;
+                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=WalkSpeed Expected=3.5");
                 Debug.Log("[NET_ANIM] Local client set NetMoveSpeed=3.5 (Walk)");
-                yield return new WaitForSeconds(0.6f);
+                yield return new WaitForSeconds(0.4f);
 
-                // Step 2: Sprint
+                // Scenario 2: Run/sprint speed change
                 localPlayer.NetMoveSpeed.Value = 7.0f;
+                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=SprintSpeed Expected=7.0");
                 Debug.Log("[NET_ANIM] Local client set NetMoveSpeed=7.0 (Sprint)");
-                yield return new WaitForSeconds(0.6f);
+                yield return new WaitForSeconds(0.4f);
 
-                // Step 3: Crouch
+                // Scenario 3: Crouch enabled
                 localPlayer.NetMoveSpeed.Value = 0f;
                 localPlayer.NetIsCrouched.Value = true;
+                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=CrouchEnabled Expected=True");
                 Debug.Log("[NET_ANIM] Local client set NetIsCrouched=true (Crouch)");
-                yield return new WaitForSeconds(0.6f);
+                yield return new WaitForSeconds(0.4f);
 
-                // Step 4: Aim
-                localPlayer.NetIsAiming.Value = true;
-                Debug.Log("[NET_ANIM] Local client set NetIsAiming=true (Aim)");
-                yield return new WaitForSeconds(0.6f);
-
-                // Step 5: Weapon switch to Shotgun (slot 1)
-                localPlayer.NetActiveSlot.Value = 1;
-                Debug.Log("[NET_ANIM] Local client switched NetActiveSlot=1 (Shotgun)");
-                yield return new WaitForSeconds(0.6f);
-
-                // Step 6: Weapon switch to Pistol (slot 2)
-                localPlayer.NetActiveSlot.Value = 2;
-                Debug.Log("[NET_ANIM] Local client switched NetActiveSlot=2 (Pistol)");
-                yield return new WaitForSeconds(0.6f);
-
-                // Step 7: Weapon switch back to AR (slot 0)
-                localPlayer.NetActiveSlot.Value = 0;
-                localPlayer.NetIsAiming.Value = false;
+                // Scenario 4: Crouch disabled
                 localPlayer.NetIsCrouched.Value = false;
+                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=CrouchDisabled Expected=False");
+                Debug.Log("[NET_ANIM] Local client set NetIsCrouched=false (Crouch Disabled)");
+                yield return new WaitForSeconds(0.4f);
+
+                // Scenario 5: Aim enabled
+                localPlayer.NetIsAiming.Value = true;
+                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=AimEnabled Expected=True");
+                Debug.Log("[NET_ANIM] Local client set NetIsAiming=true (Aim)");
+                yield return new WaitForSeconds(0.4f);
+
+                // Scenario 6: Aim disabled
+                localPlayer.NetIsAiming.Value = false;
+                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=AimDisabled Expected=False");
+                Debug.Log("[NET_ANIM] Local client set NetIsAiming=false (Aim Disabled)");
+                yield return new WaitForSeconds(0.4f);
+
+                // Scenario 7: Weapon slot 1 (Shotgun)
+                localPlayer.NetActiveSlot.Value = 1;
+                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=WeaponSlot1 Expected=1");
+                Debug.Log("[NET_ANIM] Local client switched NetActiveSlot=1 (Shotgun)");
+                yield return new WaitForSeconds(0.4f);
+
+                // Scenario 8: Weapon slot 2 (Pistol)
+                localPlayer.NetActiveSlot.Value = 2;
+                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=WeaponSlot2 Expected=2");
+                Debug.Log("[NET_ANIM] Local client switched NetActiveSlot=2 (Pistol)");
+                yield return new WaitForSeconds(0.4f);
+
+                // Scenario 9: Weapon slot 0 (AR)
+                localPlayer.NetActiveSlot.Value = 0;
+                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=WeaponSlot0 Expected=0");
                 Debug.Log("[NET_ANIM] Local client reset to NetActiveSlot=0 (AR)");
-                yield return new WaitForSeconds(0.6f);
+                yield return new WaitForSeconds(0.4f);
+
+                // Scenario 10: Reload enabled
+                localPlayer.NetIsReloading.Value = true;
+                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=ReloadEnabled Expected=True");
+                Debug.Log("[NET_ANIM] Local client set NetIsReloading=true (Reload Enabled)");
+                yield return new WaitForSeconds(0.4f);
+
+                // Scenario 11: Reload disabled
+                localPlayer.NetIsReloading.Value = false;
+                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=ReloadDisabled Expected=False");
+                Debug.Log("[NET_ANIM] Local client set NetIsReloading=false (Reload Disabled)");
+                yield return new WaitForSeconds(0.4f);
+
+                // Scenario 12: Downed life state
+                localPlayer.NetLifeState.Value = (int)Runtime.Character.PlayerLifeState.Downed;
+                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=DownedState Expected=1");
+                Debug.Log("[NET_ANIM] Local client set NetLifeState=1 (Downed)");
+                yield return new WaitForSeconds(0.4f);
+
+                // Scenario 13: Revive state
+                localPlayer.NetLifeState.Value = (int)Runtime.Character.PlayerLifeState.BeingRevived;
+                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=ReviveState Expected=2");
+                Debug.Log("[NET_ANIM] Local client set NetLifeState=2 (BeingRevived)");
+                yield return new WaitForSeconds(0.4f);
+
+                // Scenario 14: Alive state after recovery
+                localPlayer.NetLifeState.Value = (int)Runtime.Character.PlayerLifeState.Alive;
+                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=AliveState Expected=0");
+                Debug.Log("[NET_ANIM] Local client set NetLifeState=0 (Alive)");
+                yield return new WaitForSeconds(0.4f);
+
+                Debug.Log($"[NET_ANIM_TEST_COMPLETE] RunId={runId} TotalSent={seq}");
                 Debug.Log("[NET_ANIM] Automated animation replication sequence completed successfully.");
             }
 

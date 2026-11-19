@@ -37,7 +37,7 @@ namespace OutrunAftermath.Client.Multiplayer
         public NetworkVariable<FixedString32Bytes> NetOperatorId = new NetworkVariable<FixedString32Bytes>("rex");
         public NetworkVariable<float> NetHealth = new NetworkVariable<float>(100f);
         public NetworkVariable<float> NetArmor = new NetworkVariable<float>(50f);
-        public NetworkVariable<int> NetLifeState = new NetworkVariable<int>((int)PlayerLifeState.Alive);
+        public NetworkVariable<int> NetLifeState = new NetworkVariable<int>((int)PlayerLifeState.Alive, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         public NetworkVariable<float> NetBleedOutRemaining = new NetworkVariable<float>(30f);
         public NetworkVariable<float> NetReviveProgress = new NetworkVariable<float>(0f);
         public NetworkVariable<int> NetKills = new NetworkVariable<int>(0);
@@ -447,6 +447,15 @@ namespace OutrunAftermath.Client.Multiplayer
         private int _lastLoggedSlot = -1;
         private bool _lastLoggedCrouch = false;
         private bool _lastLoggedAim = false;
+        private bool _lastLoggedReload = false;
+        private int _lastLoggedLifeState = -1;
+
+        private float _lastServerLoggedSpeed = -1f;
+        private int _lastServerLoggedSlot = -1;
+        private bool _lastServerLoggedCrouch = false;
+        private bool _lastServerLoggedAim = false;
+        private bool _lastServerLoggedReload = false;
+        private int _lastServerLoggedLifeState = -1;
 
         public void SynchronizeRemoteAnimationParameters()
         {
@@ -463,20 +472,109 @@ namespace OutrunAftermath.Client.Multiplayer
                     NetLifeState.Value,
                     isReviving
                 );
+            }
 
-                if (!IsOwner)
+            if (!IsOwner)
+            {
+                bool speedChanged = Mathf.Abs(NetMoveSpeed.Value - _lastLoggedSpeed) > 0.1f;
+                bool slotChanged = NetActiveSlot.Value != _lastLoggedSlot;
+                bool crouchChanged = NetIsCrouched.Value != _lastLoggedCrouch;
+                bool aimChanged = NetIsAiming.Value != _lastLoggedAim;
+                bool reloadChanged = NetIsReloading.Value != _lastLoggedReload;
+                bool lifeChanged = NetLifeState.Value != _lastLoggedLifeState;
+
+                if (speedChanged)
                 {
-                    if (Mathf.Abs(NetMoveSpeed.Value - _lastLoggedSpeed) > 0.1f || 
-                        NetActiveSlot.Value != _lastLoggedSlot || 
-                        NetIsCrouched.Value != _lastLoggedCrouch ||
-                        NetIsAiming.Value != _lastLoggedAim)
-                    {
-                        _lastLoggedSpeed = NetMoveSpeed.Value;
-                        _lastLoggedSlot = NetActiveSlot.Value;
-                        _lastLoggedCrouch = NetIsCrouched.Value;
-                        _lastLoggedAim = NetIsAiming.Value;
-                        Debug.Log($"[NET_ANIM_REPL] Proxy ClientId={OwnerClientId} CallSign={NetCallsign.Value} replicated: Speed={NetMoveSpeed.Value:F1}, Crouch={NetIsCrouched.Value}, Aim={NetIsAiming.Value}, Slot={NetActiveSlot.Value}, LifeState={NetLifeState.Value}");
-                    }
+                    _lastLoggedSpeed = NetMoveSpeed.Value;
+                    string sName = NetMoveSpeed.Value >= 6.0f ? "SprintSpeed" : (NetMoveSpeed.Value >= 2.0f ? "WalkSpeed" : "IdleSpeed");
+                    string sVal = NetMoveSpeed.Value.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                    Debug.Log($"[NET_ANIM_RECV] TargetClientId={OwnerClientId} CallSign={NetCallsign.Value} State={sName} Value={sVal} Speed={NetMoveSpeed.Value:F1} Crouch={NetIsCrouched.Value} Aim={NetIsAiming.Value} Slot={NetActiveSlot.Value} Reload={NetIsReloading.Value} LifeState={NetLifeState.Value}");
+                }
+                if (crouchChanged)
+                {
+                    _lastLoggedCrouch = NetIsCrouched.Value;
+                    string sName = NetIsCrouched.Value ? "CrouchEnabled" : "CrouchDisabled";
+                    string sVal = NetIsCrouched.Value.ToString();
+                    Debug.Log($"[NET_ANIM_RECV] TargetClientId={OwnerClientId} CallSign={NetCallsign.Value} State={sName} Value={sVal} Speed={NetMoveSpeed.Value:F1} Crouch={NetIsCrouched.Value} Aim={NetIsAiming.Value} Slot={NetActiveSlot.Value} Reload={NetIsReloading.Value} LifeState={NetLifeState.Value}");
+                }
+                if (aimChanged)
+                {
+                    _lastLoggedAim = NetIsAiming.Value;
+                    string sName = NetIsAiming.Value ? "AimEnabled" : "AimDisabled";
+                    string sVal = NetIsAiming.Value.ToString();
+                    Debug.Log($"[NET_ANIM_RECV] TargetClientId={OwnerClientId} CallSign={NetCallsign.Value} State={sName} Value={sVal} Speed={NetMoveSpeed.Value:F1} Crouch={NetIsCrouched.Value} Aim={NetIsAiming.Value} Slot={NetActiveSlot.Value} Reload={NetIsReloading.Value} LifeState={NetLifeState.Value}");
+                }
+                if (slotChanged)
+                {
+                    _lastLoggedSlot = NetActiveSlot.Value;
+                    string sName = $"WeaponSlot{NetActiveSlot.Value}";
+                    string sVal = NetActiveSlot.Value.ToString();
+                    Debug.Log($"[NET_ANIM_RECV] TargetClientId={OwnerClientId} CallSign={NetCallsign.Value} State={sName} Value={sVal} Speed={NetMoveSpeed.Value:F1} Crouch={NetIsCrouched.Value} Aim={NetIsAiming.Value} Slot={NetActiveSlot.Value} Reload={NetIsReloading.Value} LifeState={NetLifeState.Value}");
+                }
+                if (reloadChanged)
+                {
+                    _lastLoggedReload = NetIsReloading.Value;
+                    string sName = NetIsReloading.Value ? "ReloadEnabled" : "ReloadDisabled";
+                    string sVal = NetIsReloading.Value.ToString();
+                    Debug.Log($"[NET_ANIM_RECV] TargetClientId={OwnerClientId} CallSign={NetCallsign.Value} State={sName} Value={sVal} Speed={NetMoveSpeed.Value:F1} Crouch={NetIsCrouched.Value} Aim={NetIsAiming.Value} Slot={NetActiveSlot.Value} Reload={NetIsReloading.Value} LifeState={NetLifeState.Value}");
+                }
+                if (lifeChanged)
+                {
+                    _lastLoggedLifeState = NetLifeState.Value;
+                    string sName = NetLifeState.Value == 1 ? "DownedState" : (NetLifeState.Value == 2 ? "ReviveState" : (NetLifeState.Value == 3 ? "DeathState" : "AliveState"));
+                    string sVal = NetLifeState.Value.ToString();
+                    Debug.Log($"[NET_ANIM_RECV] TargetClientId={OwnerClientId} CallSign={NetCallsign.Value} State={sName} Value={sVal} Speed={NetMoveSpeed.Value:F1} Crouch={NetIsCrouched.Value} Aim={NetIsAiming.Value} Slot={NetActiveSlot.Value} Reload={NetIsReloading.Value} LifeState={NetLifeState.Value}");
+                }
+                if (speedChanged || slotChanged || crouchChanged || aimChanged || reloadChanged || lifeChanged)
+                {
+                    Debug.Log($"[NET_ANIM_REPL] Proxy ClientId={OwnerClientId} CallSign={NetCallsign.Value} replicated: Speed={NetMoveSpeed.Value:F1}, Crouch={NetIsCrouched.Value}, Aim={NetIsAiming.Value}, Slot={NetActiveSlot.Value}, LifeState={NetLifeState.Value}");
+                }
+            }
+
+            if (IsServer && !IsOwner)
+            {
+                bool sSpeedChanged = Mathf.Abs(NetMoveSpeed.Value - _lastServerLoggedSpeed) > 0.1f;
+                bool sSlotChanged = NetActiveSlot.Value != _lastServerLoggedSlot;
+                bool sCrouchChanged = NetIsCrouched.Value != _lastServerLoggedCrouch;
+                bool sAimChanged = NetIsAiming.Value != _lastServerLoggedAim;
+                bool sReloadChanged = NetIsReloading.Value != _lastServerLoggedReload;
+                bool sLifeChanged = NetLifeState.Value != _lastServerLoggedLifeState;
+
+                if (sSpeedChanged)
+                {
+                    _lastServerLoggedSpeed = NetMoveSpeed.Value;
+                    string sName = NetMoveSpeed.Value >= 6.0f ? "SprintSpeed" : (NetMoveSpeed.Value >= 2.0f ? "WalkSpeed" : "IdleSpeed");
+                    Debug.Log($"[NET_ANIM_SERVER] ClientId={OwnerClientId} CallSign={NetCallsign.Value} State={sName} Speed={NetMoveSpeed.Value:F1} Crouch={NetIsCrouched.Value} Aim={NetIsAiming.Value} Slot={NetActiveSlot.Value} Reload={NetIsReloading.Value} LifeState={NetLifeState.Value}");
+                }
+                if (sCrouchChanged)
+                {
+                    _lastServerLoggedCrouch = NetIsCrouched.Value;
+                    string sName = NetIsCrouched.Value ? "CrouchEnabled" : "CrouchDisabled";
+                    Debug.Log($"[NET_ANIM_SERVER] ClientId={OwnerClientId} CallSign={NetCallsign.Value} State={sName} Speed={NetMoveSpeed.Value:F1} Crouch={NetIsCrouched.Value} Aim={NetIsAiming.Value} Slot={NetActiveSlot.Value} Reload={NetIsReloading.Value} LifeState={NetLifeState.Value}");
+                }
+                if (sAimChanged)
+                {
+                    _lastServerLoggedAim = NetIsAiming.Value;
+                    string sName = NetIsAiming.Value ? "AimEnabled" : "AimDisabled";
+                    Debug.Log($"[NET_ANIM_SERVER] ClientId={OwnerClientId} CallSign={NetCallsign.Value} State={sName} Speed={NetMoveSpeed.Value:F1} Crouch={NetIsCrouched.Value} Aim={NetIsAiming.Value} Slot={NetActiveSlot.Value} Reload={NetIsReloading.Value} LifeState={NetLifeState.Value}");
+                }
+                if (sSlotChanged)
+                {
+                    _lastServerLoggedSlot = NetActiveSlot.Value;
+                    string sName = $"WeaponSlot{NetActiveSlot.Value}";
+                    Debug.Log($"[NET_ANIM_SERVER] ClientId={OwnerClientId} CallSign={NetCallsign.Value} State={sName} Speed={NetMoveSpeed.Value:F1} Crouch={NetIsCrouched.Value} Aim={NetIsAiming.Value} Slot={NetActiveSlot.Value} Reload={NetIsReloading.Value} LifeState={NetLifeState.Value}");
+                }
+                if (sReloadChanged)
+                {
+                    _lastServerLoggedReload = NetIsReloading.Value;
+                    string sName = NetIsReloading.Value ? "ReloadEnabled" : "ReloadDisabled";
+                    Debug.Log($"[NET_ANIM_SERVER] ClientId={OwnerClientId} CallSign={NetCallsign.Value} State={sName} Speed={NetMoveSpeed.Value:F1} Crouch={NetIsCrouched.Value} Aim={NetIsAiming.Value} Slot={NetActiveSlot.Value} Reload={NetIsReloading.Value} LifeState={NetLifeState.Value}");
+                }
+                if (sLifeChanged)
+                {
+                    _lastServerLoggedLifeState = NetLifeState.Value;
+                    string sName = NetLifeState.Value == 1 ? "DownedState" : (NetLifeState.Value == 2 ? "ReviveState" : (NetLifeState.Value == 3 ? "DeathState" : "AliveState"));
+                    Debug.Log($"[NET_ANIM_SERVER] ClientId={OwnerClientId} CallSign={NetCallsign.Value} State={sName} Speed={NetMoveSpeed.Value:F1} Crouch={NetIsCrouched.Value} Aim={NetIsAiming.Value} Slot={NetActiveSlot.Value} Reload={NetIsReloading.Value} LifeState={NetLifeState.Value}");
                 }
             }
         }
@@ -539,20 +637,24 @@ namespace OutrunAftermath.Client.Multiplayer
             }
 
             // Phase C.1: Synchronize local player animation variables to remote proxies
-            if (_motor != null)
+            bool isAutomatedAnimTest = NetworkSessionController.Instance != null && NetworkSessionController.Instance.AutoTestAnimEnabled;
+            if (!isAutomatedAnimTest)
             {
-                NetMoveSpeed.Value = _motor.Velocity.magnitude;
-                NetIsGrounded.Value = _motor.IsGrounded;
-                NetIsCrouched.Value = (_motor.Stance == MovementStance.Crouching || _motor.Stance == MovementStance.Sliding);
-            }
-            if (_cameraRig != null)
-            {
-                NetIsAiming.Value = _cameraRig.IsAiming;
-            }
-            if (_weapons != null)
-            {
-                NetIsReloading.Value = _weapons.IsReloading;
-                NetActiveSlot.Value = _weapons.ActiveSlotIndex;
+                if (_motor != null)
+                {
+                    NetMoveSpeed.Value = _motor.Velocity.magnitude;
+                    NetIsGrounded.Value = _motor.IsGrounded;
+                    NetIsCrouched.Value = (_motor.Stance == MovementStance.Crouching || _motor.Stance == MovementStance.Sliding);
+                }
+                if (_cameraRig != null)
+                {
+                    NetIsAiming.Value = _cameraRig.IsAiming;
+                }
+                if (_weapons != null)
+                {
+                    NetIsReloading.Value = _weapons.IsReloading;
+                    NetActiveSlot.Value = _weapons.ActiveSlotIndex;
+                }
             }
 
             // Trigger Abilities

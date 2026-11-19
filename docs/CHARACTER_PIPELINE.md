@@ -217,17 +217,22 @@ All character assets must satisfy the rigorous standards enforced by `CharacterV
    - 0 placeholder single-key clips (recoil impulse on Fire, 7-phase magazine and bolt cycle on Reload).
    - Live Mecanim parameter and state transition evaluation verifies all 7 representative sequences (Locomotion, Stance, UpperBody Combat, Weapon Action, Damage Impact, Life State Downed/Revive, and Death terminal state).
    - UpperBody_Combat layer has `iKPass = true` and `Mask_UpperBody_Combat.mask`.
-5. **Equipment, Weapon Attachment & Analytic Two-Bone IK Solver Audit**:
+5. **Equipment, Weapon Attachment & Mathematically Pure Two-Bone IK Solver Audit**:
    - All 9 standard attachment sockets present and correctly positioned.
    - Weapon slot switching guarantees complete reparenting across all 3 loadout slots (active to `RightHandWeaponSocket`, inactive primary to `PrimaryWeaponHolster`, inactive secondary to `SecondaryWeaponHolster`).
    - 10 distinct weapon switching transitions verified with strict hierarchy invariance (transform count invariant at 55 with 0 duplicate allocations).
-   - Analytic Two-Bone IK solver (`SolveTwoBoneIK`) resolves `LeftUpperArm` -> `LeftLowerArm` -> `LeftHand` using the Law of Cosines and pole vector plane projection.
-   - Foregrips configured at physical handguard locations (AR: `(-0.03, -0.02, 0.02)`, Shotgun: `(-0.03, -0.02, 0.01)`), within the 0.46m reach of the character's arm.
-   - Verified support-hand distance of 0.0000m (well within $\le 0.08$m tolerance) and natural elbow bend angle of 137.3° without hyperextension or backward flips. Sidearm pistol verified single-handed.
-6. **Presentation Audit**:
+   - Mathematically pure Two-Bone IK solver (`SolveTwoBoneIKDetailed`) operates strictly via pure joint rotations on `rootJoint` (LeftUpperArm) and `midJoint` (LeftLowerArm). It never directly translates `endJoint.position`, strictly guaranteeing zero length delta ($|L_{\text{final}} - L_{\text{initial}}| < 0.0001\text{m}$).
+   - Validated across 16 formal test cases: reachability clamping ($[d_{\min}, d_{\max}]$), degenerate collinear pole vector fallbacks, 4 elbow hints (Down, Back, Up, Forward), weight blending ($0.0, 0.5, 1.0$), weapon socket alignment (AR Vanguard-4, Shotgun Trench-12), and single-handed Sidekick-9 pistol bypass.
+   - Verified support-hand distance of $0.0000\text{m}$ ($5.96 \times 10^{-8}\text{m}$), natural elbow angles ($137.3^\circ$ AR, $146.3^\circ$ Shotgun), and zero length alteration.
+6. **Rigorous Mesh Deformation & Volume Preservation Audit**:
+   - 11-joint deformation test measures real vertex displacement, bone segment length preservation ($< 0.000001\text{m}$ error), and exact signed tetrahedral mesh volume ($V = \frac{1}{6} |\sum \vec{v}_0 \cdot (\vec{v}_1 \times \vec{v}_2)|$).
+   - Evaluated across Shoulder Flexion, Elbow Flexion, Wrist Flexion, Hip Flexion, Knee Flexion, Ankle Dorsiflexion, Arms Raised, Forearms Rotated, Full Deep Lunge, Torso Twist, and Head Rotation.
+   - All 11 poses achieve volume retention tightly bounded between $98\%$ and $100\%$ ($80\% - 125\%$ tolerance) with continuous 2-manifold closed surface topology.
+7. **Presentation Audit**:
    - First-Person mode enables viewmodel arms and activates measured `ShadowCastingMode.ShadowsOnly` on body mesh.
    - Third-Person mode enables full body with measured `ShadowCastingMode.On`.
-7. **Netcode & Multiplayer Replication Audit**:
+8. **Netcode & Strict Correlated Two-Client Multiplayer Replication Audit**:
    - Authoritative synchronization supported across 7 NetworkVariables and 3 RPCs.
-   - Live multi-process 2-client replication verified across 3 separate OS processes (Dedicated Server, Client A, Client B) with 9 broadcast state events and 5 proxy observation logs (`[NET_ANIM_REPL]`), serialized into `multiplayer_replication_report.json`.
-   - Verified in 23-stage E2E production test suite with 100% PASS.
+   - Live multi-process 2-client replication verified across 3 separate OS processes (Dedicated Server, Client A, Client B).
+   - 100% correlation across all 14 mandatory animation replication scenarios (`WalkSpeed`, `SprintSpeed`, `CrouchEnabled`, `CrouchDisabled`, `AimEnabled`, `AimDisabled`, `WeaponSlot1`, `WeaponSlot2`, `WeaponSlot0`, `ReloadEnabled`, `ReloadDisabled`, `DownedState`, `ReviveState`, `AliveState`) with structured correlation logs (`[NET_ANIM_SEND]`, `[NET_ANIM_SERVER]`, `[NET_ANIM_RECV]`, `[NET_ANIM_REPL]`).
+   - Serialized into `multiplayer_replication_report.json` and verified in the 23-stage E2E production test suite with 100% PASS.
