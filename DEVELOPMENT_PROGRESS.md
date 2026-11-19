@@ -1611,6 +1611,44 @@ Address all character visual and rigging weaknesses identified during the indepe
 - **End-to-End Suite**: PASS (23/23 stages passed, 100% PASS).
 - **Overall Status**: PARTIAL (strictly maintained pending external high-poly DCC sculpted artist models).
 
+---
+
+## Phase C.1.3.3 — 2026-11-19 (production character art & visual acceptance)
+
+### Completed features
+- **Project Engineering Skills (`.agents/skills/`)**:
+  - `character-art-pipeline/SKILL.md`: Production standards for DCC modeling, anatomical proportions, retopology, zero-floating gear, and PBR texturing.
+  - `unity-character-integration/SKILL.md`: Unity Humanoid Avatar setup, 25-bone hierarchy, weapon sockets, and Two-Bone IK.
+  - `character-visual-qa/SKILL.md`: Visual inspection procedures, 3-point studio lighting, camera angles, defect checklist, and SHA-256 screenshot uniqueness gates.
+- **Root Cause Resolution for Floating Equipment (`CharacterAssetPipeline.cs`)**:
+  - Discovered that modular equipment Wavefront `.obj` files already contained pre-baked bone offset coordinates.
+  - Recalibrated all 9 equipment sockets and attachment offsets:
+    - Backpack: Grounded from $+10\,\text{cm}$ air gap to $Z = -0.045\,\text{m}$, resting flush on upper back.
+    - Sidearm Holster: Grounded from $+26\,\text{cm}$ mid-air hover to $X = -0.09\,\text{m}$, resting flush against right lateral thigh.
+    - TRACE Utility Pouches: Grounded from $+14\,\text{cm}$ gap to $X = +0.045\,\text{m}$, resting flush on left thigh.
+    - Helmet: Lowered to $Y = 0.01\,\text{m}$, contouring snugly over cranial crown.
+- **Dedicated Visual Acceptance Studio Scene (`Assets/Scenes/CharacterVisualAcceptance.unity`)**:
+  - Three-point studio lighting rig: Key Light ($5500\text{K}$, intensity $1.35$, URP soft shadows), Fill Light ($6500\text{K}$, intensity $0.55$), and Rim Light ($6000\text{K}$, intensity $0.45$).
+  - Ground floor plane with PBR material (`M_Studio_Floor.mat`) displaying soft contact shadows directly beneath boots and collapsed postures.
+  - Calibrated inspection camera rig and staged REX and TRACE operators.
+- **Cryptographic Screenshot Deduplication Pipeline (`CaptureCharacterVisuals.cs`)**:
+  - Generated 46 distinct 1920x1080 PBR visual evidence frames with 46 unique SHA-256 hashes (0% duplicate images).
+  - Output `docs/phase-c1.3.3/evidence/screenshot_manifest.json` indexing all captures with metadata, resolution, file sizes, and SHA-256 hashes.
+- **Audited Deliverables (`docs/phase-c1.3.3/`)**:
+  - `docs/phase-c1.3.3/README.md`
+  - `docs/phase-c1.3.3/PHASE_C1_3_3_VISUAL_ACCEPTANCE_REPORT.md`
+  - `docs/phase-c1.3.3/PHASE_C1_3_3_VALIDATION_REPORT.json`
+
+### Verification Verdict
+**PARTIAL (All Technical Validation Checks PASS; DCC Art Asset Gate PARTIAL)**:
+- Equipment attachment: PASS (All 9 sockets grounded, zero floating gear).
+- Weapon grips: PASS (Right-hand pistol grip aligned; support hand Two-Bone IK aligned with zero clipping).
+- Viewmodel: PASS (Dedicated FPS viewmodel arms at eye level $(0, 1.55, 0)\,\text{m}$ with full shadow casting).
+- Visual Test Scene: PASS (Created `Assets/Scenes/CharacterVisualAcceptance.unity`).
+- Screenshot Deduplication: PASS (46/46 unique SHA-256 hashes, 0 duplicates).
+- Overall Status: PARTIAL (strictly maintained because high-poly artist-sculpted DCC models are unavailable in the repo).
+
+
 
 
 

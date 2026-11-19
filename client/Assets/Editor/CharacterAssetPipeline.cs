@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.Animations;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 using OutrunAftermath.Client.Runtime.Character;
@@ -2042,22 +2043,25 @@ namespace OutrunAftermath.Client.Editor
                 smr.shadowCastingMode = ShadowCastingMode.On;
                 smr.receiveShadows = true;
 
-                // 5. Install Sockets on Skeleton Bones
+                // 5. Install Calibrated Sockets on Skeleton Bones (Phase C.1.3.3: Grounded Equipment)
                 Transform sockRHand = CreateSocket("RightHandWeaponSocket", bRHand, new Vector3(0.04f, -0.04f, 0.08f), Quaternion.identity);
                 Transform sockLHand = CreateSocket("LeftHandSupportSocket", bLHand, new Vector3(-0.04f, -0.02f, 0.06f), Quaternion.identity);
                 Transform sockHolsterPri = CreateSocket("PrimaryWeaponHolster", bChest, new Vector3(0.12f, 0.05f, -0.16f), Quaternion.Euler(15f, 35f, 160f));
-                Transform sockHolsterSec = CreateSocket("SecondaryWeaponHolster", bRThigh, new Vector3(0.14f, -0.06f, 0.02f), Quaternion.identity);
-                Transform sockBackpack = CreateSocket("BackpackSocket", bUpperChest, new Vector3(0f, 0.02f, -0.14f), Quaternion.identity);
-                Transform sockHelmet = CreateSocket("HelmetAttachmentSocket", bHead, new Vector3(0f, 0.04f, 0f), Quaternion.identity);
+                // Secondary holster on right thigh: calibrated so outer holster sits flush against lateral thigh surface
+                Transform sockHolsterSec = CreateSocket("SecondaryWeaponHolster", bRThigh, new Vector3(-0.09f, -0.06f, 0.02f), Quaternion.identity);
+                // Backpack socket on upper chest: calibrated so pack front pads firmly contact upper back
+                Transform sockBackpack = CreateSocket("BackpackSocket", bUpperChest, new Vector3(0f, 0.02f, -0.045f), Quaternion.identity);
+                // Helmet socket on head: calibrated so helmet crown and chinstrap sit snug on head
+                Transform sockHelmet = CreateSocket("HelmetAttachmentSocket", bHead, new Vector3(0f, 0.01f, 0f), Quaternion.identity);
                 Transform sockShoulderL = CreateSocket("ShoulderLeftSocket", bLClavicle, new Vector3(-0.08f, 0f, 0f), Quaternion.identity);
                 Transform sockShoulderR = CreateSocket("ShoulderRightSocket", bRClavicle, new Vector3(0.08f, 0f, 0f), Quaternion.identity);
                 Transform sockBelt = CreateSocket("UtilityBeltSocket", bHips, new Vector3(0f, -0.02f, 0f), Quaternion.identity);
 
-                // 6. Attach Modular Operator Equipment
+                // 6. Attach Modular Operator Equipment (Phase C.1.3.3: Zero Floating Equipment)
                 string opMeshesDir = $"Assets/Art/Characters/Operators/{opUpper}/Meshes";
                 if (opId == "rex")
                 {
-                    AttachMeshProp("REX_Helmet_Combat", $"{opMeshesDir}/REX_Helmet_Combat.obj", sockHelmet, matGear);
+                    AttachMeshProp("REX_Helmet_Combat", $"{opMeshesDir}/REX_Helmet_Combat.obj", sockHelmet, matGear, new Vector3(0f, -0.015f, 0f));
                     AttachMeshProp("REX_Vest_TacticalAssault", $"{opMeshesDir}/REX_Vest_TacticalAssault.obj", bChest, matGear);
                     AttachMeshProp("REX_Pauldrons_Armored", $"{opMeshesDir}/REX_Pauldrons_Armored.obj", bUpperChest, matGear);
                     AttachMeshProp("REX_Backpack_Assault", $"{opMeshesDir}/REX_Backpack_Assault.obj", sockBackpack, matGear);
@@ -2068,10 +2072,10 @@ namespace OutrunAftermath.Client.Editor
                 }
                 else
                 {
-                    AttachMeshProp("TRACE_Headset_ReconComms", $"{opMeshesDir}/TRACE_Headset_ReconComms.obj", sockHelmet, matGear);
+                    AttachMeshProp("TRACE_Headset_ReconComms", $"{opMeshesDir}/TRACE_Headset_ReconComms.obj", sockHelmet, matGear, new Vector3(0f, -0.015f, 0f));
                     AttachMeshProp("TRACE_Harness_ReconChest", $"{opMeshesDir}/TRACE_Harness_ReconChest.obj", bChest, matGear);
                     AttachMeshProp("TRACE_Backpack_ReconComms", $"{opMeshesDir}/TRACE_Backpack_ReconComms.obj", sockBackpack, matGear);
-                    AttachMeshProp("TRACE_Pouches_UtilityLeg", $"{opMeshesDir}/TRACE_Pouches_UtilityLeg.obj", bLThigh, matGear);
+                    AttachMeshProp("TRACE_Pouches_UtilityLeg", $"{opMeshesDir}/TRACE_Pouches_UtilityLeg.obj", bLThigh, matGear, new Vector3(0.045f, 0f, 0f));
                     AttachMeshProp("TRACE_Holster_Recon", $"{opMeshesDir}/TRACE_Holster_Recon.obj", sockHolsterSec, matGear);
 
                     // First Person Arms
@@ -2103,7 +2107,7 @@ namespace OutrunAftermath.Client.Editor
             return go.transform;
         }
 
-        private static void AttachMeshProp(string propName, string objPath, Transform parent, Material mat)
+        private static void AttachMeshProp(string propName, string objPath, Transform parent, Material mat, Vector3 localOffset = default, Quaternion localRot = default)
         {
             var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(objPath);
             if (mesh == null)
@@ -2127,8 +2131,8 @@ namespace OutrunAftermath.Client.Editor
 
             var go = new GameObject(propName);
             go.transform.SetParent(parent, false);
-            go.transform.localPosition = Vector3.zero;
-            go.transform.localRotation = Quaternion.identity;
+            go.transform.localPosition = localOffset;
+            go.transform.localRotation = (localRot == default) ? Quaternion.identity : localRot;
             go.transform.localScale = Vector3.one;
 
             var mf = go.AddComponent<MeshFilter>();
@@ -2138,6 +2142,117 @@ namespace OutrunAftermath.Client.Editor
             mr.sharedMaterial = mat;
             mr.shadowCastingMode = ShadowCastingMode.On;
             mr.receiveShadows = true;
+        }
+
+        // ==============================================================================
+        // PHASE C.1.3.3: DEDICATED VISUAL ACCEPTANCE SCENE CREATOR
+        // ==============================================================================
+
+        [MenuItem("Outrun/Create Visual Acceptance Scene (Phase C.1.3.3)")]
+        public static void CreateVisualAcceptanceScene()
+        {
+            Debug.Log("[CharacterAssetPipeline] Building dedicated visual acceptance scene...");
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            // 1. Studio Lighting Rig (3-Point Lighting with High-Quality Soft Shadows)
+            var studioRig = new GameObject("StudioLightingRig");
+
+            var keyGo = new GameObject("KeyLight_WarmDirectional");
+            keyGo.transform.SetParent(studioRig.transform);
+            keyGo.transform.rotation = Quaternion.Euler(45f, -30f, 0f);
+            var keyLight = keyGo.AddComponent<Light>();
+            keyLight.type = LightType.Directional;
+            keyLight.intensity = 1.35f;
+            keyLight.color = new Color(0.98f, 0.97f, 0.95f);
+            keyLight.shadows = LightShadows.Soft;
+            keyLight.shadowResolution = LightShadowResolution.VeryHigh;
+
+            var fillGo = new GameObject("FillLight_CoolDirectional");
+            fillGo.transform.SetParent(studioRig.transform);
+            fillGo.transform.rotation = Quaternion.Euler(30f, 150f, 0f);
+            var fillLight = fillGo.AddComponent<Light>();
+            fillLight.type = LightType.Directional;
+            fillLight.intensity = 0.55f;
+            fillLight.color = new Color(0.85f, 0.88f, 0.95f);
+            fillLight.shadows = LightShadows.None;
+
+            var rimGo = new GameObject("RimLight_CrispBacklight");
+            rimGo.transform.SetParent(studioRig.transform);
+            rimGo.transform.rotation = Quaternion.Euler(-25f, -120f, 0f);
+            var rimLight = rimGo.AddComponent<Light>();
+            rimLight.type = LightType.Directional;
+            rimLight.intensity = 0.45f;
+            rimLight.color = new Color(0.95f, 0.92f, 0.85f);
+            rimLight.shadows = LightShadows.None;
+
+            // 2. Studio Floor Plane for Contact Shadows
+            var groundGo = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            groundGo.name = "StudioFloor_PBR";
+            groundGo.transform.position = Vector3.zero;
+            groundGo.transform.localScale = new Vector3(12f, 1f, 12f);
+            var groundMr = groundGo.GetComponent<MeshRenderer>();
+            var groundMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Art/Characters/Shared/Materials/M_Studio_Floor.mat");
+            if (groundMat == null)
+            {
+                groundMat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
+                groundMat.name = "M_Studio_Floor";
+                groundMat.color = new Color(0.12f, 0.14f, 0.16f);
+                groundMat.SetFloat("_Smoothness", 0.35f);
+                groundMat.SetFloat("_Metallic", 0.10f);
+                AssetDatabase.CreateAsset(groundMat, "Assets/Art/Characters/Shared/Materials/M_Studio_Floor.mat");
+            }
+            groundMr.sharedMaterial = groundMat;
+
+            // 3. Inspection Cameras
+            var camRig = new GameObject("InspectionCameraRig");
+            var camGo = new GameObject("MainStudioCamera");
+            camGo.transform.SetParent(camRig.transform);
+            camGo.tag = "MainCamera";
+            var cam = camGo.AddComponent<Camera>();
+            cam.fieldOfView = 50f;
+            cam.clearFlags = CameraClearFlags.Color;
+            cam.backgroundColor = new Color(0.09f, 0.10f, 0.12f);
+            camGo.transform.position = new Vector3(0f, 1.15f, 2.7f);
+            camGo.transform.LookAt(new Vector3(0f, 1.0f, 0f));
+
+            // 4. Instantiate Operators (REX and TRACE)
+            var rexPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Characters/Operators/REX/Prefabs/PF_Operator_REX.prefab");
+            if (rexPrefab != null)
+            {
+                var rexInstance = PrefabUtility.InstantiatePrefab(rexPrefab) as GameObject;
+                rexInstance.name = "Operator_REX";
+                rexInstance.transform.position = Vector3.zero;
+                rexInstance.transform.rotation = Quaternion.identity;
+            }
+
+            var tracePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Characters/Operators/TRACE/Prefabs/PF_Operator_TRACE.prefab");
+            if (tracePrefab != null)
+            {
+                var traceInstance = PrefabUtility.InstantiatePrefab(tracePrefab) as GameObject;
+                traceInstance.name = "Operator_TRACE";
+                traceInstance.transform.position = new Vector3(2.0f, 0f, 0f);
+                traceInstance.transform.rotation = Quaternion.identity;
+            }
+
+            string scenePath = "Assets/Scenes/CharacterVisualAcceptance.unity";
+            EditorSceneManager.SaveScene(scene, scenePath);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log($"[CharacterAssetPipeline] Created and saved Visual Acceptance Scene: {scenePath}");
+        }
+
+        public static void CreateVisualAcceptanceSceneBatchMode()
+        {
+            try
+            {
+                CreateVisualAcceptanceScene();
+                EditorApplication.Exit(0);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[CharacterAssetPipeline] Create scene failed: {ex}");
+                EditorApplication.Exit(1);
+            }
         }
     }
 }

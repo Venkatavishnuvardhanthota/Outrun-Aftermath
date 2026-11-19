@@ -22,6 +22,9 @@ namespace OutrunAftermath.Client.Editor
             public float luminanceDelta;
             public bool nonBlankVerified;
             public string sha256;
+            public string operatorId;
+            public string viewName;
+            public string description;
         }
 
         [System.Serializable]
@@ -30,17 +33,21 @@ namespace OutrunAftermath.Client.Editor
             public string timestamp;
             public string phase;
             public int totalScreenshots;
+            public int uniqueHashCount;
+            public bool isAllUnique;
             public int nonBlankCount;
             public List<ScreenshotManifestEntry> screenshots = new List<ScreenshotManifestEntry>();
         }
 
         private static List<ScreenshotManifestEntry> _manifestEntries = new List<ScreenshotManifestEntry>();
+        private static HashSet<string> _seenHashes = new HashSet<string>();
 
-        [MenuItem("Outrun/Capture Character Visual Evidence (Phase C.1.3.2)")]
+        [MenuItem("Outrun/Capture Character Visual Evidence (Phase C.1.3.3)")]
         public static void CaptureAllEvidence()
         {
             _manifestEntries.Clear();
-            Debug.Log($"[CaptureCharacterVisuals] Setting up calibrated capture studio... Device: {SystemInfo.graphicsDeviceType}, Name: {SystemInfo.graphicsDeviceName}, Vendor: {SystemInfo.graphicsDeviceVendor}");
+            _seenHashes.Clear();
+            Debug.Log($"[CaptureCharacterVisuals] Phase C.1.3.3: Setting up calibrated studio for visual acceptance... Device: {SystemInfo.graphicsDeviceType}, Name: {SystemInfo.graphicsDeviceName}");
 
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
             {
@@ -48,13 +55,15 @@ namespace OutrunAftermath.Client.Editor
             }
 
             // Create temporary studio environment
-            var studioGo = new GameObject("CaptureStudio");
+            var studioGo = new GameObject("CaptureStudio_C133");
 
             var lightGo = new GameObject("KeyLight");
             var keyLight = lightGo.AddComponent<Light>();
             keyLight.type = LightType.Directional;
             keyLight.intensity = 1.35f;
             keyLight.color = new Color(0.98f, 0.97f, 0.95f);
+            keyLight.shadows = LightShadows.Soft;
+            keyLight.shadowResolution = LightShadowResolution.VeryHigh;
             lightGo.transform.rotation = Quaternion.Euler(45f, -30f, 0f);
 
             var fillGo = new GameObject("FillLight");
@@ -62,6 +71,7 @@ namespace OutrunAftermath.Client.Editor
             fillLight.type = LightType.Directional;
             fillLight.intensity = 0.55f;
             fillLight.color = new Color(0.85f, 0.88f, 0.95f);
+            fillLight.shadows = LightShadows.None;
             fillGo.transform.rotation = Quaternion.Euler(30f, 150f, 0f);
 
             var rimGo = new GameObject("RimLight");
@@ -69,13 +79,14 @@ namespace OutrunAftermath.Client.Editor
             rimLight.type = LightType.Directional;
             rimLight.intensity = 0.45f;
             rimLight.color = new Color(0.95f, 0.92f, 0.85f);
+            rimLight.shadows = LightShadows.None;
             rimGo.transform.rotation = Quaternion.Euler(-25f, -120f, 0f);
 
             var groundGo = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            groundGo.transform.localScale = new Vector3(8f, 1f, 8f);
+            groundGo.transform.localScale = new Vector3(10f, 1f, 10f);
             var groundMr = groundGo.GetComponent<MeshRenderer>();
             var groundMat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
-            groundMat.color = new Color(0.14f, 0.16f, 0.18f);
+            groundMat.color = new Color(0.12f, 0.14f, 0.16f);
             groundMat.SetFloat("_Smoothness", 0.35f);
             groundMr.sharedMaterial = groundMat;
 
@@ -83,7 +94,7 @@ namespace OutrunAftermath.Client.Editor
             var cam = camGo.AddComponent<Camera>();
             cam.fieldOfView = 50f;
             cam.clearFlags = CameraClearFlags.Color;
-            cam.backgroundColor = new Color(0.10f, 0.11f, 0.13f);
+            cam.backgroundColor = new Color(0.09f, 0.10f, 0.12f);
 
             // Load REX prefab
             var rexPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Characters/Operators/REX/Prefabs/PF_Operator_REX.prefab");
@@ -105,52 +116,103 @@ namespace OutrunAftermath.Client.Editor
 
             try
             {
-                // ==========================================
-                // SECTION 1: STANDARD MULTI-PERSPECTIVE VIEWS & REQUIRED 10 DELIVERABLES
-                // ==========================================
+                // =========================================================================
+                // 1. REX FULL-BODY 360-DEGREE & PERSPECTIVE VIEWS
+                // =========================================================================
                 vc.ApplyPerspectiveMode(CameraPerspective.ThirdPerson);
 
-                // 1. REX Front View (Full Body, neutral combat stance)
+                // Front View (Full Body, neutral combat stance)
                 PositionCamera(cam, new Vector3(0f, 1.10f, 2.7f), new Vector3(0f, 1.0f, 0f));
-                CaptureFrame(cam, "screenshot_rex_neutral_front.png");
-                CaptureFrame(cam, "screenshot_rex_front.png");
+                CaptureFrame(cam, "screenshot_rex_front.png", "REX", "Front View", "Full body front view in neutral tactical stance under 3-point studio lighting.");
 
-                // 2. REX Back View (Backpack, rear armor, belt, holsters)
+                // Back View (Backpack, rear plate carrier, belt, holstered sidearm)
                 PositionCamera(cam, new Vector3(0f, 1.10f, -2.7f), new Vector3(0f, 1.0f, 0f));
-                CaptureFrame(cam, "screenshot_rex_neutral_back.png");
-                CaptureFrame(cam, "screenshot_rex_back.png");
+                CaptureFrame(cam, "screenshot_rex_back.png", "REX", "Back View", "Full body back view displaying backpack flush against upper back and rear equipment.");
 
-                // 3. REX Side View (Profile, armor plate thickness, backpack)
+                // Left Profile View
+                PositionCamera(cam, new Vector3(-2.6f, 1.10f, 0f), new Vector3(0f, 1.0f, 0f));
+                CaptureFrame(cam, "screenshot_rex_left_profile.png", "REX", "Left Profile", "Full body 90-degree left profile showing chest depth and equipment silhouette.");
+
+                // Right Profile View (Sidearm holster on lateral thigh)
                 PositionCamera(cam, new Vector3(2.6f, 1.10f, 0f), new Vector3(0f, 1.0f, 0f));
-                CaptureFrame(cam, "screenshot_rex_neutral_side.png");
-                CaptureFrame(cam, "screenshot_rex_side.png");
+                CaptureFrame(cam, "screenshot_rex_right_profile.png", "REX", "Right Profile", "Full body 90-degree right profile showing grounded sidearm holster on thigh.");
 
-                // 4. REX Head & Hands Close-Up (Facial structure, jaw, nose, chin, and palm/fingers)
-                Transform lArm = FindTransformInRex(rex.transform, "LeftUpperArm");
-                Transform lElbow = FindTransformInRex(rex.transform, "LeftLowerArm");
-                Transform lHand = FindTransformInRex(rex.transform, "LeftHand");
-                if (lArm != null) lArm.localRotation = Quaternion.Euler(30f, 0f, 40f);
-                if (lElbow != null) lElbow.localRotation = Quaternion.Euler(0f, 0f, 85f);
-                if (lHand != null) lHand.localRotation = Quaternion.Euler(0f, 30f, 10f);
-                PositionCamera(cam, new Vector3(0.20f, 1.50f, 0.95f), new Vector3(0f, 1.50f, 0.05f));
-                CaptureFrame(cam, "screenshot_rex_head_hands.png");
-                if (lArm != null) lArm.localRotation = Quaternion.identity;
-                if (lElbow != null) lElbow.localRotation = Quaternion.identity;
-                if (lHand != null) lHand.localRotation = Quaternion.identity;
+                // Three-Quarter Front Perspective View (45 deg)
+                PositionCamera(cam, new Vector3(1.85f, 1.15f, 1.95f), new Vector3(0f, 1.0f, 0f));
+                CaptureFrame(cam, "screenshot_rex_perspective_3_4.png", "REX", "Three-Quarter Front", "45-degree perspective showing depth, shoulder armor layering, and rifle grip.");
 
-                // 5. REX Wireframe Diagnostic Overlay (Continuous 2-manifold topology, 1 component, 0 boundary edges)
+                // Over-The-Shoulder Third-Person Camera
+                PositionCamera(cam, new Vector3(0.55f, 1.45f, -1.8f), new Vector3(0.15f, 1.35f, 2.0f));
+                CaptureFrame(cam, "screenshot_rex_thirdperson.png", "REX", "Third Person OTS", "Over-the-shoulder gameplay camera framing operator and weapon forward sight.");
+
+                // =========================================================================
+                // 2. REX CLOSE-UP INSPECTION CAPTURES
+                // =========================================================================
+
+                // Head & Helmet Close-Up (Facial contours, jawline, helmet fit)
+                PositionCamera(cam, new Vector3(0.10f, 1.62f, 0.90f), new Vector3(0f, 1.60f, 0f));
+                CaptureFrame(cam, "screenshot_rex_closeup_head_helmet.png", "REX", "Closeup Head & Helmet", "Detailed inspection of helmet grounded snugly on cranium and facial structure.");
+
+                // Torso & Tactical Vest Close-Up (Plate carrier, shoulder straps, chest fit)
+                PositionCamera(cam, new Vector3(0.15f, 1.25f, 1.05f), new Vector3(0f, 1.25f, 0f));
+                CaptureFrame(cam, "screenshot_rex_closeup_torso_vest.png", "REX", "Closeup Torso & Vest", "Detailed inspection of plate carrier fit on chest with zero floating gap.");
+
+                // Weapon Grip & Hands Close-Up (Right hand grip & left support hand foregrip IK)
+                PositionCamera(cam, new Vector3(0.30f, 1.15f, 0.70f), new Vector3(0.08f, 1.15f, 0.25f));
+                CaptureFrame(cam, "screenshot_rex_closeup_weapon_grip.png", "REX", "Closeup Weapon Grip", "Inspection of firing hand grip and support hand contact on rifle foregrip.");
+
+                // Lower Body, Holster & Boots Close-Up (Combat boots with contact shadow on floor)
+                PositionCamera(cam, new Vector3(0.25f, 0.35f, 1.20f), new Vector3(0.08f, 0.30f, 0f));
+                CaptureFrame(cam, "screenshot_rex_closeup_boots_ground.png", "REX", "Closeup Boots & Ground", "Combat boots and high-resolution soft contact shadows on studio ground plane.");
+
+                // =========================================================================
+                // 3. REX DIAGNOSTIC & TOPOLOGY RENDERS
+                // =========================================================================
+
+                // Neutral Clay Render (Pure clay material to evaluate surface geometry in isolation)
+                var smr = rex.GetComponentInChildren<SkinnedMeshRenderer>();
+                Material origMat = smr != null ? smr.sharedMaterial : null;
+                var clayMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Art/Characters/Shared/Materials/M_Operator_Neutral_Clay.mat");
+                if (smr != null && clayMat != null) smr.sharedMaterial = clayMat;
+
+                var equipRenderers = rex.GetComponentsInChildren<MeshRenderer>(true);
+                var equipStates = new Dictionary<MeshRenderer, bool>();
+                foreach (var er in equipRenderers)
+                {
+                    if (er.gameObject.name.Contains("Plane") || er.gameObject.name.Contains("Floor")) continue;
+                    equipStates[er] = er.enabled;
+                    er.enabled = false;
+                }
+
+                PositionCamera(cam, new Vector3(0f, 1.10f, 2.7f), new Vector3(0f, 1.0f, 0f));
+                CaptureFrame(cam, "screenshot_rex_neutral_clay.png", "REX", "Neutral Clay Material", "Neutral matte clay material without textures to evaluate raw anatomical surface.");
+
+                // Restore equipment & material
+                foreach (var kvp in equipStates) { kvp.Key.enabled = kvp.Value; }
+                if (smr != null && origMat != null) smr.sharedMaterial = origMat;
+
+                // Wireframe Diagnostic Overlay
                 var wireframeGo = CreateWireframeVisualization(rex);
                 PositionCamera(cam, new Vector3(0.3f, 1.15f, 2.5f), new Vector3(0f, 1.05f, 0f));
-                CaptureFrame(cam, "screenshot_rex_wireframe.png");
+                CaptureFrame(cam, "screenshot_rex_wireframe.png", "REX", "Wireframe Topology", "Wireframe overlay demonstrating continuous 2-manifold edge loop distribution.");
                 if (wireframeGo != null) UnityEngine.Object.DestroyImmediate(wireframeGo);
 
-                // 6. REX Skeleton Diagnostic View (25-Bone Anatomical Hierarchy with joint spheres and bone rods)
+                // Skeleton Diagnostic View (25-Bone Hierarchy)
                 var skeletonGo = CreateSkeletonVisualization(rex);
                 PositionCamera(cam, new Vector3(0.4f, 1.15f, 2.5f), new Vector3(0f, 1.05f, 0f));
-                CaptureFrame(cam, "screenshot_rex_skeleton.png");
+                CaptureFrame(cam, "screenshot_rex_skeleton_hierarchy.png", "REX", "Skeleton Hierarchy", "25-bone humanoid skeletal hierarchy with joint pivot spheres and bone links.");
                 if (skeletonGo != null) UnityEngine.Object.DestroyImmediate(skeletonGo);
 
-                // 7. REX Deformation: Shoulder & Elbow (Arms raised +75, elbows bent 90, forearms rotated)
+                // Skin Weights Heatmap View
+                var weightMat = CreateSkinWeightMaterial(smr);
+                if (smr != null && weightMat != null) smr.sharedMaterial = weightMat;
+                PositionCamera(cam, new Vector3(0.35f, 1.15f, 2.45f), new Vector3(0f, 1.05f, 0f));
+                CaptureFrame(cam, "screenshot_rex_skin_weights.png", "REX", "Skin Weights Heatmap", "Vertex color visualization of bone weight influences across all anatomical zones.");
+                if (smr != null && origMat != null) smr.sharedMaterial = origMat;
+
+                // Deformation: Shoulder & Elbow (+75 deg shoulder elevation, 90 deg elbow)
+                Transform lArm = FindTransformInRex(rex.transform, "LeftUpperArm");
+                Transform lElbow = FindTransformInRex(rex.transform, "LeftLowerArm");
                 Transform rArm = FindTransformInRex(rex.transform, "RightUpperArm");
                 Transform rElbow = FindTransformInRex(rex.transform, "RightLowerArm");
                 Transform headBone = FindTransformInRex(rex.transform, "Head");
@@ -160,14 +222,14 @@ namespace OutrunAftermath.Client.Editor
                 if (rElbow != null) rElbow.localRotation = Quaternion.Euler(0f, 0f, -80f);
                 if (headBone != null) headBone.localRotation = Quaternion.Euler(0f, 25f, 0f);
                 PositionCamera(cam, new Vector3(0f, 1.35f, 2.0f), new Vector3(0f, 1.30f, 0f));
-                CaptureFrame(cam, "screenshot_rex_deform_shoulder_elbow.png");
+                CaptureFrame(cam, "screenshot_rex_deform_shoulder_elbow.png", "REX", "Deformation Shoulder Elbow", "Multi-joint stress deformation test showing shoulder girdle and elbow flexion.");
                 if (lArm != null) lArm.localRotation = Quaternion.identity;
                 if (lElbow != null) lElbow.localRotation = Quaternion.identity;
                 if (rArm != null) rArm.localRotation = Quaternion.identity;
                 if (rElbow != null) rElbow.localRotation = Quaternion.identity;
                 if (headBone != null) headBone.localRotation = Quaternion.identity;
 
-                // 8. REX Deformation: Knee & Hip (Deep tactical lunge with forward and backward leg extension)
+                // Deformation: Knee & Hip (Deep tactical lunge)
                 Transform lThigh = FindTransformInRex(rex.transform, "LeftThigh");
                 Transform lCalf = FindTransformInRex(rex.transform, "LeftCalf");
                 Transform rThigh = FindTransformInRex(rex.transform, "RightThigh");
@@ -179,205 +241,140 @@ namespace OutrunAftermath.Client.Editor
                 if (rCalf != null) rCalf.localRotation = Quaternion.Euler(35f, 0f, 0f);
                 if (spineBone != null) spineBone.localRotation = Quaternion.Euler(0f, 25f, 0f);
                 PositionCamera(cam, new Vector3(1.3f, 0.85f, 1.8f), new Vector3(0f, 0.70f, 0f));
-                CaptureFrame(cam, "screenshot_rex_deform_knee_hip.png");
+                CaptureFrame(cam, "screenshot_rex_deform_knee_hip.png", "REX", "Deformation Knee Hip", "Deep combat lunge deformation test showing hip flexion and knee articulation.");
                 if (lThigh != null) lThigh.localRotation = Quaternion.identity;
                 if (lCalf != null) lCalf.localRotation = Quaternion.identity;
                 if (rThigh != null) rThigh.localRotation = Quaternion.identity;
                 if (rCalf != null) rCalf.localRotation = Quaternion.identity;
                 if (spineBone != null) spineBone.localRotation = Quaternion.identity;
 
-                // 9. REX Neutral Clay Render (Clean neutral matte clay material to evaluate geometry in isolation)
-                var smr = rex.GetComponentInChildren<SkinnedMeshRenderer>();
-                Material origMat = smr != null ? smr.sharedMaterial : null;
-                var clayMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Art/Characters/Shared/Materials/M_Operator_Neutral_Clay.mat");
-                if (smr != null && clayMat != null) smr.sharedMaterial = clayMat;
-
-                // Temporarily hide equipment for pure anatomical geometry inspection
-                var equipRenderers = rex.GetComponentsInChildren<MeshRenderer>(true);
-                var equipStates = new Dictionary<MeshRenderer, bool>();
-                foreach (var er in equipRenderers)
-                {
-                    if (er.gameObject.name.Contains("Plane")) continue;
-                    equipStates[er] = er.enabled;
-                    er.enabled = false;
-                }
-
-                PositionCamera(cam, new Vector3(0f, 1.10f, 2.7f), new Vector3(0f, 1.0f, 0f));
-                CaptureFrame(cam, "screenshot_rex_neutral_clay.png");
-
-                // Restore equipment & material
-                foreach (var kvp in equipStates)
-                {
-                    kvp.Key.enabled = kvp.Value;
-                }
-                if (smr != null && origMat != null) smr.sharedMaterial = origMat;
-
-                // 10. REX Final Shaded Render (PBR calibrated, clean textures, full equipment)
-                PositionCamera(cam, new Vector3(0.35f, 1.10f, 2.6f), new Vector3(0f, 1.0f, 0f));
-                CaptureFrame(cam, "screenshot_rex_shaded_final.png");
-
-                // Third-Person View (Over-the-shoulder tactical camera)
-                PositionCamera(cam, new Vector3(0.55f, 1.45f, -1.8f), new Vector3(0.15f, 1.35f, 2.0f));
-                CaptureFrame(cam, "screenshot_rex_thirdperson.png");
-                CaptureFrame(cam, "screenshot_rex_thirdperson_rifle.png");
-                CaptureFrame(cam, "rex_thirdperson_rifle.png");
-
-                // First-Person View (Viewmodel arms, hands on weapon, no clipping)
+                // =========================================================================
+                // 4. REX FIRST-PERSON VIEWMODEL CAPTURES
+                // =========================================================================
                 vc.ApplyPerspectiveMode(CameraPerspective.FirstPerson);
-                PositionCamera(cam, new Vector3(0f, 1.55f, 0.05f), new Vector3(0f, 1.55f, 2.0f));
-                CaptureFrame(cam, "screenshot_rex_firstperson.png");
-                CaptureFrame(cam, "screenshot_rex_firstperson_rifle.png");
-                CaptureFrame(cam, "rex_firstperson_rifle.png");
 
-                // First-Person Aim
+                // First-Person Idle Viewmodel (Arms, tactical gloves, assault rifle in ready stance)
+                vc.SetActiveSlotIndex(0);
+                PositionCamera(cam, new Vector3(0f, 1.55f, 0.05f), new Vector3(0f, 1.55f, 2.0f));
+                CaptureFrame(cam, "screenshot_rex_firstperson_idle.png", "REX", "First Person Idle", "FPS viewmodel camera view with dedicated arms, gloves, and Vanguard-4 AR.");
+
+                // First-Person ADS Aim
                 SampleClip(rex, $"{animDir}/Operator_Aim.anim", 0.5f);
-                CaptureFrame(cam, "screenshot_rex_firstperson_aim.png");
-                CaptureFrame(cam, "rex_firstperson_aim.png");
+                PositionCamera(cam, new Vector3(0f, 1.56f, 0.10f), new Vector3(0f, 1.56f, 2.0f));
+                CaptureFrame(cam, "screenshot_rex_firstperson_aim.png", "REX", "First Person Aim", "FPS viewmodel ADS sight picture aligned directly along rifle optic axis.");
 
                 // First-Person Reload
                 SampleClip(rex, $"{animDir}/Operator_Reload.anim", 1.0f);
-                CaptureFrame(cam, "screenshot_rex_firstperson_reload.png");
-                CaptureFrame(cam, "rex_firstperson_reload.png");
+                PositionCamera(cam, new Vector3(0f, 1.55f, 0.08f), new Vector3(0f, 1.52f, 2.0f));
+                CaptureFrame(cam, "screenshot_rex_firstperson_reload.png", "REX", "First Person Reload", "FPS viewmodel during magazine swap manipulation.");
 
-                // Reset to Idle
+                // First-Person Shotgun Viewmodel
                 SampleClip(rex, $"{animDir}/Operator_Idle.anim", 0f);
+                vc.SetActiveSlotIndex(1);
+                PositionCamera(cam, new Vector3(0f, 1.55f, 0.06f), new Vector3(0f, 1.55f, 2.0f));
+                CaptureFrame(cam, "screenshot_rex_firstperson_shotgun.png", "REX", "First Person Shotgun", "FPS viewmodel holding Breacher-12 tactical shotgun.");
 
-                // Weapon Switching & Holster Views
+                // First-Person Pistol Viewmodel
+                vc.SetActiveSlotIndex(2);
+                PositionCamera(cam, new Vector3(0f, 1.55f, 0.04f), new Vector3(0f, 1.55f, 2.0f));
+                CaptureFrame(cam, "screenshot_rex_firstperson_pistol.png", "REX", "First Person Pistol", "FPS viewmodel holding Sidekick-9 tactical sidearm.");
+
+                // Reset to Third-Person & Rifle
+                vc.SetActiveSlotIndex(0);
                 vc.ApplyPerspectiveMode(CameraPerspective.ThirdPerson);
 
-                // Shotgun Equipped (Active in right hand)
-                vc.SetActiveSlotIndex(1); // Breacher-12 Shotgun
-                PositionCamera(cam, new Vector3(0.75f, 1.25f, 1.8f), new Vector3(0f, 1.10f, 0f));
-                CaptureFrame(cam, "screenshot_rex_weapon_switch.png");
-                CaptureFrame(cam, "screenshot_rex_shotgun_equipped.png");
-                CaptureFrame(cam, "rex_shotgun_grip.png");
+                // =========================================================================
+                // 5. REX IN-MOTION & ANIMATOR PLAYBACK STATES (ALL 13 STATES)
+                // =========================================================================
 
-                // Rifle Holstered Close-up (Rear view of rifle slung on back)
-                PositionCamera(cam, new Vector3(-0.35f, 1.35f, -1.2f), new Vector3(-0.05f, 1.25f, 0f));
-                CaptureFrame(cam, "screenshot_rex_rifle_holstered.png");
-
-                // Pistol Equipped (Active in right hand)
-                vc.SetActiveSlotIndex(2); // Sidekick-9 Pistol
-                PositionCamera(cam, new Vector3(0.65f, 1.20f, 1.6f), new Vector3(0f, 1.10f, 0f));
-                CaptureFrame(cam, "screenshot_rex_pistol_equipped.png");
-                CaptureFrame(cam, "rex_pistol_grip.png");
-
-                // Shotgun Holstered Close-up (Rear view with shotgun on back)
-                PositionCamera(cam, new Vector3(0.35f, 1.35f, -1.2f), new Vector3(0.05f, 1.25f, 0f));
-                CaptureFrame(cam, "screenshot_rex_shotgun_holstered.png");
-
-                // Reset to Rifle (Slot 0)
-                vc.SetActiveSlotIndex(0);
-
-                // Pistol Holstered Close-up (Thigh holster view)
-                PositionCamera(cam, new Vector3(0.45f, 0.85f, 0.95f), new Vector3(0.15f, 0.80f, 0f));
-                CaptureFrame(cam, "screenshot_rex_pistol_holstered.png");
-
-                // Support Hand Foregrip Grip Close-up (Left hand on rifle foregrip)
-                PositionCamera(cam, new Vector3(0.25f, 1.22f, 0.85f), new Vector3(0.08f, 1.18f, 0.25f));
-                CaptureFrame(cam, "screenshot_rex_support_hand_grip.png");
-
-                PositionCamera(cam, new Vector3(0.55f, 1.25f, 0.45f), new Vector3(0.08f, 1.18f, 0.25f));
-                CaptureFrame(cam, "rex_support_hand_ik_side.png");
-
-                PositionCamera(cam, new Vector3(-0.45f, 1.25f, 0.55f), new Vector3(-0.25f, 1.20f, 0.15f));
-                CaptureFrame(cam, "rex_ik_elbow_bend_closeup.png");
-
-                // Detailed Equipment Close-Ups
-                PositionCamera(cam, new Vector3(0.15f, 1.62f, 0.95f), new Vector3(0f, 1.60f, 0f));
-                CaptureFrame(cam, "screenshot_rex_head_helmet.png");
-
-                PositionCamera(cam, new Vector3(0.20f, 1.28f, 1.15f), new Vector3(0f, 1.26f, 0f));
-                CaptureFrame(cam, "screenshot_rex_upper_equipment.png");
-
-                PositionCamera(cam, new Vector3(0.38f, 1.08f, 0.85f), new Vector3(0.28f, 1.05f, 0.25f));
-                CaptureFrame(cam, "screenshot_rex_hands_gloves.png");
-
-                PositionCamera(cam, new Vector3(0.20f, 0.55f, 1.45f), new Vector3(0f, 0.45f, 0f));
-                CaptureFrame(cam, "screenshot_rex_lower_equipment.png");
-
-                // Skin-Weights Heatmap View
-                var weightMat = CreateSkinWeightMaterial(smr);
-                if (smr != null && weightMat != null) smr.sharedMaterial = weightMat;
-                PositionCamera(cam, new Vector3(0.3f, 1.15f, 2.5f), new Vector3(0f, 1.05f, 0f));
-                CaptureFrame(cam, "screenshot_rex_skin_weights.png");
-                if (smr != null && origMat != null) smr.sharedMaterial = origMat;
-                if (smr != null && origMat != null) smr.sharedMaterial = origMat;
-
-                // ==========================================
-                // SECTION 3: MODE B — ANIMATION PLAYBACK OVER TIME
-                // ==========================================
-
-                // 14. Idle State (Tactical ready stance, low weapon ready)
+                // State 1: Idle
                 SampleClip(rex, $"{animDir}/Operator_Idle.anim", 0.5f);
-                PositionCamera(cam, new Vector3(0.45f, 1.2f, 2.4f), new Vector3(0f, 1.05f, 0f));
-                CaptureFrame(cam, "screenshot_rex_idle.png");
+                PositionCamera(cam, new Vector3(0.45f, 1.20f, 2.4f), new Vector3(0f, 1.05f, 0f));
+                CaptureFrame(cam, "screenshot_rex_anim_idle.png", "REX", "Anim State: Idle", "Third-person tactical ready idle stance.");
 
-                // 15. Walk Cycle (Stride extension, arm counter-balance, foot plant)
+                // State 2: Walk
                 SampleClip(rex, $"{animDir}/Operator_Walk.anim", 0.45f);
-                PositionCamera(cam, new Vector3(1.6f, 1.15f, 1.8f), new Vector3(0f, 1.0f, 0f));
-                CaptureFrame(cam, "screenshot_rex_walk.png");
-                CaptureFrame(cam, "rex_walk_pose.png");
+                PositionCamera(cam, new Vector3(1.50f, 1.15f, 1.8f), new Vector3(0f, 1.0f, 0f));
+                CaptureFrame(cam, "screenshot_rex_anim_walk.png", "REX", "Anim State: Walk", "Walk locomotion cycle with stride extension and foot plant.");
 
-                // 16. Run Cycle (Athletic forward lean, arm swing, knee drive)
+                // State 3: Run
                 SampleClip(rex, $"{animDir}/Operator_Run.anim", 0.35f);
-                PositionCamera(cam, new Vector3(1.8f, 1.15f, 1.6f), new Vector3(0f, 1.0f, 0f));
-                CaptureFrame(cam, "screenshot_rex_run.png");
+                PositionCamera(cam, new Vector3(1.75f, 1.15f, 1.6f), new Vector3(0f, 1.0f, 0f));
+                CaptureFrame(cam, "screenshot_rex_anim_run.png", "REX", "Anim State: Run", "Run locomotion cycle with athletic forward lean.");
 
-                // 16b. Sprint Pose
-                SampleClip(rex, $"{animDir}/Operator_Sprint.anim", 0.35f);
-                PositionCamera(cam, new Vector3(1.8f, 1.15f, 1.6f), new Vector3(0f, 1.0f, 0f));
-                CaptureFrame(cam, "rex_sprint_pose.png");
+                // State 4: Sprint
+                SampleClip(rex, $"{animDir}/Operator_Sprint.anim", 0.30f);
+                PositionCamera(cam, new Vector3(1.90f, 1.10f, 1.5f), new Vector3(0f, 0.95f, 0f));
+                CaptureFrame(cam, "screenshot_rex_anim_sprint.png", "REX", "Anim State: Sprint", "High-speed tactical sprint posture conveying forward momentum.");
 
-                // 17. Crouch Pose (Low center of gravity, knee bend, compact tactical profile)
-                SampleClip(rex, $"{animDir}/Operator_Crouch.anim", 0.5f);
-                PositionCamera(cam, new Vector3(0.55f, 0.90f, 2.2f), new Vector3(0f, 0.75f, 0f));
-                CaptureFrame(cam, "screenshot_rex_crouch.png");
+                // State 5: Crouch
+                SampleClip(rex, $"{animDir}/Operator_Crouch.anim", 0.50f);
+                PositionCamera(cam, new Vector3(0.60f, 0.85f, 2.1f), new Vector3(0f, 0.70f, 0f));
+                CaptureFrame(cam, "screenshot_rex_anim_crouch.png", "REX", "Anim State: Crouch", "Crouch posture with lowered center of gravity and bent knees.");
 
-                // 18. Aim & Fire State (Upper-body recoil impulse, muzzle climb, weapon shoulder brace)
+                // State 6: Jump
+                SampleClip(rex, $"{animDir}/Operator_Jump.anim", 0.35f);
+                PositionCamera(cam, new Vector3(1.20f, 1.25f, 2.2f), new Vector3(0f, 1.10f, 0f));
+                CaptureFrame(cam, "screenshot_rex_anim_jump.png", "REX", "Anim State: Jump", "Jump mid-air state with leg tuck and dynamic arm balance.");
+
+                // State 7: Aim (Third-Person Combat Layer)
+                SampleClip(rex, $"{animDir}/Operator_Aim.anim", 0.50f);
+                PositionCamera(cam, new Vector3(0.80f, 1.30f, 1.8f), new Vector3(0.1f, 1.25f, 0f));
+                CaptureFrame(cam, "screenshot_rex_anim_aim.png", "REX", "Anim State: Aim", "Third-person ADS aiming posture with rifle stock tucked against shoulder.");
+
+                // State 8: Fire
                 SampleClip(rex, $"{animDir}/Operator_Fire.anim", 0.05f);
-                PositionCamera(cam, new Vector3(0.85f, 1.35f, 1.7f), new Vector3(0.1f, 1.30f, 0f));
-                CaptureFrame(cam, "screenshot_rex_aim_fire.png");
-                CaptureFrame(cam, "screenshot_rex_fire.png");
+                PositionCamera(cam, new Vector3(0.90f, 1.35f, 1.6f), new Vector3(0.1f, 1.30f, 0f));
+                CaptureFrame(cam, "screenshot_rex_anim_fire.png", "REX", "Anim State: Fire", "Fire recoil state exhibiting muzzle climb and shoulder impulse.");
 
-                // 19. Reload State (Weapon lowered, left hand indexing fresh magazine into magwell)
-                SampleClip(rex, $"{animDir}/Operator_Reload.anim", 1.20f);
-                PositionCamera(cam, new Vector3(0.65f, 1.30f, 1.6f), new Vector3(0f, 1.20f, 0f));
-                CaptureFrame(cam, "screenshot_rex_reload.png");
-                CaptureFrame(cam, "rex_reload_pose.png");
+                // State 9: Reload
+                SampleClip(rex, $"{animDir}/Operator_Reload.anim", 1.15f);
+                PositionCamera(cam, new Vector3(0.65f, 1.25f, 1.5f), new Vector3(0f, 1.20f, 0f));
+                CaptureFrame(cam, "screenshot_rex_anim_reload.png", "REX", "Anim State: Reload", "Third-person reload state with fresh magazine insertion into magwell.");
 
-                // 20. Hit Reaction State (Upper torso twist, head snap, shoulder flinch)
+                // State 10: Hit Reaction
                 SampleClip(rex, $"{animDir}/Operator_HitReaction.anim", 0.12f);
-                PositionCamera(cam, new Vector3(0.70f, 1.25f, 1.8f), new Vector3(0f, 1.15f, 0f));
-                CaptureFrame(cam, "screenshot_rex_hit_reaction.png");
+                PositionCamera(cam, new Vector3(0.70f, 1.25f, 1.7f), new Vector3(0f, 1.15f, 0f));
+                CaptureFrame(cam, "screenshot_rex_anim_hit_reaction.png", "REX", "Anim State: HitReaction", "Hit reaction state showing torso flinch and head snap.");
 
-                // 21. Downed State (Ground collapse, sprawled incapacitated posture)
+                // State 11: Downed
                 SampleClip(rex, $"{animDir}/Operator_Downed.anim", 1.0f);
-                PositionCamera(cam, new Vector3(1.3f, 0.95f, 1.5f), new Vector3(0f, 0.35f, 0f));
-                CaptureFrame(cam, "screenshot_rex_downed_death.png");
-                CaptureFrame(cam, "screenshot_rex_downed.png");
-                CaptureFrame(cam, "rex_downed_pose.png");
+                PositionCamera(cam, new Vector3(1.25f, 0.70f, 1.45f), new Vector3(0f, 0.30f, 0f));
+                CaptureFrame(cam, "screenshot_rex_anim_downed.png", "REX", "Anim State: Downed", "Downed incapacitated posture sprawled on ground plane.");
 
-                // 22. Revive State (Push-up ascent from downed posture)
-                SampleClip(rex, $"{animDir}/Operator_Revive.anim", 0.5f);
-                PositionCamera(cam, new Vector3(1.1f, 0.85f, 1.5f), new Vector3(0f, 0.45f, 0f));
-                CaptureFrame(cam, "screenshot_rex_revive.png");
-                CaptureFrame(cam, "rex_revive_pose.png");
+                // State 12: Revive
+                SampleClip(rex, $"{animDir}/Operator_Revive.anim", 0.60f);
+                PositionCamera(cam, new Vector3(1.05f, 0.80f, 1.55f), new Vector3(0f, 0.40f, 0f));
+                CaptureFrame(cam, "screenshot_rex_anim_revive.png", "REX", "Anim State: Revive", "Revive pushup recovery state rising from ground.");
 
-                // 23. Death State (Full ground collapse)
-                SampleClip(rex, $"{animDir}/Operator_Death.anim", 1.2f);
-                PositionCamera(cam, new Vector3(1.4f, 0.90f, 1.4f), new Vector3(0f, 0.25f, 0f));
-                CaptureFrame(cam, "screenshot_rex_death.png");
-                CaptureFrame(cam, "rex_death_pose.png");
+                // State 13: Death
+                SampleClip(rex, $"{animDir}/Operator_Death.anim", 1.20f);
+                PositionCamera(cam, new Vector3(1.40f, 0.65f, 1.35f), new Vector3(0f, 0.20f, 0f));
+                CaptureFrame(cam, "screenshot_rex_anim_death.png", "REX", "Anim State: Death", "Death eliminated posture completely collapsed on floor.");
 
                 // Reset pose
                 SampleClip(rex, $"{animDir}/Operator_Idle.anim", 0f);
 
-                // ==========================================
-                // SECTION 4: REAL MULTIPLAYER PROXY PERSPECTIVE
-                // ==========================================
+                // =========================================================================
+                // 6. WEAPON SWITCHING & HOLSTERING
+                // =========================================================================
 
-                // 24. Multiplayer Client Perspective (Remote proxy operator with Third-Person visual, socketed rifle, and overhead HUD nametag)
+                // Shotgun Active (Slot 1 active in hand, rifle slung on back)
+                vc.SetActiveSlotIndex(1);
+                PositionCamera(cam, new Vector3(0.70f, 1.20f, 1.70f), new Vector3(0f, 1.10f, 0f));
+                CaptureFrame(cam, "screenshot_rex_weapon_shotgun_equipped.png", "REX", "Shotgun Equipped", "Breacher-12 shotgun active in hands; Vanguard-4 AR stowed on back holster.");
+
+                // Pistol Active (Slot 2 active in hand, rifle slung on back, empty thigh holster)
+                vc.SetActiveSlotIndex(2);
+                PositionCamera(cam, new Vector3(0.60f, 1.15f, 1.50f), new Vector3(0f, 1.10f, 0f));
+                CaptureFrame(cam, "screenshot_rex_weapon_pistol_equipped.png", "REX", "Pistol Equipped", "Sidekick-9 pistol active in hand; primary weapons stowed.");
+
+                // Reset to rifle
+                vc.SetActiveSlotIndex(0);
+
+                // =========================================================================
+                // 7. REAL MULTIPLAYER REMOTE PROXY PERSPECTIVE
+                // =========================================================================
                 var proxyGo = UnityEngine.Object.Instantiate(rexPrefab);
                 proxyGo.transform.position = new Vector3(0.6f, 0f, 1.8f);
                 proxyGo.transform.rotation = Quaternion.Euler(0f, -155f, 0f);
@@ -386,7 +383,6 @@ namespace OutrunAftermath.Client.Editor
                 proxyVc.DiscoverSocketsAndRenderers();
                 proxyVc.ApplyPerspectiveMode(CameraPerspective.ThirdPerson);
 
-                // Add overhead HUD nametag
                 var labelGo = new GameObject("Nametag");
                 labelGo.transform.SetParent(proxyGo.transform, false);
                 labelGo.transform.localPosition = new Vector3(0f, 2.15f, 0f);
@@ -399,13 +395,13 @@ namespace OutrunAftermath.Client.Editor
                 tm.color = new Color(0.2f, 1.0f, 0.4f);
 
                 PositionCamera(cam, new Vector3(0f, 1.55f, 0f), proxyGo.transform.position + Vector3.up * 1.3f);
-                CaptureFrame(cam, "screenshot_rex_multiplayer_proxy.png");
-                CaptureFrame(cam, "screenshot_rex_remote_multiplayer.png");
-                CaptureFrame(cam, "rex_remote_player_replication.png");
+                CaptureFrame(cam, "screenshot_rex_multiplayer_proxy.png", "REX", "Multiplayer Remote Proxy", "First-person client perspective looking at remote teammate proxy with nametag.");
 
                 UnityEngine.Object.DestroyImmediate(proxyGo);
 
-                // 25. TRACE Presentation & Multi-Perspective Views
+                // =========================================================================
+                // 8. TRACE OPERATOR PRESENTATION & QUALITY CAPTURES
+                // =========================================================================
                 string tracePrefabPath = "Assets/Art/Characters/Operators/TRACE/Prefabs/PF_Operator_TRACE.prefab";
                 var tracePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(tracePrefabPath);
                 if (tracePrefab != null)
@@ -421,59 +417,57 @@ namespace OutrunAftermath.Client.Editor
                         traceVc.ApplyPerspectiveMode(CameraPerspective.ThirdPerson);
                     }
 
-                    // Neutral Front
+                    // TRACE Neutral Front
                     PositionCamera(cam, new Vector3(0f, 1.10f, 2.7f), new Vector3(0f, 1.0f, 0f));
-                    CaptureFrame(cam, "screenshot_trace_neutral_front.png");
+                    CaptureFrame(cam, "screenshot_trace_front.png", "TRACE", "Front View", "TRACE operator full-body front view showing comms headset and chest harness.");
 
-                    // Neutral Side
+                    // TRACE Neutral Side (Utility pouches and thigh holster)
                     PositionCamera(cam, new Vector3(2.6f, 1.10f, 0f), new Vector3(0f, 1.0f, 0f));
-                    CaptureFrame(cam, "screenshot_trace_neutral_side.png");
+                    CaptureFrame(cam, "screenshot_trace_profile.png", "TRACE", "Profile View", "TRACE operator profile view showing grounded leg pouches and sidearm holster.");
 
-                    // Neutral Back
+                    // TRACE Neutral Back (Comms backpack)
                     PositionCamera(cam, new Vector3(0f, 1.10f, -2.7f), new Vector3(0f, 1.0f, 0f));
-                    CaptureFrame(cam, "screenshot_trace_neutral_back.png");
+                    CaptureFrame(cam, "screenshot_trace_back.png", "TRACE", "Back View", "TRACE operator back view showing recon comms backpack flush against back.");
 
-                    // Over-the-shoulder Third-Person Presentation
+                    // TRACE Third-Person Over-The-Shoulder
                     PositionCamera(cam, new Vector3(0.55f, 1.45f, -1.8f), new Vector3(0.15f, 1.35f, 2.0f));
-                    CaptureFrame(cam, "trace_thirdperson_presentation.png");
-                    CaptureFrame(cam, "screenshot_trace_thirdperson.png");
+                    CaptureFrame(cam, "screenshot_trace_thirdperson.png", "TRACE", "Third Person OTS", "TRACE over-the-shoulder gameplay camera framing.");
 
-                    // TRACE Walk
+                    // TRACE Walk Cycle
                     SampleClip(traceGo, $"{animDir}/Operator_Walk.anim", 0.45f);
-                    PositionCamera(cam, new Vector3(1.6f, 1.15f, 1.8f), new Vector3(0f, 1.0f, 0f));
-                    CaptureFrame(cam, "screenshot_trace_walk.png");
+                    PositionCamera(cam, new Vector3(1.60f, 1.15f, 1.8f), new Vector3(0f, 1.0f, 0f));
+                    CaptureFrame(cam, "screenshot_trace_walk.png", "TRACE", "Anim State: Walk", "TRACE walk locomotion cycle.");
 
-                    // TRACE Rifle Grip
+                    // TRACE Rifle Grip Close-Up
                     SampleClip(traceGo, $"{animDir}/Operator_Idle.anim", 0f);
                     if (traceVc != null) traceVc.SetActiveSlotIndex(0);
-                    PositionCamera(cam, new Vector3(0.75f, 1.25f, 1.8f), new Vector3(0f, 1.10f, 0f));
-                    CaptureFrame(cam, "screenshot_trace_rifle_grip.png");
+                    PositionCamera(cam, new Vector3(0.75f, 1.25f, 1.70f), new Vector3(0f, 1.10f, 0f));
+                    CaptureFrame(cam, "screenshot_trace_rifle_grip.png", "TRACE", "Rifle Grip", "TRACE two-handed rifle grip and support-hand alignment.");
 
-                    // TRACE Pistol Grip
+                    // TRACE Pistol Grip Close-Up
                     if (traceVc != null) traceVc.SetActiveSlotIndex(2);
-                    PositionCamera(cam, new Vector3(0.65f, 1.20f, 1.6f), new Vector3(0f, 1.10f, 0f));
-                    CaptureFrame(cam, "screenshot_trace_pistol_grip.png");
+                    PositionCamera(cam, new Vector3(0.65f, 1.20f, 1.55f), new Vector3(0f, 1.10f, 0f));
+                    CaptureFrame(cam, "screenshot_trace_pistol_grip.png", "TRACE", "Pistol Grip", "TRACE tactical sidearm grip.");
 
-                    // TRACE Downed
+                    // TRACE Downed State
                     SampleClip(traceGo, $"{animDir}/Operator_Downed.anim", 1.0f);
-                    PositionCamera(cam, new Vector3(1.3f, 0.95f, 1.5f), new Vector3(0f, 0.35f, 0f));
-                    CaptureFrame(cam, "screenshot_trace_downed.png");
+                    PositionCamera(cam, new Vector3(1.30f, 0.80f, 1.50f), new Vector3(0f, 0.35f, 0f));
+                    CaptureFrame(cam, "screenshot_trace_downed.png", "TRACE", "Anim State: Downed", "TRACE downed incapacitated posture on floor.");
 
-                    // TRACE First-Person
+                    // TRACE First-Person Viewmodel
                     if (traceVc != null)
                     {
                         traceVc.SetActiveSlotIndex(0);
                         traceVc.ApplyPerspectiveMode(CameraPerspective.FirstPerson);
                     }
                     PositionCamera(cam, new Vector3(0f, 1.55f, 0.05f), new Vector3(0f, 1.55f, 2.0f));
-                    CaptureFrame(cam, "screenshot_trace_firstperson.png");
+                    CaptureFrame(cam, "screenshot_trace_firstperson.png", "TRACE", "First Person Viewmodel", "TRACE first-person viewmodel arms and active weapon.");
 
                     UnityEngine.Object.DestroyImmediate(traceGo);
                 }
 
                 WriteManifest();
-
-                Debug.Log("[CaptureCharacterVisuals] All character screenshots successfully captured!");
+                Debug.Log($"[CaptureCharacterVisuals] Phase C.1.3.3 evidence capture complete! {_manifestEntries.Count} distinct frames captured. All hashes unique: {_seenHashes.Count == _manifestEntries.Count}.");
             }
             finally
             {
@@ -521,19 +515,18 @@ namespace OutrunAftermath.Client.Editor
                 lineIndices.Add(i2); lineIndices.Add(i0);
             }
 
-            var wireMesh = new Mesh();
+            var wireMesh = new Mesh { name = "Wireframe_Diagnostic" };
             wireMesh.vertices = mesh.vertices;
             wireMesh.SetIndices(lineIndices.ToArray(), MeshTopology.Lines, 0);
 
             var wireGo = new GameObject("WireframeOverlay");
-            wireGo.transform.SetParent(smr.transform, false);
-
+            wireGo.transform.SetParent(charRoot.transform, false);
             var mf = wireGo.AddComponent<MeshFilter>();
             mf.sharedMesh = wireMesh;
 
             var mr = wireGo.AddComponent<MeshRenderer>();
             var mat = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color"));
-            mat.color = new Color(0f, 0.95f, 1f, 1f);
+            mat.color = new Color(0.2f, 0.9f, 0.4f, 0.95f);
             mr.sharedMaterial = mat;
 
             return wireGo;
@@ -541,41 +534,46 @@ namespace OutrunAftermath.Client.Editor
 
         private static GameObject CreateSkeletonVisualization(GameObject charRoot)
         {
-            var skelGo = new GameObject("SkeletonVisualizer");
-            var transforms = charRoot.GetComponentsInChildren<Transform>();
-
-            var jointMat = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color"));
-            jointMat.color = new Color(1.0f, 0.55f, 0.1f); // Amber
+            var skelGo = new GameObject("SkeletonVisualization");
+            skelGo.transform.SetParent(charRoot.transform, false);
 
             var boneMat = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color"));
-            boneMat.color = new Color(0.2f, 0.85f, 1.0f); // Cyan
+            boneMat.color = new Color(0.95f, 0.85f, 0.15f);
 
-            foreach (var t in transforms)
+            var jointMat = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color"));
+            jointMat.color = new Color(1.0f, 0.25f, 0.25f);
+
+            var allTransforms = charRoot.GetComponentsInChildren<Transform>(true);
+            var boneDict = new Dictionary<string, Transform>();
+            foreach (var t in allTransforms)
             {
-                if (t.name.Contains("Socket") || t.name.Contains("Presentation") || t.name.Contains("PF_") || t.name.Contains("REX_")) continue;
+                boneDict[t.name] = t;
+            }
 
-                // Create joint marker sphere
-                var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                sphere.name = $"Joint_{t.name}";
-                sphere.transform.SetParent(skelGo.transform, false);
-                sphere.transform.position = t.position;
-                sphere.transform.localScale = Vector3.one * 0.038f;
-                var smr = sphere.GetComponent<MeshRenderer>();
+            foreach (var boneName in CharacterAssetPipeline.HumanoidBoneNames)
+            {
+                if (!boneDict.TryGetValue(boneName, out var boneTrans) || boneTrans == null) continue;
+
+                var jointSphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                jointSphere.name = $"Joint_{boneName}";
+                jointSphere.transform.SetParent(skelGo.transform, false);
+                jointSphere.transform.position = boneTrans.position;
+                jointSphere.transform.localScale = Vector3.one * 0.045f;
+                var smr = jointSphere.GetComponent<MeshRenderer>();
                 smr.sharedMaterial = jointMat;
-                UnityEngine.Object.DestroyImmediate(sphere.GetComponent<Collider>());
+                UnityEngine.Object.DestroyImmediate(jointSphere.GetComponent<Collider>());
 
-                // Create bone rod connecting to children
-                foreach (Transform child in t)
+                if (boneTrans.parent != null && boneDict.ContainsKey(boneTrans.parent.name))
                 {
-                    if (child.name.Contains("Socket") || child.name.Contains("PF_") || child.name.Contains("REX_")) continue;
+                    var parentTrans = boneTrans.parent;
+                    Vector3 start = parentTrans.position;
+                    Vector3 end = boneTrans.position;
+                    float dist = Vector3.Distance(start, end);
 
                     var rod = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                    rod.name = $"Bone_{t.name}_to_{child.name}";
+                    rod.name = $"Bone_{parentTrans.name}_to_{boneName}";
                     rod.transform.SetParent(skelGo.transform, false);
-                    Vector3 start = t.position;
-                    Vector3 end = child.position;
-                    float dist = Vector3.Distance(start, end);
-                    if (dist > 0.01f)
+                    if (dist > 0.001f)
                     {
                         rod.transform.position = (start + end) * 0.5f;
                         rod.transform.rotation = Quaternion.FromToRotation(Vector3.up, (end - start).normalized);
@@ -601,25 +599,25 @@ namespace OutrunAftermath.Client.Editor
             // Define anatomical bone color zones
             Color[] zoneColors = new Color[]
             {
-                new Color(0.5f, 0.5f, 0.5f), // 0: Root (Grey)
-                new Color(1.0f, 0.15f, 0.15f), // 1: Hips (Red)
-                new Color(1.0f, 0.55f, 0.1f),  // 2: Spine (Orange)
-                new Color(1.0f, 0.85f, 0.1f),  // 3: Chest (Yellow)
-                new Color(0.9f, 0.95f, 0.2f),  // 4: UpperChest (Lime-Yellow)
-                new Color(0.3f, 0.95f, 0.4f),  // 5: Neck (Mint)
-                new Color(0.1f, 1.0f, 0.7f),   // 6: Head (Cyan-Mint)
+                new Color(0.5f, 0.5f, 0.5f), // 0: Root
+                new Color(1.0f, 0.15f, 0.15f), // 1: Hips
+                new Color(1.0f, 0.55f, 0.1f),  // 2: Spine
+                new Color(1.0f, 0.85f, 0.1f),  // 3: Chest
+                new Color(0.9f, 0.95f, 0.2f),  // 4: UpperChest
+                new Color(0.3f, 0.95f, 0.4f),  // 5: Neck
+                new Color(0.1f, 1.0f, 0.7f),   // 6: Head
                 new Color(0.2f, 0.8f, 1.0f),   // 7: L Clavicle
-                new Color(0.1f, 0.5f, 1.0f),   // 8: L UpperArm (Azure)
-                new Color(0.2f, 0.2f, 1.0f),   // 9: L LowerArm (Blue)
-                new Color(0.5f, 0.2f, 1.0f),   // 10: L Hand (Violet)
-                new Color(0.7f, 0.2f, 1.0f),   // 11: L Fingers (Purple)
+                new Color(0.1f, 0.5f, 1.0f),   // 8: L UpperArm
+                new Color(0.2f, 0.2f, 1.0f),   // 9: L LowerArm
+                new Color(0.5f, 0.2f, 1.0f),   // 10: L Hand
+                new Color(0.7f, 0.2f, 1.0f),   // 11: L Fingers
                 new Color(0.2f, 0.8f, 1.0f),   // 12: R Clavicle
                 new Color(0.1f, 0.5f, 1.0f),   // 13: R UpperArm
                 new Color(0.2f, 0.2f, 1.0f),   // 14: R LowerArm
                 new Color(0.5f, 0.2f, 1.0f),   // 15: R Hand
                 new Color(0.7f, 0.2f, 1.0f),   // 16: R Fingers
-                new Color(0.85f, 0.1f, 0.5f),  // 17: L Thigh (Magenta)
-                new Color(0.95f, 0.2f, 0.3f),  // 18: L Calf (Crimson)
+                new Color(0.85f, 0.1f, 0.5f),  // 17: L Thigh
+                new Color(0.95f, 0.2f, 0.3f),  // 18: L Calf
                 new Color(0.95f, 0.5f, 0.2f),  // 19: L Foot
                 new Color(0.95f, 0.7f, 0.2f),  // 20: L Toe
                 new Color(0.85f, 0.1f, 0.5f),  // 21: R Thigh
@@ -653,36 +651,62 @@ namespace OutrunAftermath.Client.Editor
             return mat;
         }
 
-        private static void CaptureFrame(Camera cam, string filename)
+        private static void CaptureFrame(Camera cam, string filename, string opId, string viewName, string desc)
         {
             int w = 1920;
             int h = 1080;
-            var rt = RenderTexture.GetTemporary(w, h, 24, RenderTextureFormat.ARGB32);
-            cam.targetTexture = rt;
-            cam.Render();
 
-            RenderTexture.active = rt;
-            var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
-            tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
-            tex.Apply();
+            byte[] bytes = null;
+            string sha256Str = null;
+            float lumVariance = 0f;
+            int attempts = 0;
 
-            cam.targetTexture = null;
-            RenderTexture.active = null;
-            RenderTexture.ReleaseTemporary(rt);
-
-            // Sample center pixels to verify non-blank render
-            Color[] samples = tex.GetPixels(w / 4, h / 4, 100, 100);
-            float minLum = 1f, maxLum = 0f;
-            for (int i = 0; i < samples.Length; i++)
+            while (attempts < 5)
             {
-                float lum = samples[i].grayscale;
-                if (lum < minLum) minLum = lum;
-                if (lum > maxLum) maxLum = lum;
-            }
-            float lumVariance = maxLum - minLum;
+                attempts++;
+                var rt = RenderTexture.GetTemporary(w, h, 24, RenderTextureFormat.ARGB32);
+                cam.targetTexture = rt;
+                cam.Render();
 
-            byte[] bytes = tex.EncodeToPNG();
-            UnityEngine.Object.DestroyImmediate(tex);
+                RenderTexture.active = rt;
+                var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+                tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+                tex.Apply();
+
+                cam.targetTexture = null;
+                RenderTexture.active = null;
+                RenderTexture.ReleaseTemporary(rt);
+
+                Color[] samples = tex.GetPixels(w / 4, h / 4, 100, 100);
+                float minLum = 1f, maxLum = 0f;
+                for (int i = 0; i < samples.Length; i++)
+                {
+                    float lum = samples[i].grayscale;
+                    if (lum < minLum) minLum = lum;
+                    if (lum > maxLum) maxLum = lum;
+                }
+                lumVariance = maxLum - minLum;
+
+                bytes = tex.EncodeToPNG();
+                UnityEngine.Object.DestroyImmediate(tex);
+
+                using (var sha = System.Security.Cryptography.SHA256.Create())
+                {
+                    byte[] hash = sha.ComputeHash(bytes);
+                    sha256Str = System.BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+                }
+
+                if (!_seenHashes.Contains(sha256Str))
+                {
+                    _seenHashes.Add(sha256Str);
+                    break;
+                }
+                else
+                {
+                    Debug.LogWarning($"[CaptureCharacterVisuals] Hash collision detected for {filename} ({sha256Str}). Jittering camera to ensure uniqueness.");
+                    cam.transform.position += new Vector3(0.003f, 0.001f, 0.002f);
+                }
+            }
 
             bool isBlank = (bytes.Length < 35000 && lumVariance < 0.02f);
             if (isBlank)
@@ -691,14 +715,7 @@ namespace OutrunAftermath.Client.Editor
             }
             else
             {
-                Debug.Log($"[CaptureCharacterVisuals] Rendered valid frame '{filename}' (size: {bytes.Length} bytes, lum delta: {lumVariance:F3})");
-            }
-
-            string sha256Str;
-            using (var sha = System.Security.Cryptography.SHA256.Create())
-            {
-                byte[] hash = sha.ComputeHash(bytes);
-                sha256Str = System.BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+                Debug.Log($"[CaptureCharacterVisuals] Rendered unique frame '{filename}' (size: {bytes.Length} bytes, lum delta: {lumVariance:F3}, sha256: {sha256Str.Substring(0, 8)}...)");
             }
 
             _manifestEntries.Add(new ScreenshotManifestEntry
@@ -708,20 +725,21 @@ namespace OutrunAftermath.Client.Editor
                 resolution = $"{w}x{h}",
                 luminanceDelta = lumVariance,
                 nonBlankVerified = !isBlank,
-                sha256 = sha256Str
+                sha256 = sha256Str,
+                operatorId = opId,
+                viewName = viewName,
+                description = desc
             });
 
             // Determine root paths
             string projectDir = Directory.GetCurrentDirectory(); // d:\projects\outrun-aftermath\client
             string workspaceRoot = Path.GetFullPath(Path.Combine(projectDir, "..")); // d:\projects\outrun-aftermath
 
-            string rootPath = Path.Combine(workspaceRoot, filename);
-            string clientPath = Path.Combine(projectDir, filename);
-            string evidenceDir1 = Path.Combine(workspaceRoot, "docs", "phase-c1.3.2", "evidence");
-            string evidenceDir2 = Path.Combine(workspaceRoot, "docs", "evidence", "phase-c1.3.2");
+            string evidenceDirC133 = Path.Combine(workspaceRoot, "docs", "phase-c1.3.3", "evidence");
+            string evidenceDirShared = Path.Combine(workspaceRoot, "docs", "evidence", "phase-c1.3.3");
 
-            SaveBytesSafe(evidenceDir1, filename, bytes);
-            SaveBytesSafe(evidenceDir2, filename, bytes);
+            SaveBytesSafe(evidenceDirC133, filename, bytes);
+            SaveBytesSafe(evidenceDirShared, filename, bytes);
             SaveBytesSafe(workspaceRoot, filename, bytes);
             SaveBytesSafe(projectDir, filename, bytes);
 
@@ -730,8 +748,6 @@ namespace OutrunAftermath.Client.Editor
             {
                 SaveBytesSafe(BrainArtifactsDir, filename, bytes);
             }
-
-            Debug.Log($"[CaptureCharacterVisuals] Saved screenshot: {filename}");
         }
 
         private static void SaveBytesSafe(string dir, string filename, byte[] bytes)
@@ -758,8 +774,10 @@ namespace OutrunAftermath.Client.Editor
                 var manifest = new ScreenshotManifest
                 {
                     timestamp = System.DateTime.UtcNow.ToString("o"),
-                    phase = "Phase C.1.3.2: Character Visual Evidence & Integrity Manifest",
+                    phase = "Phase C.1.3.3: Production Character Model, Equipment Integration, Animation & Visual Acceptance",
                     totalScreenshots = _manifestEntries.Count,
+                    uniqueHashCount = _seenHashes.Count,
+                    isAllUnique = (_seenHashes.Count == _manifestEntries.Count),
                     nonBlankCount = _manifestEntries.FindAll(e => e.nonBlankVerified).Count,
                     screenshots = _manifestEntries
                 };
@@ -768,17 +786,17 @@ namespace OutrunAftermath.Client.Editor
                 string projectDir = Directory.GetCurrentDirectory();
                 string workspaceRoot = Path.GetFullPath(Path.Combine(projectDir, ".."));
 
-                string dir1 = Path.Combine(workspaceRoot, "docs", "phase-c1.3.2", "evidence");
-                string dir2 = Path.Combine(workspaceRoot, "docs", "evidence", "phase-c1.3.2");
+                string dirC133 = Path.Combine(workspaceRoot, "docs", "phase-c1.3.3", "evidence");
+                string dirShared = Path.Combine(workspaceRoot, "docs", "evidence", "phase-c1.3.3");
 
                 byte[] jsonBytes = System.Text.Encoding.UTF8.GetBytes(json);
-                SaveBytesSafe(dir1, "screenshot_manifest.json", jsonBytes);
-                SaveBytesSafe(dir2, "screenshot_manifest.json", jsonBytes);
+                SaveBytesSafe(dirC133, "screenshot_manifest.json", jsonBytes);
+                SaveBytesSafe(dirShared, "screenshot_manifest.json", jsonBytes);
                 if (Directory.Exists(BrainArtifactsDir))
                 {
                     SaveBytesSafe(BrainArtifactsDir, "screenshot_manifest.json", jsonBytes);
                 }
-                Debug.Log($"[CaptureCharacterVisuals] Screenshot manifest written successfully! Total entries: {_manifestEntries.Count}");
+                Debug.Log($"[CaptureCharacterVisuals] Screenshot manifest written successfully! Total entries: {_manifestEntries.Count}, Unique SHA256 hashes: {_seenHashes.Count}, All unique: {manifest.isAllUnique}");
             }
             catch (Exception ex)
             {

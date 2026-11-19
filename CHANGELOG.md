@@ -2,7 +2,38 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
-## [1.4.6] - 2026-11-19 - Phase C.1.3.2: Character Animation, Weapon Grip, First-Person & Multiplayer Authority Remediation
+## [1.4.7] - 2026-11-19 - Phase C.1.3.3: Production Character Model, Equipment Integration, Animation & Visual Acceptance
+
+### Added
+- **Project Engineering Skills (`.agents/skills/`)**:
+  - `character-art-pipeline/SKILL.md`: DCC modeling standards, anatomical proportions (7.5-8 heads tall), retopology standards (25k-45k tris LOD0), zero-floating equipment rules, UV texel density (10.24 px/cm), and FBX export conventions.
+  - `unity-character-integration/SKILL.md`: Unity Humanoid Avatar setup, 25-bone skeletal mapping, skin deformation, Animator Controller 2-layer architecture with UpperBody avatar mask, weapon sockets, and Two-Bone IK.
+  - `character-visual-qa/SKILL.md`: Visual inspection protocol, 3-point studio lighting, camera framing standards, visual defect checklist, and cryptographic SHA-256 screenshot uniqueness gates.
+- **Dedicated Visual Acceptance Studio Scene (`Assets/Scenes/CharacterVisualAcceptance.unity`)**:
+  - Created persistent test scene with three-point studio lighting rig: Key Light ($5500\text{K}$, intensity $1.35$, URP soft shadows), Fill Light ($6500\text{K}$, intensity $0.55$), and Rim Light ($6000\text{K}$, intensity $0.45$).
+  - Added studio floor plane with PBR material (`M_Studio_Floor.mat`) for soft contact shadow validation directly beneath boots.
+  - Staged REX and TRACE operators with calibrated inspection cameras.
+- **Cryptographic Screenshot Deduplication Pipeline (`CaptureCharacterVisuals.cs`)**:
+  - Captured 46 distinct 1920x1080 PBR visual evidence frames with 46 unique SHA-256 hashes (0% duplicate images).
+  - Generated `docs/phase-c1.3.3/evidence/screenshot_manifest.json` indexing all captures with metadata, resolution, file sizes, and SHA-256 hashes.
+- **Audited Deliverables (`docs/phase-c1.3.3/`)**:
+  - `docs/phase-c1.3.3/README.md`
+  - `docs/phase-c1.3.3/PHASE_C1_3_3_VISUAL_ACCEPTANCE_REPORT.md`
+  - `docs/phase-c1.3.3/PHASE_C1_3_3_VALIDATION_REPORT.json`
+
+### Fixed
+- **Equipment Socket Double-Offset Bug & Floating Equipment Elimination (`CharacterAssetPipeline.cs`)**:
+  - Identified root cause of floating equipment: equipment Wavefront `.obj` files had bone coordinates baked into vertices, and parenting them to offset sockets added double displacement.
+  - Grounded `sockBackpack` on `bUpperChest` (`Z = -0.045m`), eliminating the 10cm floating gap so pack pads touch the upper back.
+  - Grounded `sockHolsterSec` on `bRThigh` (`X = -0.09m`), eliminating the 26cm mid-air floating gap so holster sits flush against lateral thigh surface.
+  - Grounded `TRACE_Pouches_UtilityLeg` (`X = +0.045m`), eliminating the 14cm floating gap so pouches sit flush against left thigh.
+  - Grounded `sockHelmet` (`Y = 0.01m`), ensuring helmet and headset contour snugly to head cranium.
+- **Screenshot Redundant Capture Logic (`CaptureCharacterVisuals.cs`)**:
+  - Eliminated duplicate sequential calls to `CaptureFrame` on the same frame buffer, replacing them with 46 distinct camera angles, close-ups, and animation states.
+
+---
+
+
 
 ### Added
 - **First-Person Presentation & Viewmodel System (`OperatorVisualController.cs`, `CharacterAssetPipeline.cs`)**:

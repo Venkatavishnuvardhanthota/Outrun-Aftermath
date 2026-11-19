@@ -31,7 +31,7 @@ namespace OutrunAftermath.Client.Editor
     public class CharacterValidationReport
     {
         public string timestamp;
-        public string phase = "Phase C.1.3.2: Character Animation, Weapon Grip, First-Person & Multiplayer Authority Remediation";
+        public string phase = "Phase C.1.3.3: Production Character Model, Equipment Integration, Animation & Visual Acceptance";
         public string status = "PARTIAL"; // Strict PARTIAL until DCC artist assets integrated
         public string unityVersion;
         public string platform;
@@ -621,19 +621,19 @@ namespace OutrunAftermath.Client.Editor
             File.WriteAllText(ReportPath, json);
             File.WriteAllText(Path.Combine("..", ReportPath), json);
 
-            string phaseReportDir = Path.Combine("..", "docs", "phase-c1.3.2");
+            string phaseReportDir = Path.Combine("..", "docs", "phase-c1.3.3");
             if (!Directory.Exists(phaseReportDir)) Directory.CreateDirectory(phaseReportDir);
-            File.WriteAllText(Path.Combine(phaseReportDir, "PHASE_C1_3_2_VALIDATION_REPORT.json"), json);
-            File.WriteAllText(Path.Combine("..", "PHASE_C1_3_2_VALIDATION_REPORT.json"), json);
+            File.WriteAllText(Path.Combine(phaseReportDir, "PHASE_C1_3_3_VALIDATION_REPORT.json"), json);
+            File.WriteAllText(Path.Combine("..", "PHASE_C1_3_3_VALIDATION_REPORT.json"), json);
 
             string brainDir = @"C:\Users\vishn\.gemini\antigravity\brain\4dca56ca-91c2-47c5-bfb3-fb99b4b8a1c5";
             if (Directory.Exists(brainDir))
             {
                 File.WriteAllText(Path.Combine(brainDir, "character_validation_report.json"), json);
-                File.WriteAllText(Path.Combine(brainDir, "PHASE_C1_3_2_VALIDATION_REPORT.json"), json);
+                File.WriteAllText(Path.Combine(brainDir, "PHASE_C1_3_3_VALIDATION_REPORT.json"), json);
             }
 
-            Debug.Log($"[CharacterValidationPipeline] Phase C.1.3.2 Audit Complete: Status={report.status}. Report written to {ReportPath}");
+            Debug.Log($"[CharacterValidationPipeline] Phase C.1.3.3 Audit Complete: Status={report.status}. Report written to {ReportPath}");
             return allPassed;
         }
 
