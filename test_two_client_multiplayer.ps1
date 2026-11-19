@@ -109,22 +109,25 @@ if ($clientBRecvMatches.Count -eq 0) {
     $clientBRecvMatches = [regex]::Matches($clientALogText, "\[NET_ANIM_RECV\][^\r\n]+")
 }
 
-# Correlate all 14 mandatory animation replication scenarios
+# Correlate all 17 mandatory animation replication scenarios (Phase C.1.3.2)
 $mandatoryStates = @(
     @{ State = "WalkSpeed"; Expected = "3.5" },
+    @{ State = "RunSpeed"; Expected = "5.5" },
     @{ State = "SprintSpeed"; Expected = "7.0" },
     @{ State = "CrouchEnabled"; Expected = "True" },
     @{ State = "CrouchDisabled"; Expected = "False" },
     @{ State = "AimEnabled"; Expected = "True" },
+    @{ State = "FireAction"; Expected = "True" },
     @{ State = "AimDisabled"; Expected = "False" },
-    @{ State = "WeaponSlot1"; Expected = "1" },
-    @{ State = "WeaponSlot2"; Expected = "2" },
-    @{ State = "WeaponSlot0"; Expected = "0" },
     @{ State = "ReloadEnabled"; Expected = "True" },
     @{ State = "ReloadDisabled"; Expected = "False" },
+    @{ State = "WeaponSlot0"; Expected = "0" },
+    @{ State = "WeaponSlot1"; Expected = "1" },
+    @{ State = "WeaponSlot2"; Expected = "2" },
     @{ State = "DownedState"; Expected = "1" },
     @{ State = "ReviveState"; Expected = "2" },
-    @{ State = "AliveState"; Expected = "0" }
+    @{ State = "DeathState"; Expected = "3" },
+    @{ State = "RespawnAction"; Expected = "0" }
 )
 
 $correlatedEvents = @()
@@ -143,6 +146,9 @@ foreach ($ms in $mandatoryStates) {
     $senderFound = $sendMatch.Success
     $senderExpected = if ($senderFound) { $sendMatch.Groups[1].Value } else { $null }
 
+    $corrMatch = if ($senderFound) { [regex]::Match($sendMatch.Value, "CorrId=([^\s\r\n]+)") } else { $null }
+    $corrId = if ($corrMatch -and $corrMatch.Success) { $corrMatch.Groups[1].Value } else { "N/A" }
+
     # Check server
     $serverMatch = [regex]::Match($serverLogText, "\[NET_ANIM_SERVER\][^\r\n]*State=$state")
     $serverFound = $serverMatch.Success
@@ -157,10 +163,12 @@ foreach ($ms in $mandatoryStates) {
 
     if (-not $receiverFound) {
         if ($state -eq "WalkSpeed" -and ($clientBLogText -match "Speed=3\.5" -or $clientALogText -match "Speed=3\.5")) { $receiverFound = $true; $receivedVal = "3.5" }
+        elseif ($state -eq "RunSpeed" -and ($clientBLogText -match "Speed=5\.5" -or $clientALogText -match "Speed=5\.5")) { $receiverFound = $true; $receivedVal = "5.5" }
         elseif ($state -eq "SprintSpeed" -and ($clientBLogText -match "Speed=7\.0" -or $clientALogText -match "Speed=7\.0")) { $receiverFound = $true; $receivedVal = "7.0" }
         elseif ($state -eq "CrouchEnabled" -and ($clientBLogText -match "Crouch=True" -or $clientALogText -match "Crouch=True")) { $receiverFound = $true; $receivedVal = "True" }
         elseif ($state -eq "CrouchDisabled" -and ($clientBLogText -match "Crouch=False" -or $clientALogText -match "Crouch=False")) { $receiverFound = $true; $receivedVal = "False" }
         elseif ($state -eq "AimEnabled" -and ($clientBLogText -match "Aim=True" -or $clientALogText -match "Aim=True")) { $receiverFound = $true; $receivedVal = "True" }
+        elseif ($state -eq "FireAction" -and ($clientBLogText -match "PlayShotEffectsRpc" -or $clientALogText -match "PlayShotEffectsRpc")) { $receiverFound = $true; $receivedVal = "True" }
         elseif ($state -eq "AimDisabled" -and ($clientBLogText -match "Aim=False" -or $clientALogText -match "Aim=False")) { $receiverFound = $true; $receivedVal = "False" }
         elseif ($state -eq "WeaponSlot1" -and ($clientBLogText -match "Slot=1" -or $clientALogText -match "Slot=1")) { $receiverFound = $true; $receivedVal = "1" }
         elseif ($state -eq "WeaponSlot2" -and ($clientBLogText -match "Slot=2" -or $clientALogText -match "Slot=2")) { $receiverFound = $true; $receivedVal = "2" }
@@ -169,7 +177,8 @@ foreach ($ms in $mandatoryStates) {
         elseif ($state -eq "ReloadDisabled" -and ($clientBLogText -match "Reload=False" -or $clientALogText -match "Reload=False")) { $receiverFound = $true; $receivedVal = "False" }
         elseif ($state -eq "DownedState" -and ($clientBLogText -match "LifeState=1" -or $clientALogText -match "LifeState=1")) { $receiverFound = $true; $receivedVal = "1" }
         elseif ($state -eq "ReviveState" -and ($clientBLogText -match "LifeState=2" -or $clientALogText -match "LifeState=2")) { $receiverFound = $true; $receivedVal = "2" }
-        elseif ($state -eq "AliveState" -and ($clientBLogText -match "LifeState=0" -or $clientALogText -match "LifeState=0")) { $receiverFound = $true; $receivedVal = "0" }
+        elseif ($state -eq "DeathState" -and ($clientBLogText -match "LifeState=3" -or $clientALogText -match "LifeState=3")) { $receiverFound = $true; $receivedVal = "3" }
+        elseif ($state -eq "RespawnAction" -and ($clientBLogText -match "LifeState=0" -or $clientALogText -match "LifeState=0")) { $receiverFound = $true; $receivedVal = "0" }
     }
 
     $isMatch = $receiverFound -and ($receivedVal -eq $exp)
@@ -180,6 +189,7 @@ foreach ($ms in $mandatoryStates) {
     }
 
     $correlatedEvents += [ordered]@{
+        CorrelationId = $corrId
         State = $state
         Expected = $exp
         SenderFound = $senderFound
@@ -197,7 +207,7 @@ $replicationPassed = ($serverClientIds.Count -ge 2) -and $clientAConnected -and 
 
 $report = [ordered]@{
     Timestamp = (Get-Date).ToString("o")
-    Phase = "Phase C.1.3.1: Strict Correlated Two-Client Multiplayer Animation Replication"
+    Phase = "Phase C.1.3.2: Strict Correlated Two-Client Multiplayer Animation Replication"
     ReplicationPassed = $replicationPassed
     AllMandatoryStatesCorrelated = $allMandatoryCorrelated
     TotalMandatoryScenarios = $mandatoryStates.Count

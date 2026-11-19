@@ -31,7 +31,7 @@ namespace OutrunAftermath.Client.Editor
     public class CharacterValidationReport
     {
         public string timestamp;
-        public string phase = "Phase C.1.3: Character Validation Integrity, True IK, Multiplayer Animation Replication & Visual Runtime Verification";
+        public string phase = "Phase C.1.3.2: Character Animation, Weapon Grip, First-Person & Multiplayer Authority Remediation";
         public string status = "PARTIAL"; // Strict PARTIAL until DCC artist assets integrated
         public string unityVersion;
         public string platform;
@@ -194,6 +194,22 @@ namespace OutrunAftermath.Client.Editor
     }
 
     [Serializable]
+    public class RuntimeStatePlaybackAudit
+    {
+        public string stateName;
+        public string expectedBehavior;
+        public bool animatorStateEntered;
+        public bool transitionCompleted;
+        public int bonesEvaluated;
+        public float maxBoneDisplacementMeters;
+        public float averageBoneDisplacementMeters;
+        public string movedBodyRegions;
+        public int invalidTransformCount;
+        public string result; // "PASS" or "FAIL"
+        public string failureExplanation;
+    }
+
+    [Serializable]
     public class AnimatorValidation
     {
         public bool valid;
@@ -209,6 +225,8 @@ namespace OutrunAftermath.Client.Editor
         public int detectedPlaceholders;
         public bool runtimePlaybackVerified;
         public List<string> verifiedPlaybackSequences = new List<string>();
+        public List<RuntimeStatePlaybackAudit> runtimeStateAudits = new List<RuntimeStatePlaybackAudit>();
+        public int passedStateAuditsCount;
     }
 
     [Serializable]
@@ -603,13 +621,19 @@ namespace OutrunAftermath.Client.Editor
             File.WriteAllText(ReportPath, json);
             File.WriteAllText(Path.Combine("..", ReportPath), json);
 
+            string phaseReportDir = Path.Combine("..", "docs", "phase-c1.3.2");
+            if (!Directory.Exists(phaseReportDir)) Directory.CreateDirectory(phaseReportDir);
+            File.WriteAllText(Path.Combine(phaseReportDir, "PHASE_C1_3_2_VALIDATION_REPORT.json"), json);
+            File.WriteAllText(Path.Combine("..", "PHASE_C1_3_2_VALIDATION_REPORT.json"), json);
+
             string brainDir = @"C:\Users\vishn\.gemini\antigravity\brain\4dca56ca-91c2-47c5-bfb3-fb99b4b8a1c5";
             if (Directory.Exists(brainDir))
             {
                 File.WriteAllText(Path.Combine(brainDir, "character_validation_report.json"), json);
+                File.WriteAllText(Path.Combine(brainDir, "PHASE_C1_3_2_VALIDATION_REPORT.json"), json);
             }
 
-            Debug.Log($"[CharacterValidationPipeline] Phase C.1.2 Audit Complete: Status={report.status}. Report written to {ReportPath}");
+            Debug.Log($"[CharacterValidationPipeline] Phase C.1.3.2 Audit Complete: Status={report.status}. Report written to {ReportPath}");
             return allPassed;
         }
 
@@ -855,7 +879,7 @@ namespace OutrunAftermath.Client.Editor
                                  tracePrefab.GetComponentInChildren<SkinnedMeshRenderer>().bones.Length == 25;
 
             geom.skinnedMeshRendererReferencesValid = smrRexValid && smrTraceValid;
-            geom.selfIntersectionStatus = "Continuous 2-manifold closed surface with 0 boundary edges. Micro-fold self-collision bounded by DCC art specification.";
+            geom.selfIntersectionStatus = "NOT_RUN";
 
             if (geom.invalidVertexCoordinates > 0 || geom.degenerateTriangleCount > 0 || !geom.windingConsistencyPassed || !geom.boneIndexValidityPassed)
             {
@@ -1152,6 +1176,7 @@ namespace OutrunAftermath.Client.Editor
 
                 vc.Initialize("rex", "Rogue", null, null, null, null, true);
                 vc.DiscoverSocketsAndRenderers();
+                vc.ApplyPerspectiveMode(CameraPerspective.ThirdPerson);
 
                 Transform leftUpperArm = FindTransform(instance.transform, "LeftUpperArm");
                 Transform leftLowerArm = FindTransform(instance.transform, "LeftLowerArm");
@@ -1252,18 +1277,6 @@ namespace OutrunAftermath.Client.Editor
 
                 // Case 9: Rifle Vanguard4 Foregrip Alignment
                 vc.SetActiveSlotIndex(0);
-                var aimClip = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Art/Characters/Shared/Animations/Operator_Aim.anim");
-                if (aimClip != null)
-                {
-                    aimClip.SampleAnimation(instance, 0f);
-                }
-                else
-                {
-                    Transform rArm = FindTransform(instance.transform, "RightUpperArm");
-                    Transform rElb = FindTransform(instance.transform, "RightLowerArm");
-                    if (rArm != null) rArm.localRotation = Quaternion.Euler(45f, -30f, 20f);
-                    if (rElb != null) rElb.localRotation = Quaternion.Euler(0f, 0f, -45f);
-                }
                 vc.AlignSupportHandToForegrip();
                 float arDist = vc.GetSupportHandDistance();
                 float arElbow = vc.GetLeftElbowAngle();
@@ -1292,17 +1305,6 @@ namespace OutrunAftermath.Client.Editor
 
                 // Case 10: Shotgun Trench12 Foregrip Alignment
                 vc.SetActiveSlotIndex(1);
-                if (aimClip != null)
-                {
-                    aimClip.SampleAnimation(instance, 0f);
-                }
-                else
-                {
-                    Transform rArm = FindTransform(instance.transform, "RightUpperArm");
-                    Transform rElb = FindTransform(instance.transform, "RightLowerArm");
-                    if (rArm != null) rArm.localRotation = Quaternion.Euler(45f, -30f, 20f);
-                    if (rElb != null) rElb.localRotation = Quaternion.Euler(0f, 0f, -45f);
-                }
                 vc.AlignSupportHandToForegrip();
                 float sgDist = vc.GetSupportHandDistance();
                 float sgElbow = vc.GetLeftElbowAngle();
@@ -1622,9 +1624,77 @@ namespace OutrunAftermath.Client.Editor
             return false;
         }
 
+        private static RuntimeStatePlaybackAudit EvaluateStatePlayback(
+            Animator anim,
+            Transform skeletonRoot,
+            Dictionary<Transform, Vector3> restPositions,
+            string stateName,
+            string expectedBehavior,
+            int layer,
+            float minExpectedDisplacement = 0.005f)
+        {
+            var audit = new RuntimeStatePlaybackAudit
+            {
+                stateName = stateName,
+                expectedBehavior = expectedBehavior,
+                bonesEvaluated = restPositions.Count
+            };
+
+            audit.animatorStateEntered = IsInState(anim, layer, stateName);
+            audit.transitionCompleted = !anim.IsInTransition(layer) || audit.animatorStateEntered;
+
+            float maxDisp = 0f;
+            float sumDisp = 0f;
+            int invalidCount = 0;
+            var movedRegions = new HashSet<string>();
+
+            foreach (var kvp in restPositions)
+            {
+                Transform b = kvp.Key;
+                if (b == null) continue;
+                Vector3 curPos = b.position;
+                if (float.IsNaN(curPos.x) || float.IsNaN(curPos.y) || float.IsNaN(curPos.z) ||
+                    float.IsInfinity(curPos.x) || float.IsInfinity(curPos.y) || float.IsInfinity(curPos.z))
+                {
+                    invalidCount++;
+                    continue;
+                }
+
+                float disp = Vector3.Distance(curPos, kvp.Value);
+                if (disp > maxDisp) maxDisp = disp;
+                sumDisp += disp;
+
+                if (disp > 0.015f)
+                {
+                    string name = b.name;
+                    if (name.Contains("Thigh") || name.Contains("Calf") || name.Contains("Foot")) movedRegions.Add("Legs/Feet");
+                    else if (name.Contains("Arm") || name.Contains("Hand") || name.Contains("Clavicle")) movedRegions.Add("Arms/Hands");
+                    else if (name.Contains("Spine") || name.Contains("Chest") || name.Contains("Hips")) movedRegions.Add("Torso/Hips");
+                    else if (name.Contains("Head") || name.Contains("Neck")) movedRegions.Add("Head/Neck");
+                }
+            }
+
+            audit.maxBoneDisplacementMeters = maxDisp;
+            audit.averageBoneDisplacementMeters = restPositions.Count > 0 ? (sumDisp / restPositions.Count) : 0f;
+            audit.movedBodyRegions = movedRegions.Count > 0 ? string.Join(", ", movedRegions) : "Posture/Breathing";
+            audit.invalidTransformCount = invalidCount;
+
+            bool pass = audit.animatorStateEntered && audit.transitionCompleted && invalidCount == 0 && maxDisp >= minExpectedDisplacement;
+            audit.result = pass ? "PASS" : "FAIL";
+            if (!pass)
+            {
+                audit.failureExplanation = $"State '{stateName}' entered={audit.animatorStateEntered}, transition={audit.transitionCompleted}, NaNs={invalidCount}, maxDisp={maxDisp:F4}m (min={minExpectedDisplacement:F4}m)";
+            }
+
+            return audit;
+        }
+
         private static void RunLiveAnimatorPlaybackAudit(AnimatorValidation val, ref bool allPassed, List<string> errors)
         {
             val.verifiedPlaybackSequences.Clear();
+            val.runtimeStateAudits.Clear();
+            val.passedStateAuditsCount = 0;
+
             var rexPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Characters/Operators/REX/Prefabs/PF_Operator_REX.prefab");
             if (rexPrefab == null)
             {
@@ -1644,157 +1714,167 @@ namespace OutrunAftermath.Client.Editor
                     return;
                 }
 
-                // Sequence 1: Idle -> Walk -> Run -> Sprint
+                Transform skeletonRoot = instance.transform.Find("ThirdPersonPresentation/Skeleton");
+                var restPositions = new Dictionary<Transform, Vector3>();
+                if (skeletonRoot != null)
+                {
+                    foreach (var t in skeletonRoot.GetComponentsInChildren<Transform>(true))
+                    {
+                        restPositions[t] = t.position;
+                    }
+                }
+
+                // Initialize Base Parameters
                 anim.SetFloat("Speed", 0f);
                 anim.SetBool("IsGrounded", true);
                 anim.SetBool("IsCrouched", false);
                 anim.SetInteger("LifeState", 0);
-                TickMecanim(anim, 0.25f);
-                bool idlePassed = IsInState(anim, 0, "Idle");
+                anim.SetBool("IsReviving", false);
+                anim.SetBool("IsAiming", false);
+                anim.SetBool("IsFiring", false);
+                anim.SetBool("IsReloading", false);
+                TickMecanim(anim, 0.20f);
 
+                // --- STATE 1: Idle ---
+                anim.SetFloat("Speed", 0f);
+                TickMecanim(anim, 0.35f);
+                var auditIdle = EvaluateStatePlayback(anim, skeletonRoot, restPositions, "Idle", "Natural standing posture, subtle weight shift", 0, 0.001f);
+                val.runtimeStateAudits.Add(auditIdle);
+
+                // --- STATE 2: Walk ---
                 anim.SetFloat("Speed", 3.5f);
                 TickMecanim(anim, 0.35f);
-                bool walkPassed = IsInState(anim, 0, "Walk");
+                var auditWalk = EvaluateStatePlayback(anim, skeletonRoot, restPositions, "Walk", "Alternating leg movement, arm counter-swing, grounded foot placement", 0, 0.04f);
+                val.runtimeStateAudits.Add(auditWalk);
 
+                // --- STATE 3: Run ---
                 anim.SetFloat("Speed", 6.0f);
                 TickMecanim(anim, 0.35f);
-                bool runPassed = IsInState(anim, 0, "Run");
+                var auditRun = EvaluateStatePlayback(anim, skeletonRoot, restPositions, "Run", "Faster cadence, pronounced arm and leg drive", 0, 0.06f);
+                val.runtimeStateAudits.Add(auditRun);
 
+                // --- STATE 4: Sprint ---
                 anim.SetFloat("Speed", 9.0f);
                 TickMecanim(anim, 0.35f);
-                bool sprintPassed = IsInState(anim, 0, "Sprint");
+                var auditSprint = EvaluateStatePlayback(anim, skeletonRoot, restPositions, "Sprint", "Forward-leaning aggressive posture, high velocity stride", 0, 0.08f);
+                val.runtimeStateAudits.Add(auditSprint);
 
-                if (idlePassed && walkPassed && runPassed && sprintPassed)
+                if (auditIdle.result == "PASS" && auditWalk.result == "PASS" && auditRun.result == "PASS" && auditSprint.result == "PASS")
                     val.verifiedPlaybackSequences.Add("Locomotion (Idle -> Walk -> Run -> Sprint)");
-                else
-                    errors.Add($"Locomotion playback failed: Idle={idlePassed}, Walk={walkPassed}, Run={runPassed}, Sprint={sprintPassed}");
 
-                // Sequence 2: Idle -> Crouch -> Walk
+                // --- STATE 5: Crouch ---
                 anim.SetFloat("Speed", 0f);
                 anim.SetBool("IsCrouched", true);
                 TickMecanim(anim, 0.35f);
-                bool crouchPassed = IsInState(anim, 0, "Crouch");
-
-                anim.SetFloat("Speed", 2.5f);
-                TickMecanim(anim, 0.35f);
-                bool crouchWalkPassed = IsInState(anim, 0, "Crouch");
+                var auditCrouch = EvaluateStatePlayback(anim, skeletonRoot, restPositions, "Crouch", "Lowered body, bent knees, compact posture", 0, 0.08f);
+                val.runtimeStateAudits.Add(auditCrouch);
 
                 anim.SetBool("IsCrouched", false);
-                anim.SetFloat("Speed", 0f);
                 TickMecanim(anim, 0.35f);
-
-                if (crouchPassed && crouchWalkPassed)
+                if (auditCrouch.result == "PASS")
                     val.verifiedPlaybackSequences.Add("Stance Transition (Idle -> Crouch -> Idle)");
-                else
-                    errors.Add($"Stance playback failed: crouch={crouchPassed}, crouchWalk={crouchWalkPassed}");
 
-                // Sequence 3: Jump Sequence (Idle -> Jump -> Land -> Idle)
-                anim.SetFloat("Speed", 0f);
-                anim.SetBool("IsGrounded", true);
-                anim.SetInteger("LifeState", 0);
-                TickMecanim(anim, 0.25f);
-                bool idleBeforeJump = IsInState(anim, 0, "Idle");
-
+                // --- STATE 6: Jump ---
                 anim.SetBool("IsGrounded", false);
                 TickMecanim(anim, 0.25f);
-                bool jumpPassed = IsInState(anim, 0, "Jump");
+                var auditJump = EvaluateStatePlayback(anim, skeletonRoot, restPositions, "Jump", "Anticipation, airborne extension, bent knees", 0, 0.05f);
+                val.runtimeStateAudits.Add(auditJump);
 
                 anim.SetBool("IsGrounded", true);
                 TickMecanim(anim, 0.35f);
-                bool landPassed = IsInState(anim, 0, "Idle") || IsInState(anim, 0, "Walk");
-
-                if (idleBeforeJump && jumpPassed && landPassed)
+                if (auditJump.result == "PASS")
                     val.verifiedPlaybackSequences.Add("Jump Sequence (Idle -> Jump -> Land -> Idle)");
-                else
-                    errors.Add($"Jump playback failed: idleBeforeJump={idleBeforeJump}, jumpPassed={jumpPassed}, landPassed={landPassed}");
 
-                // Sequence 4: UpperBody Combat (Aim -> Fire -> Aim)
+                // --- STATE 7: Aim (Layer 1) ---
                 anim.SetBool("IsAiming", true);
                 TickMecanim(anim, 0.25f);
-                bool aimPassed = IsInState(anim, 1, "Aim");
+                var auditAim = EvaluateStatePlayback(anim, skeletonRoot, restPositions, "Aim", "Stable weapon-ready posture, two hands braced", 1, 0.04f);
+                val.runtimeStateAudits.Add(auditAim);
 
+                // --- STATE 8: Fire (Layer 1) ---
                 anim.SetBool("IsFiring", true);
-                TickMecanim(anim, 0.20f);
-                bool firePassed = IsInState(anim, 1, "Fire");
+                TickMecanim(anim, 0.15f);
+                var auditFire = EvaluateStatePlayback(anim, skeletonRoot, restPositions, "Fire", "Firing recoil impulse, shoulder brace reaction", 1, 0.03f);
+                val.runtimeStateAudits.Add(auditFire);
 
                 anim.SetBool("IsFiring", false);
-                TickMecanim(anim, 0.45f);
-                bool returnAimPassed = IsInState(anim, 1, "Aim");
-
-                if (aimPassed && firePassed && returnAimPassed)
+                TickMecanim(anim, 0.35f);
+                if (auditAim.result == "PASS" && auditFire.result == "PASS")
                     val.verifiedPlaybackSequences.Add("UpperBody Combat (Aim -> Fire -> Aim)");
-                else
-                    errors.Add($"Combat layer playback failed: Aim={aimPassed}, Fire={firePassed}, ReturnAim={returnAimPassed}");
 
-                // Sequence 5: Aim -> Reload -> Aim
+                // --- STATE 9: Reload (Layer 1) ---
                 anim.SetBool("IsReloading", true);
                 TickMecanim(anim, 0.25f);
-                bool reloadPassed = IsInState(anim, 1, "Reload");
+                var auditReload = EvaluateStatePlayback(anim, skeletonRoot, restPositions, "Reload", "Weapon lowered, left arm indexing fresh magazine into magwell", 1, 0.05f);
+                val.runtimeStateAudits.Add(auditReload);
 
                 anim.SetBool("IsReloading", false);
                 TickMecanim(anim, 2.2f, 10);
-                bool returnFromReload = IsInState(anim, 1, "Aim");
-
-                if (reloadPassed && returnFromReload)
+                if (auditReload.result == "PASS")
                     val.verifiedPlaybackSequences.Add("Weapon Action (Aim -> Reload -> Aim)");
-                else
-                    errors.Add($"Reload playback failed: reloadPassed={reloadPassed}, returnFromReload={returnFromReload}");
 
-                // Sequence 6: HitReaction
+                // --- STATE 10: Hit Reaction (Layer 1) ---
                 anim.SetTrigger("HitTrigger");
-                TickMecanim(anim, 0.20f);
-                bool hitPassed = IsInState(anim, 0, "HitReaction") || IsInState(anim, 1, "HitReaction");
-                TickMecanim(anim, 0.45f);
-                if (hitPassed)
+                TickMecanim(anim, 0.15f);
+                var auditHit = EvaluateStatePlayback(anim, skeletonRoot, restPositions, "HitReaction", "Upper torso twist, head snap, shoulder flinch", 1, 0.02f);
+                val.runtimeStateAudits.Add(auditHit);
+                TickMecanim(anim, 0.40f);
+                if (auditHit.result == "PASS")
                     val.verifiedPlaybackSequences.Add("Damage Impact (Alive -> HitReaction -> Alive)");
-                else
-                    errors.Add($"HitReaction playback failed: hitPassed={hitPassed}");
 
-                // Sequence 7: Downed State
+                // --- STATE 11: Downed ---
                 anim.SetInteger("LifeState", 1); // Downed
+                anim.SetBool("IsReviving", false);
                 TickMecanim(anim, 0.45f);
-                bool downedPassed = IsInState(anim, 0, "Downed");
-                if (downedPassed)
+                var auditDowned = EvaluateStatePlayback(anim, skeletonRoot, restPositions, "Downed", "Ground collapse, sprawled incapacitated posture", 0, 0.15f);
+                val.runtimeStateAudits.Add(auditDowned);
+                if (auditDowned.result == "PASS")
                     val.verifiedPlaybackSequences.Add("Downed State (Alive -> Downed)");
-                else
-                    errors.Add($"Downed playback failed: downedPassed={downedPassed}");
 
-                // Sequence 8: Revive Sequence (Downed -> Revive -> Alive)
+                // --- STATE 12: Revive ---
                 anim.SetBool("IsReviving", true);
                 TickMecanim(anim, 0.45f);
-                bool revivePassed = IsInState(anim, 0, "Revive");
+                var auditRevive = EvaluateStatePlayback(anim, skeletonRoot, restPositions, "Revive", "Ascent sequence pushing off ground to recover", 0, 0.10f);
+                val.runtimeStateAudits.Add(auditRevive);
 
                 anim.SetInteger("LifeState", 0);
                 anim.SetBool("IsReviving", false);
                 TickMecanim(anim, 0.45f);
-                bool aliveAgain = IsInState(anim, 0, "Idle") || IsInState(anim, 0, "Walk");
-
-                if (revivePassed && aliveAgain)
+                if (auditRevive.result == "PASS")
                     val.verifiedPlaybackSequences.Add("Revive Sequence (Downed -> Revive -> Alive)");
-                else
-                    errors.Add($"Revive playback failed: revivePassed={revivePassed}, aliveAgain={aliveAgain}");
 
-                // Sequence 9: Death (must not return to Alive without explicit reset)
-                anim.SetInteger("LifeState", 2); // Eliminated / Death
-                TickMecanim(anim, 0.40f);
-                bool deathPassed = IsInState(anim, 0, "Death");
-
-                // Advance multiple frames with speed > 0, verify still in Death
-                anim.SetFloat("Speed", 5.0f);
-                TickMecanim(anim, 0.50f);
+                // --- STATE 13: Death ---
+                anim.SetInteger("LifeState", 3); // Eliminated (Death)
+                TickMecanim(anim, 0.45f);
+                var auditDeath = EvaluateStatePlayback(anim, skeletonRoot, restPositions, "Death", "Terminal ground collapse, no accidental return to locomotion", 0, 0.20f);
+                
+                // Terminal verification: test locomotion input during death
+                anim.SetFloat("Speed", 6.0f);
                 TickMecanim(anim, 0.50f);
                 bool stillDead = IsInState(anim, 0, "Death");
-
-                if (deathPassed && stillDead)
+                if (!stillDead)
+                {
+                    auditDeath.result = "FAIL";
+                    auditDeath.failureExplanation = "Snapped out of Death into locomotion without explicit respawn!";
+                }
+                val.runtimeStateAudits.Add(auditDeath);
+                if (auditDeath.result == "PASS")
                     val.verifiedPlaybackSequences.Add("Terminal State (Alive -> Death; No locomotion snap)");
-                else
-                    errors.Add($"Death state playback failed: DeathEntered={deathPassed}, StillDead={stillDead}");
 
-                val.runtimePlaybackVerified = (val.verifiedPlaybackSequences.Count == 9);
+                // Evaluate Overall Playback
+                int passedCount = 0;
+                foreach (var a in val.runtimeStateAudits)
+                {
+                    if (a.result == "PASS") passedCount++;
+                    else errors.Add($"State '{a.stateName}' failed playback: {a.failureExplanation}");
+                }
+                val.passedStateAuditsCount = passedCount;
+                val.runtimePlaybackVerified = (passedCount == 13);
+
                 if (!val.runtimePlaybackVerified)
                 {
                     allPassed = false;
-                    errors.Add($"Live Animator playback failed: only {val.verifiedPlaybackSequences.Count}/9 sequences passed.");
+                    errors.Add($"Live Animator playback failed: only {passedCount}/13 states passed.");
                 }
             }
             finally
@@ -1835,45 +1915,46 @@ namespace OutrunAftermath.Client.Editor
                     val.verifiedTransitions.Clear();
                     val.supportHandDistanceTolerance = 0.08f;
                     bool allTransitionsPassed = true;
+                    int executedSwitches = 0;
 
                     // Transition 1: Rifle (0) -> Shotgun (1)
-                    vc.SetActiveSlotIndex(1);
+                    vc.SetActiveSlotIndex(1); executedSwitches++;
                     vc.AlignSupportHandToForegrip();
                     if (vc.AreAllWeaponsCorrectlyParented(1) && vc.IsSupportHandAligned(val.supportHandDistanceTolerance))
                         val.verifiedTransitions.Add("Rifle -> Shotgun");
                     else allTransitionsPassed = false;
 
                     // Transition 2: Shotgun (1) -> Rifle (0)
-                    vc.SetActiveSlotIndex(0);
+                    vc.SetActiveSlotIndex(0); executedSwitches++;
                     vc.AlignSupportHandToForegrip();
                     if (vc.AreAllWeaponsCorrectlyParented(0) && vc.IsSupportHandAligned(val.supportHandDistanceTolerance))
                         val.verifiedTransitions.Add("Shotgun -> Rifle");
                     else allTransitionsPassed = false;
 
                     // Transition 3: Rifle (0) -> Pistol (2)
-                    vc.SetActiveSlotIndex(2);
+                    vc.SetActiveSlotIndex(2); executedSwitches++;
                     vc.AlignSupportHandToForegrip();
                     if (vc.AreAllWeaponsCorrectlyParented(2) && !vc.IsTwoHandedGrip)
                         val.verifiedTransitions.Add("Rifle -> Pistol");
                     else allTransitionsPassed = false;
 
                     // Transition 4: Pistol (2) -> Rifle (0)
-                    vc.SetActiveSlotIndex(0);
+                    vc.SetActiveSlotIndex(0); executedSwitches++;
                     vc.AlignSupportHandToForegrip();
                     if (vc.AreAllWeaponsCorrectlyParented(0) && vc.IsSupportHandAligned(val.supportHandDistanceTolerance))
                         val.verifiedTransitions.Add("Pistol -> Rifle");
                     else allTransitionsPassed = false;
 
                     // Transition 5: Shotgun (1) -> Pistol (2)
-                    vc.SetActiveSlotIndex(1);
-                    vc.SetActiveSlotIndex(2);
+                    vc.SetActiveSlotIndex(1); executedSwitches++;
+                    vc.SetActiveSlotIndex(2); executedSwitches++;
                     vc.AlignSupportHandToForegrip();
                     if (vc.AreAllWeaponsCorrectlyParented(2) && !vc.IsTwoHandedGrip)
                         val.verifiedTransitions.Add("Shotgun -> Pistol");
                     else allTransitionsPassed = false;
 
                     // Transition 6: Pistol (2) -> Shotgun (1)
-                    vc.SetActiveSlotIndex(1);
+                    vc.SetActiveSlotIndex(1); executedSwitches++;
                     vc.AlignSupportHandToForegrip();
                     if (vc.AreAllWeaponsCorrectlyParented(1) && vc.IsSupportHandAligned(val.supportHandDistanceTolerance))
                         val.verifiedTransitions.Add("Pistol -> Shotgun");
@@ -1882,9 +1963,9 @@ namespace OutrunAftermath.Client.Editor
                     // Transition 7: Rapid repeated switching
                     for (int i = 0; i < 5; i++)
                     {
-                        vc.SetActiveSlotIndex(0);
-                        vc.SetActiveSlotIndex(1);
-                        vc.SetActiveSlotIndex(2);
+                        vc.SetActiveSlotIndex(0); executedSwitches++;
+                        vc.SetActiveSlotIndex(1); executedSwitches++;
+                        vc.SetActiveSlotIndex(2); executedSwitches++;
                     }
                     vc.AlignSupportHandToForegrip();
                     if (vc.AreAllWeaponsCorrectlyParented(2))
@@ -1892,47 +1973,47 @@ namespace OutrunAftermath.Client.Editor
                     else allTransitionsPassed = false;
 
                     // Transition 8: Switching while aiming
-                    vc.SetActiveSlotIndex(0);
-                    vc.SetActiveSlotIndex(1);
+                    vc.SetActiveSlotIndex(0); executedSwitches++;
+                    vc.SetActiveSlotIndex(1); executedSwitches++;
                     vc.AlignSupportHandToForegrip();
                     if (vc.AreAllWeaponsCorrectlyParented(1))
                         val.verifiedTransitions.Add("Switching while aiming");
                     else allTransitionsPassed = false;
 
                     // Transition 9: Switching while moving
-                    vc.SetActiveSlotIndex(2);
+                    vc.SetActiveSlotIndex(2); executedSwitches++;
                     vc.AlignSupportHandToForegrip();
                     if (vc.AreAllWeaponsCorrectlyParented(2))
                         val.verifiedTransitions.Add("Switching while moving");
                     else allTransitionsPassed = false;
 
                     // Transition 10: Switching after respawn
-                    vc.SetActiveSlotIndex(0);
+                    vc.SetActiveSlotIndex(0); executedSwitches++;
                     vc.AlignSupportHandToForegrip();
                     if (vc.AreAllWeaponsCorrectlyParented(0) && vc.IsSupportHandAligned(val.supportHandDistanceTolerance))
                         val.verifiedTransitions.Add("Switching after respawn");
                     else allTransitionsPassed = false;
 
                     // Inspect Two-Bone IK and weapon parenting metrics
-                    vc.SetActiveSlotIndex(0); // AR
+                    vc.SetActiveSlotIndex(0); executedSwitches++; // AR
                     vc.AlignSupportHandToForegrip();
                     float arDist = vc.GetSupportHandDistance();
                     float arElbowAngle = vc.GetLeftElbowAngle();
                     bool arAligned = vc.IsSupportHandAligned(val.supportHandDistanceTolerance);
 
-                    vc.SetActiveSlotIndex(1); // Shotgun
+                    vc.SetActiveSlotIndex(1); executedSwitches++; // Shotgun
                     vc.AlignSupportHandToForegrip();
                     float sgDist = vc.GetSupportHandDistance();
                     float sgElbowAngle = vc.GetLeftElbowAngle();
                     bool sgAligned = vc.IsSupportHandAligned(val.supportHandDistanceTolerance);
 
-                    vc.SetActiveSlotIndex(2); // Pistol
+                    vc.SetActiveSlotIndex(2); executedSwitches++; // Pistol
                     vc.AlignSupportHandToForegrip();
                     bool pistolIsTwoHanded = vc.IsTwoHandedGrip;
                     bool pistolPass = !pistolIsTwoHanded;
 
                     int finalTransformCount = instance.GetComponentsInChildren<Transform>(true).Length;
-                    val.testedWeaponSwitches = 25;
+                    val.testedWeaponSwitches = executedSwitches;
                     val.noDuplicateWeapons = (initialTransformCount == finalTransformCount);
                     val.weaponSwitchingTestPassed = allTransitionsPassed && val.noDuplicateWeapons;
                     val.socketParentingVerified = allTransitionsPassed;

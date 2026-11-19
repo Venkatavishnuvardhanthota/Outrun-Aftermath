@@ -1846,7 +1846,7 @@ namespace OutrunAftermath.Client.Editor
             tReviveToIdle.duration = 0.25f;
 
             var tToDeath = rootSm.AddAnyStateTransition(sDeath);
-            tToDeath.AddCondition(AnimatorConditionMode.Equals, 2, "LifeState");
+            tToDeath.AddCondition(AnimatorConditionMode.Equals, 3, "LifeState");
             tToDeath.hasExitTime = false;
             tToDeath.canTransitionToSelf = false;
             tToDeath.duration = 0.20f;
@@ -1979,7 +1979,14 @@ namespace OutrunAftermath.Client.Editor
 
                 var fpRoot = new GameObject("FirstPersonPresentation");
                 fpRoot.transform.SetParent(rootGo.transform, false);
+                fpRoot.transform.localPosition = new Vector3(0f, 1.55f, 0f);
+                fpRoot.transform.localRotation = Quaternion.identity;
                 fpRoot.SetActive(false); // Default inactive until local owner in first-person
+
+                var fpWeaponSock = new GameObject("FirstPersonWeaponSocket");
+                fpWeaponSock.transform.SetParent(fpRoot.transform, false);
+                fpWeaponSock.transform.localPosition = new Vector3(0.06f, -0.08f, 0.32f);
+                fpWeaponSock.transform.localRotation = Quaternion.identity;
 
                 // 3. Build Skeleton Hierarchy inside ThirdPersonPresentation
                 var skelGo = new GameObject("Skeleton");

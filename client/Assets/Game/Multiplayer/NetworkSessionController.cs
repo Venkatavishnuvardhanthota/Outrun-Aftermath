@@ -386,89 +386,138 @@ namespace OutrunAftermath.Client.Multiplayer
 
                 int seq = 0;
 
-                // Scenario 1: Walk speed change
+                // 1. Scenario 1: Idle to walk
+                string cId1 = $"CID_{++seq:D2}_WalkSpeed";
+                localPlayer.NetCorrelationId.Value = new Unity.Collections.FixedString64Bytes(cId1);
                 localPlayer.NetMoveSpeed.Value = 3.5f;
-                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=WalkSpeed Expected=3.5");
+                Debug.Log($"[NET_ANIM_SEND] CorrId={cId1} RunId={runId} Seq={seq} ClientId={ownerId} State=WalkSpeed Expected=3.5");
                 Debug.Log("[NET_ANIM] Local client set NetMoveSpeed=3.5 (Walk)");
                 yield return new WaitForSeconds(0.4f);
 
-                // Scenario 2: Run/sprint speed change
+                // 2. Scenario 2: Walk to run
+                string cId2 = $"CID_{++seq:D2}_RunSpeed";
+                localPlayer.NetCorrelationId.Value = new Unity.Collections.FixedString64Bytes(cId2);
+                localPlayer.NetMoveSpeed.Value = 5.5f;
+                Debug.Log($"[NET_ANIM_SEND] CorrId={cId2} RunId={runId} Seq={seq} ClientId={ownerId} State=RunSpeed Expected=5.5");
+                Debug.Log("[NET_ANIM] Local client set NetMoveSpeed=5.5 (Run)");
+                yield return new WaitForSeconds(0.4f);
+
+                // 3. Scenario 3: Sprint
+                string cId3 = $"CID_{++seq:D2}_SprintSpeed";
+                localPlayer.NetCorrelationId.Value = new Unity.Collections.FixedString64Bytes(cId3);
                 localPlayer.NetMoveSpeed.Value = 7.0f;
-                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=SprintSpeed Expected=7.0");
+                Debug.Log($"[NET_ANIM_SEND] CorrId={cId3} RunId={runId} Seq={seq} ClientId={ownerId} State=SprintSpeed Expected=7.0");
                 Debug.Log("[NET_ANIM] Local client set NetMoveSpeed=7.0 (Sprint)");
                 yield return new WaitForSeconds(0.4f);
 
-                // Scenario 3: Crouch enabled
+                // 4. Scenario 4: Crouch
+                string cId4 = $"CID_{++seq:D2}_CrouchEnabled";
+                localPlayer.NetCorrelationId.Value = new Unity.Collections.FixedString64Bytes(cId4);
                 localPlayer.NetMoveSpeed.Value = 0f;
                 localPlayer.NetIsCrouched.Value = true;
-                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=CrouchEnabled Expected=True");
+                Debug.Log($"[NET_ANIM_SEND] CorrId={cId4} RunId={runId} Seq={seq} ClientId={ownerId} State=CrouchEnabled Expected=True");
                 Debug.Log("[NET_ANIM] Local client set NetIsCrouched=true (Crouch)");
                 yield return new WaitForSeconds(0.4f);
 
-                // Scenario 4: Crouch disabled
+                // Scenario 4b: Crouch disabled
+                string cId4b = $"CID_{++seq:D2}_CrouchDisabled";
+                localPlayer.NetCorrelationId.Value = new Unity.Collections.FixedString64Bytes(cId4b);
                 localPlayer.NetIsCrouched.Value = false;
-                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=CrouchDisabled Expected=False");
+                Debug.Log($"[NET_ANIM_SEND] CorrId={cId4b} RunId={runId} Seq={seq} ClientId={ownerId} State=CrouchDisabled Expected=False");
                 Debug.Log("[NET_ANIM] Local client set NetIsCrouched=false (Crouch Disabled)");
                 yield return new WaitForSeconds(0.4f);
 
-                // Scenario 5: Aim enabled
+                // 5. Scenario 5: Aim
+                string cId5 = $"CID_{++seq:D2}_AimEnabled";
+                localPlayer.NetCorrelationId.Value = new Unity.Collections.FixedString64Bytes(cId5);
                 localPlayer.NetIsAiming.Value = true;
-                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=AimEnabled Expected=True");
+                Debug.Log($"[NET_ANIM_SEND] CorrId={cId5} RunId={runId} Seq={seq} ClientId={ownerId} State=AimEnabled Expected=True");
                 Debug.Log("[NET_ANIM] Local client set NetIsAiming=true (Aim)");
                 yield return new WaitForSeconds(0.4f);
 
-                // Scenario 6: Aim disabled
+                // 6. Scenario 6: Fire Action
+                string cId6 = $"CID_{++seq:D2}_FireAction";
+                localPlayer.NetCorrelationId.Value = new Unity.Collections.FixedString64Bytes(cId6);
+                localPlayer.FireWeaponRpc(localPlayer.transform.position + Vector3.up * 1.5f, localPlayer.transform.forward, 0f, 0, seq);
+                Debug.Log($"[NET_ANIM_SEND] CorrId={cId6} RunId={runId} Seq={seq} ClientId={ownerId} State=FireAction Expected=True");
+                Debug.Log("[NET_ANIM] Local client fired weapon RPC");
+                yield return new WaitForSeconds(0.4f);
+
+                // Reset Aim
+                string cId5b = $"CID_{++seq:D2}_AimDisabled";
+                localPlayer.NetCorrelationId.Value = new Unity.Collections.FixedString64Bytes(cId5b);
                 localPlayer.NetIsAiming.Value = false;
-                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=AimDisabled Expected=False");
-                Debug.Log("[NET_ANIM] Local client set NetIsAiming=false (Aim Disabled)");
+                Debug.Log($"[NET_ANIM_SEND] CorrId={cId5b} RunId={runId} Seq={seq} ClientId={ownerId} State=AimDisabled Expected=False");
                 yield return new WaitForSeconds(0.4f);
 
-                // Scenario 7: Weapon slot 1 (Shotgun)
-                localPlayer.NetActiveSlot.Value = 1;
-                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=WeaponSlot1 Expected=1");
-                Debug.Log("[NET_ANIM] Local client switched NetActiveSlot=1 (Shotgun)");
-                yield return new WaitForSeconds(0.4f);
-
-                // Scenario 8: Weapon slot 2 (Pistol)
-                localPlayer.NetActiveSlot.Value = 2;
-                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=WeaponSlot2 Expected=2");
-                Debug.Log("[NET_ANIM] Local client switched NetActiveSlot=2 (Pistol)");
-                yield return new WaitForSeconds(0.4f);
-
-                // Scenario 9: Weapon slot 0 (AR)
-                localPlayer.NetActiveSlot.Value = 0;
-                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=WeaponSlot0 Expected=0");
-                Debug.Log("[NET_ANIM] Local client reset to NetActiveSlot=0 (AR)");
-                yield return new WaitForSeconds(0.4f);
-
-                // Scenario 10: Reload enabled
+                // 7. Scenario 7: Reload
+                string cId7 = $"CID_{++seq:D2}_ReloadEnabled";
+                localPlayer.NetCorrelationId.Value = new Unity.Collections.FixedString64Bytes(cId7);
                 localPlayer.NetIsReloading.Value = true;
-                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=ReloadEnabled Expected=True");
+                Debug.Log($"[NET_ANIM_SEND] CorrId={cId7} RunId={runId} Seq={seq} ClientId={ownerId} State=ReloadEnabled Expected=True");
                 Debug.Log("[NET_ANIM] Local client set NetIsReloading=true (Reload Enabled)");
                 yield return new WaitForSeconds(0.4f);
 
-                // Scenario 11: Reload disabled
+                string cId7b = $"CID_{++seq:D2}_ReloadDisabled";
+                localPlayer.NetCorrelationId.Value = new Unity.Collections.FixedString64Bytes(cId7b);
                 localPlayer.NetIsReloading.Value = false;
-                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=ReloadDisabled Expected=False");
-                Debug.Log("[NET_ANIM] Local client set NetIsReloading=false (Reload Disabled)");
+                Debug.Log($"[NET_ANIM_SEND] CorrId={cId7b} RunId={runId} Seq={seq} ClientId={ownerId} State=ReloadDisabled Expected=False");
                 yield return new WaitForSeconds(0.4f);
 
-                // Scenario 12: Downed life state
-                localPlayer.NetLifeState.Value = (int)Runtime.Character.PlayerLifeState.Downed;
-                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=DownedState Expected=1");
-                Debug.Log("[NET_ANIM] Local client set NetLifeState=1 (Downed)");
+                // 8. Scenario 8: Rifle slot 0
+                string cId8 = $"CID_{++seq:D2}_WeaponSlot0";
+                localPlayer.NetCorrelationId.Value = new Unity.Collections.FixedString64Bytes(cId8);
+                localPlayer.NetActiveSlot.Value = 0;
+                Debug.Log($"[NET_ANIM_SEND] CorrId={cId8} RunId={runId} Seq={seq} ClientId={ownerId} State=WeaponSlot0 Expected=0");
+                Debug.Log("[NET_ANIM] Local client selected NetActiveSlot=0 (Rifle)");
                 yield return new WaitForSeconds(0.4f);
 
-                // Scenario 13: Revive state
-                localPlayer.NetLifeState.Value = (int)Runtime.Character.PlayerLifeState.BeingRevived;
-                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=ReviveState Expected=2");
-                Debug.Log("[NET_ANIM] Local client set NetLifeState=2 (BeingRevived)");
+                // 9. Scenario 9: Shotgun slot 1
+                string cId9 = $"CID_{++seq:D2}_WeaponSlot1";
+                localPlayer.NetCorrelationId.Value = new Unity.Collections.FixedString64Bytes(cId9);
+                localPlayer.NetActiveSlot.Value = 1;
+                Debug.Log($"[NET_ANIM_SEND] CorrId={cId9} RunId={runId} Seq={seq} ClientId={ownerId} State=WeaponSlot1 Expected=1");
+                Debug.Log("[NET_ANIM] Local client switched NetActiveSlot=1 (Shotgun)");
                 yield return new WaitForSeconds(0.4f);
 
-                // Scenario 14: Alive state after recovery
-                localPlayer.NetLifeState.Value = (int)Runtime.Character.PlayerLifeState.Alive;
-                Debug.Log($"[NET_ANIM_SEND] RunId={runId} Seq={++seq} ClientId={ownerId} State=AliveState Expected=0");
-                Debug.Log("[NET_ANIM] Local client set NetLifeState=0 (Alive)");
+                // 10. Scenario 10: Pistol slot 2
+                string cId10 = $"CID_{++seq:D2}_WeaponSlot2";
+                localPlayer.NetCorrelationId.Value = new Unity.Collections.FixedString64Bytes(cId10);
+                localPlayer.NetActiveSlot.Value = 2;
+                Debug.Log($"[NET_ANIM_SEND] CorrId={cId10} RunId={runId} Seq={seq} ClientId={ownerId} State=WeaponSlot2 Expected=2");
+                Debug.Log("[NET_ANIM] Local client switched NetActiveSlot=2 (Pistol)");
+                yield return new WaitForSeconds(0.4f);
+
+                // 11. Scenario 11: Downed state (Server-Authoritative via ServerRpc)
+                string cId11 = $"CID_{++seq:D2}_DownedState";
+                localPlayer.NetCorrelationId.Value = new Unity.Collections.FixedString64Bytes(cId11);
+                localPlayer.RequestSetLifeStateRpc((int)Runtime.Character.PlayerLifeState.Downed, new Unity.Collections.FixedString64Bytes(cId11));
+                Debug.Log($"[NET_ANIM_SEND] CorrId={cId11} RunId={runId} Seq={seq} ClientId={ownerId} State=DownedState Expected=1");
+                Debug.Log("[NET_ANIM] Local client requested Server authoritative Downed state (LifeState=1)");
+                yield return new WaitForSeconds(0.4f);
+
+                // 12. Scenario 12: Revive state (Server-Authoritative via ServerRpc)
+                string cId12 = $"CID_{++seq:D2}_ReviveState";
+                localPlayer.NetCorrelationId.Value = new Unity.Collections.FixedString64Bytes(cId12);
+                localPlayer.RequestSetLifeStateRpc((int)Runtime.Character.PlayerLifeState.BeingRevived, new Unity.Collections.FixedString64Bytes(cId12));
+                Debug.Log($"[NET_ANIM_SEND] CorrId={cId12} RunId={runId} Seq={seq} ClientId={ownerId} State=ReviveState Expected=2");
+                Debug.Log("[NET_ANIM] Local client requested Server authoritative Revive state (LifeState=2)");
+                yield return new WaitForSeconds(0.4f);
+
+                // 13. Scenario 13: Death state (Server-Authoritative via ServerRpc)
+                string cId13 = $"CID_{++seq:D2}_DeathState";
+                localPlayer.NetCorrelationId.Value = new Unity.Collections.FixedString64Bytes(cId13);
+                localPlayer.RequestSetLifeStateRpc((int)Runtime.Character.PlayerLifeState.Eliminated, new Unity.Collections.FixedString64Bytes(cId13));
+                Debug.Log($"[NET_ANIM_SEND] CorrId={cId13} RunId={runId} Seq={seq} ClientId={ownerId} State=DeathState Expected=3");
+                Debug.Log("[NET_ANIM] Local client requested Server authoritative Death state (LifeState=3)");
+                yield return new WaitForSeconds(0.4f);
+
+                // 16. Scenario 16: Respawn (Server-Authoritative via ServerRpc, resets state and active slot)
+                string cId16 = $"CID_{++seq:D2}_RespawnAction";
+                localPlayer.NetCorrelationId.Value = new Unity.Collections.FixedString64Bytes(cId16);
+                localPlayer.RequestRespawnRpc(new Unity.Collections.FixedString64Bytes(cId16));
+                Debug.Log($"[NET_ANIM_SEND] CorrId={cId16} RunId={runId} Seq={seq} ClientId={ownerId} State=RespawnAction Expected=0");
+                Debug.Log("[NET_ANIM] Local client requested Server authoritative Respawn (LifeState=0, Slot=0)");
                 yield return new WaitForSeconds(0.4f);
 
                 Debug.Log($"[NET_ANIM_TEST_COMPLETE] RunId={runId} TotalSent={seq}");

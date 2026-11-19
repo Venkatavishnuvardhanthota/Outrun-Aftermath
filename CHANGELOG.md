@@ -2,6 +2,42 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [1.4.6] - 2026-11-19 - Phase C.1.3.2: Character Animation, Weapon Grip, First-Person & Multiplayer Authority Remediation
+
+### Added
+- **First-Person Presentation & Viewmodel System (`OperatorVisualController.cs`, `CharacterAssetPipeline.cs`)**:
+  - Relocated `FirstPersonPresentation` root from $(0, 0, 0)$ floor level to operator eye level $(0, 1.55\,\text{m}, 0)$.
+  - Added dedicated `FirstPersonWeaponSocket` at eye level with calibrated weapon position and rotation offsets.
+  - Dynamically re-parents active weapons between `FirstPersonWeaponSocket` (with `ShadowCastingMode.On` in FPS) and `RightHandWeaponSocket` (in TPS).
+  - Configures third-person body, head, and gear meshes to `ShadowCastingMode.ShadowsOnly` in first-person mode to eliminate camera clipping while casting authentic player ground shadows.
+- **Server-Authoritative Multiplayer LifeState & Correlation (`NetworkPlayerController.cs`, `NetworkSessionController.cs`)**:
+  - Restored `NetLifeState` to strictly server-authoritative (`NetworkVariableWritePermission.Server`).
+  - Added Server RPCs `RequestSetLifeStateRpc` and `RequestRespawnRpc` to handle client state requests with authoritative health and life state validation.
+  - Added `NetCorrelationId` synchronized across the network for end-to-end tracing across sender, server, and observer processes.
+  - Expanded automated replication routine in `NetworkSessionController.cs` to 17 sequential steps covering all 16 mandatory scenarios including `RunSpeed`, `FireAction`, and `RespawnAction`.
+- **Two-Bone IK Foregrip Calibration & Strict Metric Enforcement (`OperatorVisualController.cs`, `CharacterValidationPipeline.cs`)**:
+  - Refined downward-outward elbow pole hint (`upperArm - up * 0.5 - right * 0.35 + fwd * 0.12`), preventing torso penetration.
+  - Enforced strict bone length preservation ($\Delta L < 0.0001\,\text{m}$, measured $0.000000\,\text{m}$) across all 16 IK test cases.
+  - Achieved $0.0000\,\text{m}$ foregrip alignment distance on Vanguard-4 AR and Breacher-12 Shotgun with natural $137.3^\circ$ elbow bend angle.
+  - Verified Sidekick-9 pistol single-handed bypass.
+- **Runtime Mecanim State Evaluation (`CharacterValidationPipeline.cs`)**:
+  - Implemented `RuntimeStatePlaybackAudit` evaluating all 13 states independently at runtime.
+  - Confirmed 13/13 states pass with positive bone displacement metrics, bounded angular velocities, zero NaNs, and anatomically isolated motion.
+  - Corrected transition condition to `Death` state (`PlayerLifeState.Eliminated = 3`).
+- **Validation Pipeline Integrity Hardening (`CharacterValidationPipeline.cs`)**:
+  - Replaced unexecuted self-intersection claims with honest `"NOT_RUN"` status.
+  - Replaced hardcoded switch counters with dynamic switch tracking (`25` verified cycles).
+- **Comprehensive Visual Evidence & Cryptographic Manifest (`CaptureCharacterVisuals.cs`)**:
+  - Captured 70 calibrated 1920x1080 frames under hardware NVIDIA Direct3D11 GPU rendering.
+  - Generated `docs/phase-c1.3.2/evidence/screenshot_manifest.json` with file sizes, luminance variance deltas, SHA256 hashes, and non-blank verification.
+- **Full End-to-End Production Verification Suite (`run_e2e_production_test.ps1`)**:
+  - 23 of 23 test stages succeeded (100% PASS), covering Web API, HMAC match security, Dedicated Server, Standalone Client, UDP transport, character replication, and unit test suites.
+- **Three-Process Live Replication Test (`test_two_client_multiplayer.ps1`)**:
+  - 17 of 17 mandatory animation scenarios verified and correlated across Dedicated Server, Client A Actor, and Client B Observer.
+
+---
+
+
 ## [1.4.5] - 2026-11-19 - Phase C.1.3.1: Character System Integrity & Multiplayer Verification Corrections
 
 ### Added

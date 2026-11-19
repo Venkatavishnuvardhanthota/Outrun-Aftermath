@@ -37,6 +37,7 @@ namespace OutrunAftermath.Client.Runtime.Character
         [SerializeField] private Transform shoulderLeftSocket;
         [SerializeField] private Transform shoulderRightSocket;
         [SerializeField] private Transform utilityBeltSocket;
+        [SerializeField] private Transform firstPersonWeaponSocket;
 
         [Header("Modular Equipment Visuals")]
         [SerializeField] private List<Renderer> thirdPersonEquipmentRenderers = new List<Renderer>();
@@ -92,6 +93,7 @@ namespace OutrunAftermath.Client.Runtime.Character
         public Transform ShoulderLeftSocket => shoulderLeftSocket;
         public Transform ShoulderRightSocket => shoulderRightSocket;
         public Transform UtilityBeltSocket => utilityBeltSocket;
+        public Transform FirstPersonWeaponSocket => firstPersonWeaponSocket;
 
         public void Initialize(string opId, string opFaction, CharacterMotor motor, WeaponSystem weapons, PlayerHealth health, CameraRig cameraRig, bool isLocalOwner)
         {
@@ -154,6 +156,27 @@ namespace OutrunAftermath.Client.Runtime.Character
             {
                 var fp = transform.Find("FirstPersonPresentation");
                 if (fp != null) firstPersonRoot = fp.gameObject;
+            }
+
+            if (firstPersonRoot != null)
+            {
+                if (firstPersonRoot.transform.localPosition == Vector3.zero)
+                {
+                    firstPersonRoot.transform.localPosition = new Vector3(0f, 1.55f, 0f);
+                }
+                firstPersonWeaponSocket = FindSocketByName("FirstPersonWeaponSocket", firstPersonWeaponSocket);
+                if (firstPersonWeaponSocket == null)
+                {
+                    firstPersonWeaponSocket = firstPersonRoot.transform.Find("FirstPersonWeaponSocket");
+                    if (firstPersonWeaponSocket == null)
+                    {
+                        var fpSock = new GameObject("FirstPersonWeaponSocket");
+                        fpSock.transform.SetParent(firstPersonRoot.transform, false);
+                        fpSock.transform.localPosition = new Vector3(0.06f, -0.08f, 0.32f);
+                        fpSock.transform.localRotation = Quaternion.identity;
+                        firstPersonWeaponSocket = fpSock.transform;
+                    }
+                }
             }
 
             // Find Sockets by standard name
@@ -334,15 +357,19 @@ namespace OutrunAftermath.Client.Runtime.Character
                 }
                 foreach (var r in headEquipmentRenderers) if (r != null) { r.shadowCastingMode = ShadowCastingMode.On; r.enabled = true; }
                 foreach (var r in thirdPersonEquipmentRenderers) if (r != null) { r.shadowCastingMode = ShadowCastingMode.On; r.enabled = true; }
-                SetSocketedWeaponShadowMode(ShadowCastingMode.On);
+                UpdateSocketedWeaponVisuals();
                 return;
             }
 
             if (perspective == CameraPerspective.FirstPerson)
             {
                 // First Person Presentation:
-                // Dedicated first-person arms viewmodel active
-                if (firstPersonRoot != null) firstPersonRoot.SetActive(true);
+                // Dedicated first-person arms viewmodel active at eye level
+                if (firstPersonRoot != null)
+                {
+                    firstPersonRoot.transform.localPosition = new Vector3(0f, 1.55f, 0f);
+                    firstPersonRoot.SetActive(true);
+                }
 
                 // Third-person body mesh casts shadows but does not clip the local camera
                 if (bodySkinnedMesh != null)
@@ -362,7 +389,16 @@ namespace OutrunAftermath.Client.Runtime.Character
                     if (r != null) r.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
                 }
 
-                SetSocketedWeaponShadowMode(ShadowCastingMode.ShadowsOnly);
+                foreach (var r in firstPersonRenderers)
+                {
+                    if (r != null)
+                    {
+                        r.shadowCastingMode = ShadowCastingMode.On;
+                        r.enabled = true;
+                    }
+                }
+
+                UpdateSocketedWeaponVisuals();
             }
             else
             {
@@ -395,7 +431,7 @@ namespace OutrunAftermath.Client.Runtime.Character
                     }
                 }
 
-                SetSocketedWeaponShadowMode(ShadowCastingMode.On);
+                UpdateSocketedWeaponVisuals();
             }
         }
 
@@ -404,10 +440,17 @@ namespace OutrunAftermath.Client.Runtime.Character
             foreach (var kvp in _weaponVisualInstances)
             {
                 if (kvp.Value == null) continue;
-                foreach (var r in kvp.Value.GetComponentsInChildren<Renderer>(true))
-                {
-                    r.shadowCastingMode = mode;
-                }
+                SetWeaponRendererShadowMode(kvp.Value, mode);
+            }
+        }
+
+        private void SetWeaponRendererShadowMode(GameObject weaponGo, ShadowCastingMode mode)
+        {
+            if (weaponGo == null) return;
+            foreach (var r in weaponGo.GetComponentsInChildren<Renderer>(true))
+            {
+                r.shadowCastingMode = mode;
+                r.enabled = true;
             }
         }
 
@@ -454,18 +497,24 @@ namespace OutrunAftermath.Client.Runtime.Character
             if (_weaponVisualInstances.TryGetValue(1, out var sGo) && sGo != null)
                 GetOrCreateForegripSocket(sGo, new Vector3(-0.03f, -0.02f, 0.01f));
 
+            bool isFirstPerson = (_isLocalOwner && _currentPerspective == CameraPerspective.FirstPerson && firstPersonWeaponSocket != null);
+            Transform activeWeaponParent = isFirstPerson ? firstPersonWeaponSocket : rightHandWeaponSocket;
+            ShadowCastingMode activeMode = ShadowCastingMode.On;
+            ShadowCastingMode holsteredMode = isFirstPerson ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
+
             // 1. Process Slot 0 (Vanguard-4 Assault Rifle)
             if (_weaponVisualInstances.TryGetValue(0, out var rifleVisual) && rifleVisual != null)
             {
                 if (_activeSlotIndex == 0)
                 {
-                    if (rightHandWeaponSocket != null)
+                    if (activeWeaponParent != null)
                     {
-                        rifleVisual.transform.SetParent(rightHandWeaponSocket, false);
-                        rifleVisual.transform.localPosition = GetWeaponHandOffset(0);
-                        rifleVisual.transform.localRotation = GetWeaponHandRotation(0);
+                        rifleVisual.transform.SetParent(activeWeaponParent, false);
+                        rifleVisual.transform.localPosition = isFirstPerson ? new Vector3(0f, 0f, 0f) : GetWeaponHandOffset(0);
+                        rifleVisual.transform.localRotation = isFirstPerson ? Quaternion.identity : GetWeaponHandRotation(0);
                         rifleVisual.transform.localScale = Vector3.one;
                         rifleVisual.SetActive(true);
+                        SetWeaponRendererShadowMode(rifleVisual, activeMode);
                     }
                 }
                 else
@@ -477,6 +526,7 @@ namespace OutrunAftermath.Client.Runtime.Character
                         rifleVisual.transform.localRotation = Quaternion.identity;
                         rifleVisual.transform.localScale = Vector3.one;
                         rifleVisual.SetActive(true);
+                        SetWeaponRendererShadowMode(rifleVisual, holsteredMode);
                     }
                 }
             }
@@ -486,13 +536,14 @@ namespace OutrunAftermath.Client.Runtime.Character
             {
                 if (_activeSlotIndex == 1)
                 {
-                    if (rightHandWeaponSocket != null)
+                    if (activeWeaponParent != null)
                     {
-                        shotgunVisual.transform.SetParent(rightHandWeaponSocket, false);
-                        shotgunVisual.transform.localPosition = GetWeaponHandOffset(1);
-                        shotgunVisual.transform.localRotation = GetWeaponHandRotation(1);
+                        shotgunVisual.transform.SetParent(activeWeaponParent, false);
+                        shotgunVisual.transform.localPosition = isFirstPerson ? new Vector3(-0.01f, 0.01f, -0.02f) : GetWeaponHandOffset(1);
+                        shotgunVisual.transform.localRotation = isFirstPerson ? Quaternion.identity : GetWeaponHandRotation(1);
                         shotgunVisual.transform.localScale = Vector3.one;
                         shotgunVisual.SetActive(true);
+                        SetWeaponRendererShadowMode(shotgunVisual, activeMode);
                     }
                 }
                 else
@@ -505,6 +556,7 @@ namespace OutrunAftermath.Client.Runtime.Character
                         shotgunVisual.transform.localRotation = Quaternion.Euler(0f, 15f, 0f);
                         shotgunVisual.transform.localScale = Vector3.one;
                         shotgunVisual.SetActive(true);
+                        SetWeaponRendererShadowMode(shotgunVisual, holsteredMode);
                     }
                 }
             }
@@ -514,13 +566,14 @@ namespace OutrunAftermath.Client.Runtime.Character
             {
                 if (_activeSlotIndex == 2)
                 {
-                    if (rightHandWeaponSocket != null)
+                    if (activeWeaponParent != null)
                     {
-                        pistolVisual.transform.SetParent(rightHandWeaponSocket, false);
-                        pistolVisual.transform.localPosition = GetWeaponHandOffset(2);
-                        pistolVisual.transform.localRotation = GetWeaponHandRotation(2);
+                        pistolVisual.transform.SetParent(activeWeaponParent, false);
+                        pistolVisual.transform.localPosition = isFirstPerson ? new Vector3(0.01f, 0.01f, -0.05f) : GetWeaponHandOffset(2);
+                        pistolVisual.transform.localRotation = isFirstPerson ? Quaternion.identity : GetWeaponHandRotation(2);
                         pistolVisual.transform.localScale = Vector3.one;
                         pistolVisual.SetActive(true);
+                        SetWeaponRendererShadowMode(pistolVisual, activeMode);
                     }
                 }
                 else
@@ -532,6 +585,7 @@ namespace OutrunAftermath.Client.Runtime.Character
                         pistolVisual.transform.localRotation = Quaternion.Euler(-10f, 0f, 0f);
                         pistolVisual.transform.localScale = Vector3.one;
                         pistolVisual.SetActive(true);
+                        SetWeaponRendererShadowMode(pistolVisual, holsteredMode);
                     }
                 }
             }
@@ -539,12 +593,6 @@ namespace OutrunAftermath.Client.Runtime.Character
             // 4. Update Support Hand Foregrip Target and align support hand
             UpdateSupportHandTarget();
             AlignSupportHandToForegrip();
-
-            // Refresh shadow casting mode based on current perspective
-            ShadowCastingMode currentMode = (_isLocalOwner && _currentPerspective == CameraPerspective.FirstPerson)
-                ? ShadowCastingMode.ShadowsOnly
-                : ShadowCastingMode.On;
-            SetSocketedWeaponShadowMode(currentMode);
         }
 
         private void UpdateSupportHandTarget()
@@ -896,17 +944,22 @@ namespace OutrunAftermath.Client.Runtime.Character
             if (rightHandWeaponSocket == null || primaryWeaponHolster == null || secondaryWeaponHolster == null)
                 return false;
 
+            Transform expectedActiveSocket = (_isLocalOwner && _currentPerspective == CameraPerspective.FirstPerson && firstPersonWeaponSocket != null)
+                ? firstPersonWeaponSocket
+                : rightHandWeaponSocket;
+
             int inHandCount = 0;
             foreach (var kvp in _weaponVisualInstances)
             {
                 if (kvp.Value == null) continue;
-                if (kvp.Value.transform.parent == rightHandWeaponSocket) inHandCount++;
+                if (kvp.Value.transform.parent == rightHandWeaponSocket || (firstPersonWeaponSocket != null && kvp.Value.transform.parent == firstPersonWeaponSocket))
+                    inHandCount++;
             }
             if (inHandCount != 1) return false;
 
             if (_weaponVisualInstances.TryGetValue(expectedActiveSlot, out var activeWp) && activeWp != null)
             {
-                if (activeWp.transform.parent != rightHandWeaponSocket) return false;
+                if (activeWp.transform.parent != expectedActiveSocket && activeWp.transform.parent != rightHandWeaponSocket) return false;
             }
             else return false;
 

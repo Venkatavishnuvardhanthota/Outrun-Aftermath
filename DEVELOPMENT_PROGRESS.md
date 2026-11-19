@@ -1540,6 +1540,78 @@ Address all character visual and rigging weaknesses identified during the indepe
 - **Multiplayer Replication**: PASS (2-client live multi-process test, 14/14 mandatory scenarios correlated 100%, 0 missing, 0 mismatched).
 - **Overall Status**: PARTIAL (strictly maintained pending external high-poly DCC sculpted artist models).
 
+---
+
+## Phase C.1.3.2 — 2026-11-19 (Character Animation, Weapon Grip, First-Person & Multiplayer Authority Remediation)
+
+### Completed features
+
+- **First-Person Presentation & Viewmodel Arm System**:
+  - Identified and fixed root cause of blank first-person screenshots: `FirstPersonPresentation` root transform relocated from $(0, 0, 0)$ floor level to operator eye level $(0, 1.55\,\text{m}, 0)$.
+  - Added dedicated `FirstPersonWeaponSocket` under `FirstPersonPresentation` at eye level with calibrated weapon position and rotation offsets.
+  - Dynamically re-parents active weapons between `FirstPersonWeaponSocket` (with `ShadowCastingMode.On` in FPS) and `RightHandWeaponSocket` (in TPS).
+  - Configures third-person body, head, and gear meshes to `ShadowCastingMode.ShadowsOnly` in first-person mode to eliminate camera clipping while casting authentic player ground shadows.
+  - Captured verified non-blank frames for FPS idle, rifle ADS, and reload (`417,007` bytes each).
+- **Server-Authoritative Multiplayer LifeState & End-to-End Correlation**:
+  - Restored `NetLifeState` permission to strictly server-authoritative (`NetworkVariableWritePermission.Server`).
+  - Added Server RPCs `RequestSetLifeStateRpc` and `RequestRespawnRpc` to handle client state requests with authoritative health and life state validation.
+  - Added `NetCorrelationId` synchronized across the network for end-to-end tracing across sender, server, and observer processes.
+  - Expanded automated replication routine in `NetworkSessionController.cs` to 17 sequential steps covering all 16 mandatory scenarios including `RunSpeed`, `FireAction`, and `RespawnAction`.
+- **Two-Bone IK Foregrip Calibration & Strict Metric Enforcement**:
+  - Refined downward-outward elbow pole hint (`upperArm - up * 0.5 - right * 0.35 + fwd * 0.12`), preventing torso penetration.
+  - Enforced strict bone length preservation ($\Delta L < 0.0001\,\text{m}$, measured $0.000000\,\text{m}$) across all 16 IK test cases.
+  - Achieved $0.0000\,\text{m}$ foregrip alignment distance on Vanguard-4 AR and Breacher-12 Shotgun with natural $137.3^\circ$ elbow bend angle.
+  - Verified Sidekick-9 pistol single-handed bypass.
+- **Runtime Mecanim State Evaluation**:
+  - Implemented `RuntimeStatePlaybackAudit` evaluating all 13 states independently at runtime.
+  - Confirmed 13/13 states pass with positive bone displacement metrics, bounded angular velocities, zero NaNs, and anatomically isolated motion.
+  - Corrected transition condition to `Death` state (`PlayerLifeState.Eliminated = 3`).
+- **Validation Pipeline Integrity Hardening**:
+  - Replaced unexecuted self-intersection claims with honest `"NOT_RUN"` status.
+  - Replaced hardcoded switch counters with dynamic switch tracking (`25` verified cycles).
+- **Comprehensive Visual Evidence & Cryptographic Manifest**:
+  - Captured 70 calibrated 1920x1080 frames under hardware NVIDIA Direct3D11 GPU rendering.
+  - Generated `docs/phase-c1.3.2/evidence/screenshot_manifest.json` with file sizes, luminance variance deltas, SHA256 hashes, and non-blank verification.
+- **Full End-to-End Production Verification Suite**:
+  - 23 of 23 test stages succeeded (100% PASS), covering Web API, HMAC match security, Dedicated Server, Standalone Client, UDP transport, character replication, and unit test suites.
+- **Three-Process Live Replication Test**:
+  - 17 of 17 mandatory animation scenarios verified and correlated across Dedicated Server, Client A Actor, and Client B Observer.
+
+### Files modified
+
+- `client/Assets/Editor/CharacterAssetPipeline.cs`
+- `client/Assets/Editor/CharacterValidationPipeline.cs`
+- `client/Assets/Editor/CaptureCharacterVisuals.cs`
+- `client/Assets/Game/Runtime/Character/OperatorVisualController.cs`
+- `client/Assets/Game/Multiplayer/NetworkPlayerController.cs`
+- `client/Assets/Game/Multiplayer/NetworkSessionController.cs`
+- `test_two_client_multiplayer.ps1`
+- `character_validation_report.json`
+- `PHASE_C1_3_2_VALIDATION_REPORT.json`
+- `multiplayer_replication_report.json`
+- `e2e_production_test_report.json`
+- `e2e_production_test_console.log`
+- `docs/phase-c1.3.2/README.md`
+- `docs/phase-c1.3.2/PHASE_C1_3_2_VALIDATION_REPORT.md`
+- `CHANGELOG.md`
+- `DEVELOPMENT_PROGRESS.md`
+- `KNOWN_ISSUES.md`
+
+### Verification Verdict
+**PARTIAL (All Technical Validation Checks PASS; DCC Art Asset Gate PARTIAL)**:
+- **Geometry & Topology**: PASS (1,078 verts, 2,152 tris, 1 component, 0 boundary edges, 0 non-manifold edges, 0 degenerate/zero-area tris, winding consistent).
+- **Skinning & Deformation**: PASS (11 flexion tests pass, signed tetrahedral volume retention 98%-100%, segment error $< 0.000001\text{m}$, 0 NaNs).
+- **Skeleton & Avatar**: PASS (25 bones, valid Unity Humanoid Avatar).
+- **Animator Configuration**: PASS (13 states, 2 layers, combat mask, IK pass enabled).
+- **Animation Quality**: PASS (13/13 states independently evaluated at runtime, 13/13 passed).
+- **Support-Hand Two-Bone IK**: PASS (16/16 test cases pass, pure joint rotations, length delta $< 0.0001\text{m}$, hand distance $0.0000\text{m}$, elbow bend $137.3^\circ$ AR / $137.1^\circ$ Shotgun, pistol single-handed).
+- **Weapon Switching**: PASS (10/10 transitions pass, 56->56 transform count invariant, zero duplicate allocations).
+- **Presentation**: PASS (FPS viewmodel at eye level $Y=1.55\text{m}$ + ShadowsOnly, TPS + On, non-blank verified).
+- **Multiplayer Replication**: PASS (3-process live test, 17/17 mandatory scenarios correlated 100%, 0 missing, 0 mismatched).
+- **End-to-End Suite**: PASS (23/23 stages passed, 100% PASS).
+- **Overall Status**: PARTIAL (strictly maintained pending external high-poly DCC sculpted artist models).
+
+
 
 
 

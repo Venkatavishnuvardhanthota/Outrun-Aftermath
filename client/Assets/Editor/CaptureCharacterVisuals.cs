@@ -13,9 +13,33 @@ namespace OutrunAftermath.Client.Editor
     {
         private const string BrainArtifactsDir = @"C:\Users\vishn\.gemini\antigravity\brain\4dca56ca-91c2-47c5-bfb3-fb99b4b8a1c5";
 
-        [MenuItem("Outrun/Capture Character Visual Evidence (Phase C.1.3)")]
+        [System.Serializable]
+        public class ScreenshotManifestEntry
+        {
+            public string filename;
+            public long fileSizeBytes;
+            public string resolution;
+            public float luminanceDelta;
+            public bool nonBlankVerified;
+            public string sha256;
+        }
+
+        [System.Serializable]
+        public class ScreenshotManifest
+        {
+            public string timestamp;
+            public string phase;
+            public int totalScreenshots;
+            public int nonBlankCount;
+            public List<ScreenshotManifestEntry> screenshots = new List<ScreenshotManifestEntry>();
+        }
+
+        private static List<ScreenshotManifestEntry> _manifestEntries = new List<ScreenshotManifestEntry>();
+
+        [MenuItem("Outrun/Capture Character Visual Evidence (Phase C.1.3.2)")]
         public static void CaptureAllEvidence()
         {
+            _manifestEntries.Clear();
             Debug.Log($"[CaptureCharacterVisuals] Setting up calibrated capture studio... Device: {SystemInfo.graphicsDeviceType}, Name: {SystemInfo.graphicsDeviceName}, Vendor: {SystemInfo.graphicsDeviceVendor}");
 
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
@@ -200,10 +224,23 @@ namespace OutrunAftermath.Client.Editor
 
                 // First-Person View (Viewmodel arms, hands on weapon, no clipping)
                 vc.ApplyPerspectiveMode(CameraPerspective.FirstPerson);
-                PositionCamera(cam, new Vector3(0f, 1.55f, 0.15f), new Vector3(0f, 1.55f, 3.0f));
+                PositionCamera(cam, new Vector3(0f, 1.55f, 0.05f), new Vector3(0f, 1.55f, 2.0f));
                 CaptureFrame(cam, "screenshot_rex_firstperson.png");
                 CaptureFrame(cam, "screenshot_rex_firstperson_rifle.png");
                 CaptureFrame(cam, "rex_firstperson_rifle.png");
+
+                // First-Person Aim
+                SampleClip(rex, $"{animDir}/Operator_Aim.anim", 0.5f);
+                CaptureFrame(cam, "screenshot_rex_firstperson_aim.png");
+                CaptureFrame(cam, "rex_firstperson_aim.png");
+
+                // First-Person Reload
+                SampleClip(rex, $"{animDir}/Operator_Reload.anim", 1.0f);
+                CaptureFrame(cam, "screenshot_rex_firstperson_reload.png");
+                CaptureFrame(cam, "rex_firstperson_reload.png");
+
+                // Reset to Idle
+                SampleClip(rex, $"{animDir}/Operator_Idle.anim", 0f);
 
                 // Weapon Switching & Holster Views
                 vc.ApplyPerspectiveMode(CameraPerspective.ThirdPerson);
@@ -368,7 +405,7 @@ namespace OutrunAftermath.Client.Editor
 
                 UnityEngine.Object.DestroyImmediate(proxyGo);
 
-                // 25. TRACE Third-Person Presentation (Recon Operator with scout rig, sensor visor, and combat camo)
+                // 25. TRACE Presentation & Multi-Perspective Views
                 string tracePrefabPath = "Assets/Art/Characters/Operators/TRACE/Prefabs/PF_Operator_TRACE.prefab";
                 var tracePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(tracePrefabPath);
                 if (tracePrefab != null)
@@ -383,13 +420,58 @@ namespace OutrunAftermath.Client.Editor
                         traceVc.DiscoverSocketsAndRenderers();
                         traceVc.ApplyPerspectiveMode(CameraPerspective.ThirdPerson);
                     }
+
+                    // Neutral Front
+                    PositionCamera(cam, new Vector3(0f, 1.10f, 2.7f), new Vector3(0f, 1.0f, 0f));
+                    CaptureFrame(cam, "screenshot_trace_neutral_front.png");
+
+                    // Neutral Side
+                    PositionCamera(cam, new Vector3(2.6f, 1.10f, 0f), new Vector3(0f, 1.0f, 0f));
+                    CaptureFrame(cam, "screenshot_trace_neutral_side.png");
+
+                    // Neutral Back
+                    PositionCamera(cam, new Vector3(0f, 1.10f, -2.7f), new Vector3(0f, 1.0f, 0f));
+                    CaptureFrame(cam, "screenshot_trace_neutral_back.png");
+
+                    // Over-the-shoulder Third-Person Presentation
                     PositionCamera(cam, new Vector3(0.55f, 1.45f, -1.8f), new Vector3(0.15f, 1.35f, 2.0f));
                     CaptureFrame(cam, "trace_thirdperson_presentation.png");
                     CaptureFrame(cam, "screenshot_trace_thirdperson.png");
+
+                    // TRACE Walk
+                    SampleClip(traceGo, $"{animDir}/Operator_Walk.anim", 0.45f);
+                    PositionCamera(cam, new Vector3(1.6f, 1.15f, 1.8f), new Vector3(0f, 1.0f, 0f));
+                    CaptureFrame(cam, "screenshot_trace_walk.png");
+
+                    // TRACE Rifle Grip
+                    SampleClip(traceGo, $"{animDir}/Operator_Idle.anim", 0f);
+                    if (traceVc != null) traceVc.SetActiveSlotIndex(0);
+                    PositionCamera(cam, new Vector3(0.75f, 1.25f, 1.8f), new Vector3(0f, 1.10f, 0f));
+                    CaptureFrame(cam, "screenshot_trace_rifle_grip.png");
+
+                    // TRACE Pistol Grip
+                    if (traceVc != null) traceVc.SetActiveSlotIndex(2);
+                    PositionCamera(cam, new Vector3(0.65f, 1.20f, 1.6f), new Vector3(0f, 1.10f, 0f));
+                    CaptureFrame(cam, "screenshot_trace_pistol_grip.png");
+
+                    // TRACE Downed
+                    SampleClip(traceGo, $"{animDir}/Operator_Downed.anim", 1.0f);
+                    PositionCamera(cam, new Vector3(1.3f, 0.95f, 1.5f), new Vector3(0f, 0.35f, 0f));
+                    CaptureFrame(cam, "screenshot_trace_downed.png");
+
+                    // TRACE First-Person
+                    if (traceVc != null)
+                    {
+                        traceVc.SetActiveSlotIndex(0);
+                        traceVc.ApplyPerspectiveMode(CameraPerspective.FirstPerson);
+                    }
+                    PositionCamera(cam, new Vector3(0f, 1.55f, 0.05f), new Vector3(0f, 1.55f, 2.0f));
+                    CaptureFrame(cam, "screenshot_trace_firstperson.png");
+
                     UnityEngine.Object.DestroyImmediate(traceGo);
                 }
 
-                Debug.Log("[CaptureCharacterVisuals] All character screenshots successfully captured!");
+                WriteManifest();
 
                 Debug.Log("[CaptureCharacterVisuals] All character screenshots successfully captured!");
             }
@@ -612,65 +694,96 @@ namespace OutrunAftermath.Client.Editor
                 Debug.Log($"[CaptureCharacterVisuals] Rendered valid frame '{filename}' (size: {bytes.Length} bytes, lum delta: {lumVariance:F3})");
             }
 
+            string sha256Str;
+            using (var sha = System.Security.Cryptography.SHA256.Create())
+            {
+                byte[] hash = sha.ComputeHash(bytes);
+                sha256Str = System.BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+            }
+
+            _manifestEntries.Add(new ScreenshotManifestEntry
+            {
+                filename = filename,
+                fileSizeBytes = bytes.Length,
+                resolution = $"{w}x{h}",
+                luminanceDelta = lumVariance,
+                nonBlankVerified = !isBlank,
+                sha256 = sha256Str
+            });
+
             // Determine root paths
             string projectDir = Directory.GetCurrentDirectory(); // d:\projects\outrun-aftermath\client
             string workspaceRoot = Path.GetFullPath(Path.Combine(projectDir, "..")); // d:\projects\outrun-aftermath
 
             string rootPath = Path.Combine(workspaceRoot, filename);
             string clientPath = Path.Combine(projectDir, filename);
-            string evidenceDir = Path.Combine(workspaceRoot, "docs", "evidence", "phase-c1.3.1");
+            string evidenceDir1 = Path.Combine(workspaceRoot, "docs", "phase-c1.3.2", "evidence");
+            string evidenceDir2 = Path.Combine(workspaceRoot, "docs", "evidence", "phase-c1.3.2");
 
-            try
-            {
-                if (!Directory.Exists(evidenceDir))
-                {
-                    Directory.CreateDirectory(evidenceDir);
-                }
-                string evidencePath = Path.Combine(evidenceDir, filename);
-                File.WriteAllBytes(evidencePath, bytes);
-                Debug.Log($"[CaptureCharacterVisuals] Saved evidence: {evidencePath}");
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[CaptureCharacterVisuals] Failed writing evidence: {ex.Message}");
-            }
-
-            try
-            {
-                File.WriteAllBytes(rootPath, bytes);
-                Debug.Log($"[CaptureCharacterVisuals] Saved root: {rootPath}");
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[CaptureCharacterVisuals] Failed writing root {rootPath}: {ex.Message}");
-            }
-
-            try
-            {
-                File.WriteAllBytes(clientPath, bytes);
-                Debug.Log($"[CaptureCharacterVisuals] Saved client: {clientPath}");
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[CaptureCharacterVisuals] Failed writing client {clientPath}: {ex.Message}");
-            }
+            SaveBytesSafe(evidenceDir1, filename, bytes);
+            SaveBytesSafe(evidenceDir2, filename, bytes);
+            SaveBytesSafe(workspaceRoot, filename, bytes);
+            SaveBytesSafe(projectDir, filename, bytes);
 
             // Copy to brain artifact directory if it exists
             if (Directory.Exists(BrainArtifactsDir))
             {
-                try
-                {
-                    string brainPath = Path.Combine(BrainArtifactsDir, filename);
-                    File.WriteAllBytes(brainPath, bytes);
-                    Debug.Log($"[CaptureCharacterVisuals] Saved brain: {brainPath}");
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning($"[CaptureCharacterVisuals] Failed writing brain: {ex.Message}");
-                }
+                SaveBytesSafe(BrainArtifactsDir, filename, bytes);
             }
 
             Debug.Log($"[CaptureCharacterVisuals] Saved screenshot: {filename}");
+        }
+
+        private static void SaveBytesSafe(string dir, string filename, byte[] bytes)
+        {
+            try
+            {
+                if (!Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+                string fullPath = Path.Combine(dir, filename);
+                File.WriteAllBytes(fullPath, bytes);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[CaptureCharacterVisuals] Failed writing {filename} to {dir}: {ex.Message}");
+            }
+        }
+
+        private static void WriteManifest()
+        {
+            try
+            {
+                var manifest = new ScreenshotManifest
+                {
+                    timestamp = System.DateTime.UtcNow.ToString("o"),
+                    phase = "Phase C.1.3.2: Character Visual Evidence & Integrity Manifest",
+                    totalScreenshots = _manifestEntries.Count,
+                    nonBlankCount = _manifestEntries.FindAll(e => e.nonBlankVerified).Count,
+                    screenshots = _manifestEntries
+                };
+
+                string json = EditorJsonUtility.ToJson(manifest, true);
+                string projectDir = Directory.GetCurrentDirectory();
+                string workspaceRoot = Path.GetFullPath(Path.Combine(projectDir, ".."));
+
+                string dir1 = Path.Combine(workspaceRoot, "docs", "phase-c1.3.2", "evidence");
+                string dir2 = Path.Combine(workspaceRoot, "docs", "evidence", "phase-c1.3.2");
+
+                byte[] jsonBytes = System.Text.Encoding.UTF8.GetBytes(json);
+                SaveBytesSafe(dir1, "screenshot_manifest.json", jsonBytes);
+                SaveBytesSafe(dir2, "screenshot_manifest.json", jsonBytes);
+                if (Directory.Exists(BrainArtifactsDir))
+                {
+                    SaveBytesSafe(BrainArtifactsDir, "screenshot_manifest.json", jsonBytes);
+                }
+                Debug.Log($"[CaptureCharacterVisuals] Screenshot manifest written successfully! Total entries: {_manifestEntries.Count}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[CaptureCharacterVisuals] Failed writing manifest: {ex}");
+            }
         }
 
         private static Transform FindTransformInRex(Transform root, string name)

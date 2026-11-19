@@ -1,0 +1,568 @@
+{
+    "timestamp": "2026-11-19T12:50:18.7309718Z",
+    "phase": "Phase C.1.3.2: Character Visual Evidence & Integrity Manifest",
+    "totalScreenshots": 70,
+    "nonBlankCount": 70,
+    "screenshots": [
+        {
+            "filename": "screenshot_rex_neutral_front.png",
+            "fileSizeBytes": 284866,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.042411744594573975,
+            "nonBlankVerified": true,
+            "sha256": "ccd49e34382c3af682363f03dc7cb69f2d659d48ba46849d8612d036a26ebb94"
+        },
+        {
+            "filename": "screenshot_rex_front.png",
+            "fileSizeBytes": 296979,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.042411744594573975,
+            "nonBlankVerified": true,
+            "sha256": "766031a23c630bd9d30453ca6ff08866e4fe7311d8f93467610a7d03c056be36"
+        },
+        {
+            "filename": "screenshot_rex_neutral_back.png",
+            "fileSizeBytes": 315413,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.049807846546173096,
+            "nonBlankVerified": true,
+            "sha256": "50f3f523d4dc3ac2c2a4d7f55c0bae83011fff6170edb3996c00794d9e802079"
+        },
+        {
+            "filename": "screenshot_rex_back.png",
+            "fileSizeBytes": 315413,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.049807846546173096,
+            "nonBlankVerified": true,
+            "sha256": "50f3f523d4dc3ac2c2a4d7f55c0bae83011fff6170edb3996c00794d9e802079"
+        },
+        {
+            "filename": "screenshot_rex_neutral_side.png",
+            "fileSizeBytes": 278176,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.026278436183929443,
+            "nonBlankVerified": true,
+            "sha256": "89d73d0490964bf3813b77606b6569451a598da8b81f10e28939b11814794ade"
+        },
+        {
+            "filename": "screenshot_rex_side.png",
+            "fileSizeBytes": 278176,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.026278436183929443,
+            "nonBlankVerified": true,
+            "sha256": "89d73d0490964bf3813b77606b6569451a598da8b81f10e28939b11814794ade"
+        },
+        {
+            "filename": "screenshot_rex_head_hands.png",
+            "fileSizeBytes": 591654,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.03748627007007599,
+            "nonBlankVerified": true,
+            "sha256": "bf85050e1ed310a8abd28a72e4c1cebae796021d4dd3acab16092bed19b21c4e"
+        },
+        {
+            "filename": "screenshot_rex_wireframe.png",
+            "fileSizeBytes": 396445,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.03966274857521057,
+            "nonBlankVerified": true,
+            "sha256": "51edd35a550e42127527f562cec89824a9c8f7eacf50c7aee00929c60e48fe1c"
+        },
+        {
+            "filename": "screenshot_rex_skeleton.png",
+            "fileSizeBytes": 262480,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.03966274857521057,
+            "nonBlankVerified": true,
+            "sha256": "9b76a2d9c4bfd3056e749cd87253751887ec7c474db1f98d453141bfa454fcbd"
+        },
+        {
+            "filename": "screenshot_rex_deform_shoulder_elbow.png",
+            "fileSizeBytes": 349925,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.042411744594573975,
+            "nonBlankVerified": true,
+            "sha256": "5a9ac7327a6e5c88e9e62560e6aabec8975826de4bac2894be23ab9fc4cc200a"
+        },
+        {
+            "filename": "screenshot_rex_deform_knee_hip.png",
+            "fileSizeBytes": 358907,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.026725471019744873,
+            "nonBlankVerified": true,
+            "sha256": "ee6b164d728a68f6068b04f4593ab3b66ec09fb62d77ce1aa7c955bba4976743"
+        },
+        {
+            "filename": "screenshot_rex_neutral_clay.png",
+            "fileSizeBytes": 280402,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.042411744594573975,
+            "nonBlankVerified": true,
+            "sha256": "5ccd81f3bb8d10701eda62f8027035a40087a5cb55b309688cc953a0c6e182ec"
+        },
+        {
+            "filename": "screenshot_rex_shaded_final.png",
+            "fileSizeBytes": 298750,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.04241177439689636,
+            "nonBlankVerified": true,
+            "sha256": "c288de1db36a6e4c4ef8cf9ee2357a629297ca308a3a442087096d453492e2ff"
+        },
+        {
+            "filename": "screenshot_rex_thirdperson.png",
+            "fileSizeBytes": 369198,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.3374549448490143,
+            "nonBlankVerified": true,
+            "sha256": "eaa6c654a1645837623fa93fe4f7e6cfccb3904fd04f0c3906e9d60e8b2a485c"
+        },
+        {
+            "filename": "screenshot_rex_thirdperson_rifle.png",
+            "fileSizeBytes": 369198,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.3374549448490143,
+            "nonBlankVerified": true,
+            "sha256": "eaa6c654a1645837623fa93fe4f7e6cfccb3904fd04f0c3906e9d60e8b2a485c"
+        },
+        {
+            "filename": "rex_thirdperson_rifle.png",
+            "fileSizeBytes": 369198,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.3374549448490143,
+            "nonBlankVerified": true,
+            "sha256": "eaa6c654a1645837623fa93fe4f7e6cfccb3904fd04f0c3906e9d60e8b2a485c"
+        },
+        {
+            "filename": "screenshot_rex_firstperson.png",
+            "fileSizeBytes": 417007,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.053003937005996704,
+            "nonBlankVerified": true,
+            "sha256": "a99ab9d37654e91d4aad1b9a979f2e8941607ebafca8b137950d876c01f35ea6"
+        },
+        {
+            "filename": "screenshot_rex_firstperson_rifle.png",
+            "fileSizeBytes": 417007,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.053003937005996704,
+            "nonBlankVerified": true,
+            "sha256": "a99ab9d37654e91d4aad1b9a979f2e8941607ebafca8b137950d876c01f35ea6"
+        },
+        {
+            "filename": "rex_firstperson_rifle.png",
+            "fileSizeBytes": 417007,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.053003937005996704,
+            "nonBlankVerified": true,
+            "sha256": "a99ab9d37654e91d4aad1b9a979f2e8941607ebafca8b137950d876c01f35ea6"
+        },
+        {
+            "filename": "screenshot_rex_firstperson_aim.png",
+            "fileSizeBytes": 417007,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.053003937005996704,
+            "nonBlankVerified": true,
+            "sha256": "a99ab9d37654e91d4aad1b9a979f2e8941607ebafca8b137950d876c01f35ea6"
+        },
+        {
+            "filename": "rex_firstperson_aim.png",
+            "fileSizeBytes": 417007,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.053003937005996704,
+            "nonBlankVerified": true,
+            "sha256": "a99ab9d37654e91d4aad1b9a979f2e8941607ebafca8b137950d876c01f35ea6"
+        },
+        {
+            "filename": "screenshot_rex_firstperson_reload.png",
+            "fileSizeBytes": 417007,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.053003937005996704,
+            "nonBlankVerified": true,
+            "sha256": "a99ab9d37654e91d4aad1b9a979f2e8941607ebafca8b137950d876c01f35ea6"
+        },
+        {
+            "filename": "rex_firstperson_reload.png",
+            "fileSizeBytes": 417007,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.053003937005996704,
+            "nonBlankVerified": true,
+            "sha256": "a99ab9d37654e91d4aad1b9a979f2e8941607ebafca8b137950d876c01f35ea6"
+        },
+        {
+            "filename": "screenshot_rex_weapon_switch.png",
+            "fileSizeBytes": 347712,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.028345108032226563,
+            "nonBlankVerified": true,
+            "sha256": "f19a5cab4fdfaa0dd49e94f08d69d84699613e7a5fe08e86df18f60534649e48"
+        },
+        {
+            "filename": "screenshot_rex_shotgun_equipped.png",
+            "fileSizeBytes": 347712,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.028345108032226563,
+            "nonBlankVerified": true,
+            "sha256": "f19a5cab4fdfaa0dd49e94f08d69d84699613e7a5fe08e86df18f60534649e48"
+        },
+        {
+            "filename": "rex_shotgun_grip.png",
+            "fileSizeBytes": 347712,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.028345108032226563,
+            "nonBlankVerified": true,
+            "sha256": "f19a5cab4fdfaa0dd49e94f08d69d84699613e7a5fe08e86df18f60534649e48"
+        },
+        {
+            "filename": "screenshot_rex_rifle_holstered.png",
+            "fileSizeBytes": 405361,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.028345078229904175,
+            "nonBlankVerified": true,
+            "sha256": "3d6f0edb56823a4ac368565676d4b9b507f9f4cf5104e9be526bda9c1997755e"
+        },
+        {
+            "filename": "screenshot_rex_pistol_equipped.png",
+            "fileSizeBytes": 357776,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.03226667642593384,
+            "nonBlankVerified": true,
+            "sha256": "7fae112b45c774801530951ec21015b06b2f8361adde1578ada5b5a8a7ec8027"
+        },
+        {
+            "filename": "rex_pistol_grip.png",
+            "fileSizeBytes": 357776,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.03226667642593384,
+            "nonBlankVerified": true,
+            "sha256": "7fae112b45c774801530951ec21015b06b2f8361adde1578ada5b5a8a7ec8027"
+        },
+        {
+            "filename": "screenshot_rex_shotgun_holstered.png",
+            "fileSizeBytes": 420621,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.03966274857521057,
+            "nonBlankVerified": true,
+            "sha256": "90a89268b23ab989eed92f1e758b76c3fe82df56bc9c996a5a5a5b12198ee12c"
+        },
+        {
+            "filename": "screenshot_rex_pistol_holstered.png",
+            "fileSizeBytes": 405323,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.03456863760948181,
+            "nonBlankVerified": true,
+            "sha256": "1eb92aa8c40065ee4de643ce758970e67f3c401effaa40f035ab59346b86c947"
+        },
+        {
+            "filename": "screenshot_rex_support_hand_grip.png",
+            "fileSizeBytes": 511519,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.035741180181503296,
+            "nonBlankVerified": true,
+            "sha256": "ae185dcb86586ffe00bf4b2125e2e5e87bb3ceb2d7278dffe73bd62649f4ba16"
+        },
+        {
+            "filename": "rex_support_hand_ik_side.png",
+            "fileSizeBytes": 585460,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.15008237957954407,
+            "nonBlankVerified": true,
+            "sha256": "42c880f6db9c02edab1293a6918ee0a4eaff41e04375b385e67ed4c3c895838e"
+        },
+        {
+            "filename": "rex_ik_elbow_bend_closeup.png",
+            "fileSizeBytes": 624936,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.018435299396514893,
+            "nonBlankVerified": true,
+            "sha256": "2daab113893e795ba4ed406d8aee2cf0f268a60588b8ba2f9b2d7504424fd6ce"
+        },
+        {
+            "filename": "screenshot_rex_head_helmet.png",
+            "fileSizeBytes": 376039,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.157560795545578,
+            "nonBlankVerified": true,
+            "sha256": "815b9a0a95c0528126fe44b2c1fb9499566d6fd04635b1965f764c59226e3fbd"
+        },
+        {
+            "filename": "screenshot_rex_upper_equipment.png",
+            "fileSizeBytes": 390149,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.03966274857521057,
+            "nonBlankVerified": true,
+            "sha256": "41159b1fc396c704c689ad687e42107b1f26d32c8bbcf14020a92c4e118f011c"
+        },
+        {
+            "filename": "screenshot_rex_hands_gloves.png",
+            "fileSizeBytes": 522834,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.03849020600318909,
+            "nonBlankVerified": true,
+            "sha256": "3b6bb585f89bd6874d76c90fcf30f8b25d5ef12f14107210fc2033ac90b85b46"
+        },
+        {
+            "filename": "screenshot_rex_lower_equipment.png",
+            "fileSizeBytes": 415393,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.0384901762008667,
+            "nonBlankVerified": true,
+            "sha256": "b9a3629bdfc60025b977ec00d10f4e5c3062d0d0e6d907091086e4db728aa1f1"
+        },
+        {
+            "filename": "screenshot_rex_skin_weights.png",
+            "fileSizeBytes": 301063,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.03966274857521057,
+            "nonBlankVerified": true,
+            "sha256": "c6ecead37cc31027bb7f27b160cac02012c6872b7a11a75cdc481b41a5acf225"
+        },
+        {
+            "filename": "screenshot_rex_idle.png",
+            "fileSizeBytes": 319743,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.03849020600318909,
+            "nonBlankVerified": true,
+            "sha256": "643a1684bc7091411e520bc713ba6953e933f5066cf48bbdd1c9249a996b3a84"
+        },
+        {
+            "filename": "screenshot_rex_walk.png",
+            "fileSizeBytes": 319228,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.027898013591766357,
+            "nonBlankVerified": true,
+            "sha256": "ac0e1a86b45d1522c6fb3e54f4796c8484b9c548bf99f79bb2fee7edfbaa22db"
+        },
+        {
+            "filename": "rex_walk_pose.png",
+            "fileSizeBytes": 319228,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.027898013591766357,
+            "nonBlankVerified": true,
+            "sha256": "ac0e1a86b45d1522c6fb3e54f4796c8484b9c548bf99f79bb2fee7edfbaa22db"
+        },
+        {
+            "filename": "screenshot_rex_run.png",
+            "fileSizeBytes": 312631,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.026278406381607056,
+            "nonBlankVerified": true,
+            "sha256": "50112c4f0750a6fd1a84f39c16167be6fa00a7201f09743bb39c19ceac552ea7"
+        },
+        {
+            "filename": "rex_sprint_pose.png",
+            "fileSizeBytes": 312631,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.026278406381607056,
+            "nonBlankVerified": true,
+            "sha256": "50112c4f0750a6fd1a84f39c16167be6fa00a7201f09743bb39c19ceac552ea7"
+        },
+        {
+            "filename": "screenshot_rex_crouch.png",
+            "fileSizeBytes": 351338,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.036870598793029785,
+            "nonBlankVerified": true,
+            "sha256": "7deba43ffd7fbd1cf724b767c6f4d35d5e48bc6a6d8f9aec35f569e88e6cd4f5"
+        },
+        {
+            "filename": "screenshot_rex_aim_fire.png",
+            "fileSizeBytes": 297302,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.03456863760948181,
+            "nonBlankVerified": true,
+            "sha256": "81e60931220e951d17c093e13717ee34c83855740b0152eea65ed010e9783a0f"
+        },
+        {
+            "filename": "screenshot_rex_fire.png",
+            "fileSizeBytes": 297302,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.03456863760948181,
+            "nonBlankVerified": true,
+            "sha256": "81e60931220e951d17c093e13717ee34c83855740b0152eea65ed010e9783a0f"
+        },
+        {
+            "filename": "screenshot_rex_reload.png",
+            "fileSizeBytes": 331651,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.03226667642593384,
+            "nonBlankVerified": true,
+            "sha256": "db4b2faa729a67c022e915b50875de3dfa382247d2bea6f2c95677e87c8546d8"
+        },
+        {
+            "filename": "rex_reload_pose.png",
+            "fileSizeBytes": 331651,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.03226667642593384,
+            "nonBlankVerified": true,
+            "sha256": "db4b2faa729a67c022e915b50875de3dfa382247d2bea6f2c95677e87c8546d8"
+        },
+        {
+            "filename": "screenshot_rex_hit_reaction.png",
+            "fileSizeBytes": 330950,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.03226667642593384,
+            "nonBlankVerified": true,
+            "sha256": "5ec7a9d4db5867bc0582e20013e92938276e486aa43297b7f6659a8bd8912cc5"
+        },
+        {
+            "filename": "screenshot_rex_downed_death.png",
+            "fileSizeBytes": 330298,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.012211769819259644,
+            "nonBlankVerified": true,
+            "sha256": "eb6edf685c63a221982abd1de692b8b05b52334d3f0aa724610b7691302302aa"
+        },
+        {
+            "filename": "screenshot_rex_downed.png",
+            "fileSizeBytes": 330298,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.012211769819259644,
+            "nonBlankVerified": true,
+            "sha256": "eb6edf685c63a221982abd1de692b8b05b52334d3f0aa724610b7691302302aa"
+        },
+        {
+            "filename": "rex_downed_pose.png",
+            "fileSizeBytes": 330298,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.012211769819259644,
+            "nonBlankVerified": true,
+            "sha256": "eb6edf685c63a221982abd1de692b8b05b52334d3f0aa724610b7691302302aa"
+        },
+        {
+            "filename": "screenshot_rex_revive.png",
+            "fileSizeBytes": 359851,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.01613333821296692,
+            "nonBlankVerified": true,
+            "sha256": "6d351b3e570dd655110d63120c5744b3408f23e146d740c0dbfca283ca7eed61"
+        },
+        {
+            "filename": "rex_revive_pose.png",
+            "fileSizeBytes": 359851,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.01613333821296692,
+            "nonBlankVerified": true,
+            "sha256": "6d351b3e570dd655110d63120c5744b3408f23e146d740c0dbfca283ca7eed61"
+        },
+        {
+            "filename": "screenshot_rex_death.png",
+            "fileSizeBytes": 321996,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.009462743997573853,
+            "nonBlankVerified": true,
+            "sha256": "941d8132bd9c05d8a7a99d7ee63f629bace81c9201b8855b59e5d12cd6f0905e"
+        },
+        {
+            "filename": "rex_death_pose.png",
+            "fileSizeBytes": 321996,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.009462743997573853,
+            "nonBlankVerified": true,
+            "sha256": "941d8132bd9c05d8a7a99d7ee63f629bace81c9201b8855b59e5d12cd6f0905e"
+        },
+        {
+            "filename": "screenshot_rex_multiplayer_proxy.png",
+            "fileSizeBytes": 511580,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.022803932428359985,
+            "nonBlankVerified": true,
+            "sha256": "f54deb837fe5a025687c0bed7e561c5ad7950e86d6ac3a4a3c180fb57406fc47"
+        },
+        {
+            "filename": "screenshot_rex_remote_multiplayer.png",
+            "fileSizeBytes": 511580,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.022803932428359985,
+            "nonBlankVerified": true,
+            "sha256": "f54deb837fe5a025687c0bed7e561c5ad7950e86d6ac3a4a3c180fb57406fc47"
+        },
+        {
+            "filename": "rex_remote_player_replication.png",
+            "fileSizeBytes": 511580,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.022803932428359985,
+            "nonBlankVerified": true,
+            "sha256": "f54deb837fe5a025687c0bed7e561c5ad7950e86d6ac3a4a3c180fb57406fc47"
+        },
+        {
+            "filename": "screenshot_trace_neutral_front.png",
+            "fileSizeBytes": 318155,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.042411744594573975,
+            "nonBlankVerified": true,
+            "sha256": "d47dbd19c49eabdcb5317297e47572b0e5afba99662363348f0331970593d5e0"
+        },
+        {
+            "filename": "screenshot_trace_neutral_side.png",
+            "fileSizeBytes": 330167,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.026278436183929443,
+            "nonBlankVerified": true,
+            "sha256": "366fe3194a30811445e9bc7552c0c5255397da66bb80bed0f2419aec804426c3"
+        },
+        {
+            "filename": "screenshot_trace_neutral_back.png",
+            "fileSizeBytes": 324742,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.049807846546173096,
+            "nonBlankVerified": true,
+            "sha256": "9e6caf350b005062e7c4caa787b20f446f175ec19ad69e4d9bef6c8b8c4d8fa6"
+        },
+        {
+            "filename": "trace_thirdperson_presentation.png",
+            "fileSizeBytes": 361698,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.046780407428741455,
+            "nonBlankVerified": true,
+            "sha256": "cff9d51de976d541e995eefdf49290844b20dbe2c793474a780d0bbbdeeb9221"
+        },
+        {
+            "filename": "screenshot_trace_thirdperson.png",
+            "fileSizeBytes": 361698,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.046780407428741455,
+            "nonBlankVerified": true,
+            "sha256": "cff9d51de976d541e995eefdf49290844b20dbe2c793474a780d0bbbdeeb9221"
+        },
+        {
+            "filename": "screenshot_trace_walk.png",
+            "fileSizeBytes": 317192,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.027898013591766357,
+            "nonBlankVerified": true,
+            "sha256": "bbc90705db3046d0ab856fb967fa8c04af7eaf26ca9b5d7fc10147b6c3ecdc75"
+        },
+        {
+            "filename": "screenshot_trace_rifle_grip.png",
+            "fileSizeBytes": 348823,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.028345108032226563,
+            "nonBlankVerified": true,
+            "sha256": "ddf77f154ed2fcb1ee25182ee75908dd7e73f7c88da0995e44091fde55b5f504"
+        },
+        {
+            "filename": "screenshot_trace_pistol_grip.png",
+            "fileSizeBytes": 360493,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.03226667642593384,
+            "nonBlankVerified": true,
+            "sha256": "ed27a619d3151fd553ef6ba6b37f20e827813653fb346f960b5808ac85639842"
+        },
+        {
+            "filename": "screenshot_trace_downed.png",
+            "fileSizeBytes": 327576,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.012211769819259644,
+            "nonBlankVerified": true,
+            "sha256": "404564c09f5ee9d48f2e00ef214fb6ebdb30c970100b0cee278605e991b1005d"
+        },
+        {
+            "filename": "screenshot_trace_firstperson.png",
+            "fileSizeBytes": 351172,
+            "resolution": "1920x1080",
+            "luminanceDelta": 0.053003937005996704,
+            "nonBlankVerified": true,
+            "sha256": "5efc353869652ad0160113de3494ab511850419585d3b1d4024b99fbbfb8e665"
+        }
+    ]
+}
