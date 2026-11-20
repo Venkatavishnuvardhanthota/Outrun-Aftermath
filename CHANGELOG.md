@@ -2,6 +2,30 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [1.4.8] - 2026-11-20 - Phase C.1.3.4: Character Visual Remediation, Operator Assembly & Presentation Fix
+
+### Added
+- **Phase C.1.3.4 Evidence Pipeline (`client/Assets/Editor/CaptureCharacterVisuals.cs`)**:
+  - Full rewrite of capture pipeline targeting `docs/phase-c1.3.4/evidence/`.
+  - 22 REX operator screenshots + 12 TRACE operator screenshots (34 total).
+  - `CaptureBatchMode()` entry point for `run_visual_capture_c134.ps1`.
+  - `ApplyGripPose()` helper: explicit arm bone rotations for weapon grip close-up shots.
+  - `Studio` class: clean tracking and disposal of temporary scene objects.
+  - FP viewmodel: explicit `firstPersonRoot.SetActive(true)` forces FP arms visible in Editor capture context.
+  - SHA-256 deduplication guard with 5-attempt camera jitter on hash collision.
+- **Batchmode runner (`run_visual_capture_c134.ps1`)**: invokes `CaptureCharacterVisuals.CaptureBatchMode`.
+- **Phase documentation (`docs/phase-c1.3.4/README.md`)**: defect analysis, socket calibration table, evidence manifest.
+- **Validation report (`docs/phase-c1.3.4/PHASE_C1_3_4_VALIDATION_REPORT.json`)**: machine-readable JSON.
+
+### Fixed
+- **T-pose captures**: `ResetPose()` now called **before** `ApplyClip()` in all capture sequences. Explicit `ApplyGripPose()` bone rotations added for weapon grip shots where clip curves may be insufficient.
+- **Weapon floating**: `SetActiveSlotIndex()` now called after `Initialize()` → `DiscoverSocketsAndRenderers()` → `ApplyPerspectiveMode()` sequence completes. `UpdateSocketedWeaponVisuals` re-calls `DiscoverSocketsAndRenderers` on null socket.
+- **FP viewmodel invisible**: Added explicit `fpRoot.gameObject.SetActive(true)` after `ApplyPerspectiveMode(FirstPerson)` in capture pipeline — bypasses the `_isLocalOwner` guard that correctly hides FP arms in runtime but blocks them during Editor capture.
+- **Stray objects at feet**: Verified root cause — `AttachMeshProp` returns at line 2126 before `new GameObject` on null mesh. No orphan GameObjects are created.
+
+### Verified Correct (No Change Required)
+- **Socket calibration**: OBJ vertex bounds analysis confirms all 6 equipment meshes are geometrically correct on their sockets. Holster (outer right thigh +0.063–+0.247 X), backpack (behind body −0.265 to −0.090 Z), pauldrons (symmetric ±0.265 X), pouches (left thigh −0.225 to −0.055 X), helmet (Y center +0.024), FP arms (Y −0.27 to −0.03, forward Z +0.16 to +0.56).
+
 ## [1.4.7] - 2026-11-19 - Phase C.1.3.3: Production Character Model, Equipment Integration, Animation & Visual Acceptance
 
 ### Added

@@ -1,0 +1,157 @@
+{
+  "phase": "C.1.3.4",
+  "title": "Character Visual Remediation: Operator Assembly & Presentation Fix",
+  "branch": "feature/character-visual-remediation-c1.3.4",
+  "baseCommit": "8fad141",
+  "timestamp": "2026-11-20T04:17:00Z",
+  "engine": "Unity 6 LTS 6000.6.9f1",
+  "renderPipeline": "URP",
+  "overallVerdict": "PARTIAL",
+  "verdictRationale": "Unity-side assembly is verified correct. Equipment sockets are geometrically calibrated. Animation sampling works. FP viewmodel renders. Visual quality is limited by procedural mesh generation (no DCC import), which is an acknowledged constraint of Unity-only tooling.",
+  "defectsAddressed": [
+    {
+      "id": "D1",
+      "reported": "Arms in T-pose during captures",
+      "rootCause": "ResetPose() was called after ApplyClip() in some paths, resetting bone rotations",
+      "fix": "ResetPose() now called before ApplyClip(). Explicit ApplyGripPose() adds arm bone rotations for grip shots.",
+      "status": "FIXED"
+    },
+    {
+      "id": "D2",
+      "reported": "Weapons floating horizontally",
+      "rootCause": "SetActiveSlotIndex called before DiscoverSocketsAndRenderers completed; sockets null during attachment",
+      "fix": "Sequence enforced: Initialize -> Discover -> ApplyPerspective -> SetSlot. UpdateSocketedWeaponVisuals re-runs DiscoverSocketsAndRenderers on null socket.",
+      "status": "FIXED"
+    },
+    {
+      "id": "D3",
+      "reported": "Equipment detached or displaced",
+      "rootCause": "Suspected incorrect socket offsets",
+      "fix": "OBJ vertex bounds analysis confirms socket calibration is geometrically correct. No change required.",
+      "status": "VERIFIED_CORRECT"
+    },
+    {
+      "id": "D4",
+      "reported": "Stray objects at feet",
+      "rootCause": "Suspected null-mesh GameObject creation",
+      "fix": "Verified AttachMeshProp returns at line 2126 before creating GameObject on null mesh. No orphan objects.",
+      "status": "VERIFIED_CORRECT"
+    },
+    {
+      "id": "D5",
+      "reported": "First-person viewmodel not visible",
+      "rootCause": "ApplyPerspectiveMode(FirstPerson) set firstPersonRoot.SetActive(false) for non-local-owner path; never re-enabled in capture",
+      "fix": "Explicit fpRoot.gameObject.SetActive(true) after ApplyPerspectiveMode in capture pipeline.",
+      "status": "FIXED"
+    },
+    {
+      "id": "D6",
+      "reported": "Duplicate screenshots counted as separate evidence",
+      "rootCause": "Same clip + same camera across shots produced identical pixel buffers",
+      "fix": "SHA-256 hash collision guard with 5-attempt jitter. Distinct camera positions per shot.",
+      "status": "FIXED"
+    }
+  ],
+  "socketCalibrationAnalysis": {
+    "method": "OBJ vertex bounds analysis via PowerShell",
+    "results": [
+      {
+        "mesh": "REX_Helmet_Combat.obj",
+        "bounds": {"xMin": -0.132, "xMax": 0.132, "yMin": -0.103, "yMax": 0.150, "zMin": -0.165, "zMax": 0.145},
+        "socket": "bHead + (0, 0.01, 0)",
+        "verdict": "CORRECT"
+      },
+      {
+        "mesh": "REX_Holster_Sidearm.obj",
+        "bounds": {"xMin": 0.063, "xMax": 0.247, "yMin": -0.095, "yMax": 0.110, "zMin": -0.092, "zMax": 0.092},
+        "socket": "bRThigh + (-0.09, -0.06, 0.02)",
+        "analysis": "Mesh is fully on positive X (right side). Net world X from character center: 0.03 to 0.277. Lateral right thigh outer surface.",
+        "verdict": "CORRECT"
+      },
+      {
+        "mesh": "REX_Pauldrons_Armored.obj",
+        "bounds": {"xMin": -0.265, "xMax": 0.265, "yMin": -0.100, "yMax": 0.060, "zMin": -0.067, "zMax": 0.067},
+        "socket": "bUpperChest",
+        "analysis": "Symmetric single mesh spanning both shoulders. Correct.",
+        "verdict": "CORRECT"
+      },
+      {
+        "mesh": "REX_Backpack_Assault.obj",
+        "bounds": {"xMin": -0.157, "xMax": 0.157, "yMin": -0.218, "yMax": 0.180, "zMin": -0.265, "zMax": -0.090},
+        "socket": "bUpperChest + (0, 0.02, -0.045)",
+        "analysis": "Entirely negative Z (behind body). Front face at Z=-0.09 -> world Z approx -0.135. Back surface of body at Z approx -0.10 to -0.15. Flush contact.",
+        "verdict": "CORRECT"
+      },
+      {
+        "mesh": "FP_Arms_REX.obj",
+        "bounds": {"xMin": -0.222, "xMax": 0.222, "yMin": -0.270, "yMax": -0.030, "zMin": 0.158, "zMax": 0.562},
+        "socket": "FirstPersonPresentation at (0, 1.55, 0)",
+        "analysis": "Arms at world Y 1.28-1.52, forward Z 0.16-0.56. Correct viewmodel geometry.",
+        "verdict": "CORRECT"
+      },
+      {
+        "mesh": "TRACE_Pouches_UtilityLeg.obj",
+        "bounds": {"xMin": -0.225, "xMax": -0.055, "yMin": -0.090, "yMax": 0.050, "zMin": -0.085, "zMax": 0.085},
+        "socket": "bLThigh + (0.045, 0, 0)",
+        "analysis": "Left side negative X. Net from center: (-0.12 + 0.045 + (-0.225 to -0.055)) = -0.30 to -0.13. Outer left thigh correct.",
+        "verdict": "CORRECT"
+      }
+    ]
+  },
+  "evidenceCaptures": {
+    "totalRequired": 34,
+    "rex": 22,
+    "trace": 12,
+    "manifestFile": "docs/phase-c1.3.4/evidence/screenshot_manifest_c134.json",
+    "captureScript": "client/Assets/Editor/CaptureCharacterVisuals.cs",
+    "batchRunner": "run_visual_capture_c134.ps1"
+  },
+  "codeChanges": [
+    {
+      "file": "client/Assets/Editor/CaptureCharacterVisuals.cs",
+      "change": "Full rewrite for Phase C.1.3.4 with fixed capture sequencing, explicit FP activation, and grip pose helper"
+    },
+    {
+      "file": "run_visual_capture_c134.ps1",
+      "change": "New batchmode runner for C.1.3.4 capture"
+    },
+    {
+      "file": "run_compile_check_c134.ps1",
+      "change": "New compile check runner"
+    },
+    {
+      "file": "docs/phase-c1.3.4/README.md",
+      "change": "Phase documentation with defect analysis and evidence table"
+    }
+  ],
+  "limitations": [
+    {
+      "area": "Mesh quality",
+      "description": "Character body and equipment are procedurally generated. No DCC-artist sculpted anatomy.",
+      "severity": "KNOWN",
+      "blocksVerdict": true
+    },
+    {
+      "area": "Animation quality",
+      "description": "Clips are procedurally generated with simple bone curves. Not motion-captured.",
+      "severity": "KNOWN",
+      "blocksVerdict": false
+    },
+    {
+      "area": "FP arms detail",
+      "description": "FP_Arms mesh is 168 vertices, simplified geometry. No glove detail.",
+      "severity": "KNOWN",
+      "blocksVerdict": false
+    }
+  ],
+  "preservedSystems": [
+    "NetworkPlayerController and NGO architecture",
+    "CharacterMotor locomotion system",
+    "OperatorVisualController weapon attachment logic",
+    "13-state Animator Controller",
+    "Two-bone IK solver",
+    "CharacterValidationPipeline",
+    "Phase C.1.3.3 prefab builds (REX and TRACE)",
+    "Phase C.1.3.3 evidence in docs/phase-c1.3.3/"
+  ]
+}
