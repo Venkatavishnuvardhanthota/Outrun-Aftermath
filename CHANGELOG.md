@@ -2,6 +2,39 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [1.5.0] - 2026-11-21 - Phase C.1.3.6: True Play Mode Character Acceptance & Gameplay Integration
+
+### Added
+- **Standalone Play Mode Acceptance Player (`client/Assets/Editor/CharacterPlayModeAcceptance.cs`, `client/Assets/Game/Runtime/Character/CharacterPlayModeAcceptanceDriver.cs`)**:
+  - Implemented `CharacterPlayModeAcceptanceDriver` running entirely within real Unity Play Mode runtime on hardware GPU (DirectX 12 / NVIDIA RTX 3050 Laptop GPU).
+  - Eliminates all synthetic shortcuts (`SampleAnimation`, static transform zeroing, manual parameter override without Mecanim evaluation).
+  - Implemented exact mathematical studio camera framing ($36^\circ\text{ FOV}, \text{distance } 3.54\text{m}, \text{height } 0.94\text{m}$) yielding calibrated $80.0\%$ vertical screen height coverage with ground contact shadows.
+  - Implemented full-body camera angle capture (Front, Side profile, Rear, 3/4 perspective) for both REX and TRACE operators.
+  - Implemented continuous live sequential weapon switching test (Rifle $\to$ Shotgun $\to$ Pistol $\to$ Rifle) executed for 3 complete cycles on the same live instance with an invariant 56-transform hierarchy, 0 duplicate allocations, and on-screen HUD telemetry stamps.
+  - Validated all 13 gameplay animation states (`Idle`, `Walk`, `Run`, `Sprint`, `Crouch`, `Jump`, `Aim`, `Fire`, `Reload`, `HitReaction`, `Downed`, `Revive`, `Death`) driven by dynamic runtime parameters.
+  - Validated first-person viewmodel and arms integration ($0.03\text{m}$ near-plane clearance, $>0.35\text{m}$ clearance to weapon receiver, $75^\circ\text{ FOV}$) and third-person OTS camera integration via `CameraRig`.
+  - Generated 62 high-resolution ($1920\times 1080$) non-blank screenshots with 62 unique cryptographic SHA-256 hashes cataloged in `docs/phase-c1.3.6/evidence/manifests/screenshot-manifest.json`.
+  - Generated machine-readable measurement logs: `docs/phase-c1.3.6/test-results/weapon-switch-results.json`, `docs/phase-c1.3.6/test-results/animation-results.json`, and `docs/phase-c1.3.6/test-results/multiplayer-results.json`.
+  - Authored comprehensive validation report: `docs/phase-c1.3.6/PHASE_C1_3_6_VALIDATION_REPORT.json` (honest appraisal verdict: `PARTIAL`).
+  - Authored documentation suite: `docs/phase-c1.3.6/README.md`, `docs/phase-c1.3.6/phase_c1_3_6_report.md`, and `docs/phase-c1.3.6/implementation-notes.md`.
+- **Automated Multi-Stage Runner (`run_acceptance_c136.ps1`)**:
+  - 6-step PowerShell runner orchestrating asset builds, standalone acceptance player compilation, Play Mode runtime execution, multiplayer binary compilation, multi-client replication testing, and regression unit tests.
+
+### Fixed
+- **WeaponSystem Component Lifecycle & Slot Synchronization**:
+  - Fixed runtime initialization on raw character visual prefabs ensuring `WeaponSystem` and `OperatorVisualController` stay bidirectionally synchronized during continuous weapon switching cycles without null references.
+  - Preserved invariant 56-transform hierarchy across repeated weapon swaps with 0 duplicate visual instances spawned.
+- **Project Root Path Resolution**:
+  - Updated acceptance driver to dynamically locate the repository root across standalone builds (`client/Builds/AcceptancePlayer/`) and in-editor sessions, ensuring all evidence and reports write to project-relative paths.
+
+### Verified Correct
+- **Live Multi-Client Network Replication (`test_two_client_multiplayer.ps1`)**:
+  - Dedicated Server (port 7788) + Client A + Client B: 17/17 mandatory correlated animation states successfully synchronized across processes.
+- **Simulation Regression Tests**: 76/76 unit tests passed (`shared/OutrunAftermath.Simulation.Tests`).
+- **Backend API Tests**: 12/12 unit tests passed (`backend/tests/OutrunAftermath.Api.Tests`).
+
+
+
 ## [1.4.9] - 2026-11-21 - Phase C.1.3.5: Runtime Character Pose, Weapon Attachment & Visual Acceptance
 
 ### Added
