@@ -965,24 +965,24 @@ namespace OutrunAftermath.Client.Editor
                 new float[] { 0f, 2.0f, 0f, -2.0f, 0f },
                 new float[] { 0f, 0f, 0f, 0f, 0f });
 
-            // Tactical low-ready arms
+            // Tactical natural resting / low-ready arms (hang down along torso)
             AddRotCurve(clip, PathRUpperArm, times,
-                new float[] { 34f, 35f, 34f, 33f, 34f },
-                new float[] { -15f, -14f, -15f, -16f, -15f },
-                new float[] { -10f, -10f, -10f, -10f, -10f });
-            AddRotCurve(clip, PathRLowerArm, times,
-                new float[] { 55f, 56f, 55f, 54f, 55f },
                 new float[] { 0f, 0f, 0f, 0f, 0f },
-                new float[] { 0f, 0f, 0f, 0f, 0f });
+                new float[] { -15f, -14f, -15f, -16f, -15f },
+                new float[] { -72f, -73f, -72f, -71f, -72f });
+            AddRotCurve(clip, PathRLowerArm, times,
+                new float[] { 0f, 0f, 0f, 0f, 0f },
+                new float[] { -10f, -10f, -10f, -10f, -10f },
+                new float[] { -22f, -24f, -22f, -20f, -22f });
 
             AddRotCurve(clip, PathLUpperArm, times,
-                new float[] { 24f, 25f, 24f, 23f, 24f },
-                new float[] { 25f, 25f, 25f, 25f, 25f },
-                new float[] { 15f, 15f, 15f, 15f, 15f });
+                new float[] { 0f, 0f, 0f, 0f, 0f },
+                new float[] { 15f, 16f, 15f, 14f, 15f },
+                new float[] { 72f, 71f, 72f, 73f, 72f });
             AddRotCurve(clip, PathLLowerArm, times,
-                new float[] { 64f, 65f, 64f, 63f, 64f },
-                new float[] { -15f, -15f, -15f, -15f, -15f },
-                new float[] { 0f, 0f, 0f, 0f, 0f });
+                new float[] { 0f, 0f, 0f, 0f, 0f },
+                new float[] { 10f, 10f, 10f, 10f, 10f },
+                new float[] { 22f, 20f, 22f, 24f, 22f });
 
             AddRotCurve(clip, PathLThigh, times,
                 new float[] { 2f, 2f, 2f, 2f, 2f },
@@ -1043,24 +1043,24 @@ namespace OutrunAftermath.Client.Editor
                 new float[] { 0f, 0f, 0f, 0f, 0f },
                 new float[] { 0f, 0f, 0f, 0f, 0f });
 
-            // Arms natural counter-swing
+            // Arms natural counter-swing (staying lowered along torso)
             AddRotCurve(clip, PathRUpperArm, times,
-                new float[] { 34f, 16f, 34f, 52f, 34f },
-                new float[] { -15f, -15f, -15f, -15f, -15f },
-                new float[] { -10f, -10f, -10f, -10f, -10f });
-            AddRotCurve(clip, PathRLowerArm, times,
-                new float[] { 55f, 65f, 55f, 45f, 55f },
                 new float[] { 0f, 0f, 0f, 0f, 0f },
-                new float[] { 0f, 0f, 0f, 0f, 0f });
+                new float[] { -12f, -28f, -12f, 4f, -12f },
+                new float[] { -70f, -68f, -70f, -72f, -70f });
+            AddRotCurve(clip, PathRLowerArm, times,
+                new float[] { 0f, 0f, 0f, 0f, 0f },
+                new float[] { -10f, -10f, -10f, -10f, -10f },
+                new float[] { -20f, -35f, -20f, -15f, -20f });
 
             AddRotCurve(clip, PathLUpperArm, times,
-                new float[] { 24f, 44f, 24f, 4f, 24f },
-                new float[] { 25f, 25f, 25f, 25f, 25f },
-                new float[] { 15f, 15f, 15f, 15f, 15f });
+                new float[] { 0f, 0f, 0f, 0f, 0f },
+                new float[] { 12f, -4f, 12f, 28f, 12f },
+                new float[] { 70f, 72f, 70f, 68f, 70f });
             AddRotCurve(clip, PathLLowerArm, times,
-                new float[] { 64f, 55f, 64f, 75f, 64f },
-                new float[] { -15f, -15f, -15f, -15f, -15f },
-                new float[] { 0f, 0f, 0f, 0f, 0f });
+                new float[] { 0f, 0f, 0f, 0f, 0f },
+                new float[] { 10f, 10f, 10f, 10f, 10f },
+                new float[] { 20f, 15f, 20f, 35f, 20f });
 
             return clip;
         }
@@ -1104,13 +1104,22 @@ namespace OutrunAftermath.Client.Editor
                 new float[] { 0f, 0f, 0f, 0f, 0f });
 
             AddRotCurve(clip, PathRUpperArm, times,
-                new float[] { 34f, 2f, 34f, 66f, 34f },
-                new float[] { -15f, -15f, -15f, -15f, -15f },
-                new float[] { -10f, -10f, -10f, -10f, -10f });
+                new float[] { 0f, 0f, 0f, 0f, 0f },
+                new float[] { -15f, -38f, -15f, 8f, -15f },
+                new float[] { -68f, -64f, -68f, -72f, -68f });
+            AddRotCurve(clip, PathRLowerArm, times,
+                new float[] { 0f, 0f, 0f, 0f, 0f },
+                new float[] { -10f, -10f, -10f, -10f, -10f },
+                new float[] { -30f, -55f, -30f, -20f, -30f });
+
             AddRotCurve(clip, PathLUpperArm, times,
-                new float[] { 24f, 58f, 24f, -10f, 24f },
-                new float[] { 25f, 25f, 25f, 25f, 25f },
-                new float[] { 15f, 15f, 15f, 15f, 15f });
+                new float[] { 0f, 0f, 0f, 0f, 0f },
+                new float[] { 15f, -8f, 15f, 38f, 15f },
+                new float[] { 68f, 72f, 68f, 64f, 68f });
+            AddRotCurve(clip, PathLLowerArm, times,
+                new float[] { 0f, 0f, 0f, 0f, 0f },
+                new float[] { 10f, 10f, 10f, 10f, 10f },
+                new float[] { 30f, 20f, 30f, 55f, 30f });
 
             return clip;
         }
@@ -1154,13 +1163,22 @@ namespace OutrunAftermath.Client.Editor
                 new float[] { 0f, 0f, 0f, 0f, 0f });
 
             AddRotCurve(clip, PathRUpperArm, times,
-                new float[] { 34f, -10f, 34f, 78f, 34f },
-                new float[] { -15f, -15f, -15f, -15f, -15f },
-                new float[] { -10f, -10f, -10f, -10f, -10f });
+                new float[] { 0f, 0f, 0f, 0f, 0f },
+                new float[] { -15f, -48f, -15f, 12f, -15f },
+                new float[] { -65f, -60f, -65f, -70f, -65f });
+            AddRotCurve(clip, PathRLowerArm, times,
+                new float[] { 0f, 0f, 0f, 0f, 0f },
+                new float[] { -10f, -10f, -10f, -10f, -10f },
+                new float[] { -40f, -70f, -40f, -25f, -40f });
+
             AddRotCurve(clip, PathLUpperArm, times,
-                new float[] { 24f, 68f, 24f, -20f, 24f },
-                new float[] { 25f, 25f, 25f, 25f, 25f },
-                new float[] { 15f, 15f, 15f, 15f, 15f });
+                new float[] { 0f, 0f, 0f, 0f, 0f },
+                new float[] { 15f, -12f, 15f, 48f, 15f },
+                new float[] { 65f, 70f, 65f, 60f, 65f });
+            AddRotCurve(clip, PathLLowerArm, times,
+                new float[] { 0f, 0f, 0f, 0f, 0f },
+                new float[] { 10f, 10f, 10f, 10f, 10f },
+                new float[] { 40f, 25f, 40f, 70f, 40f });
 
             return clip;
         }
@@ -1212,13 +1230,22 @@ namespace OutrunAftermath.Client.Editor
                 new float[] { 0f, 0f, 0f });
 
             AddRotCurve(clip, PathRUpperArm, times,
-                new float[] { 42f, 43f, 42f },
-                new float[] { -12f, -12f, -12f },
-                new float[] { -10f, -10f, -10f });
-            AddRotCurve(clip, PathRLowerArm, times,
-                new float[] { 68f, 68f, 68f },
                 new float[] { 0f, 0f, 0f },
-                new float[] { 0f, 0f, 0f });
+                new float[] { -15f, -15f, -15f },
+                new float[] { -68f, -68f, -68f });
+            AddRotCurve(clip, PathRLowerArm, times,
+                new float[] { 0f, 0f, 0f },
+                new float[] { -10f, -10f, -10f },
+                new float[] { -30f, -30f, -30f });
+
+            AddRotCurve(clip, PathLUpperArm, times,
+                new float[] { 0f, 0f, 0f },
+                new float[] { 15f, 15f, 15f },
+                new float[] { 68f, 68f, 68f });
+            AddRotCurve(clip, PathLLowerArm, times,
+                new float[] { 0f, 0f, 0f },
+                new float[] { 10f, 10f, 10f },
+                new float[] { 30f, 30f, 30f });
 
             return clip;
         }
@@ -1257,9 +1284,22 @@ namespace OutrunAftermath.Client.Editor
                 new float[] { 0f, 0f, 0f, 0f, 0f, 0f });
 
             AddRotCurve(clip, PathRUpperArm, times,
-                new float[] { 34f, -15f, 45f, 40f, 15f, 34f },
-                new float[] { -15f, -15f, -15f, -15f, -15f, -15f },
-                new float[] { -10f, -10f, -10f, -10f, -10f, -10f });
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f },
+                new float[] { -15f, -20f, -30f, -25f, -18f, -15f },
+                new float[] { -70f, -55f, -45f, -50f, -65f, -70f });
+            AddRotCurve(clip, PathRLowerArm, times,
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f },
+                new float[] { -10f, -10f, -10f, -10f, -10f, -10f },
+                new float[] { -20f, -35f, -45f, -40f, -25f, -20f });
+
+            AddRotCurve(clip, PathLUpperArm, times,
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f },
+                new float[] { 15f, 20f, 30f, 25f, 18f, 15f },
+                new float[] { 70f, 55f, 45f, 50f, 65f, 70f });
+            AddRotCurve(clip, PathLLowerArm, times,
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f },
+                new float[] { 10f, 10f, 10f, 10f, 10f, 10f },
+                new float[] { 20f, 35f, 45f, 40f, 25f, 20f });
 
             return clip;
         }
@@ -1284,29 +1324,33 @@ namespace OutrunAftermath.Client.Editor
                 new float[] { -3f, -3f, -3f },
                 new float[] { 4f, 4f, 4f });
 
-            // ADS weapon raised in right hand
+            // ADS weapon raised in right hand forward towards target
             AddRotCurve(clip, PathRUpperArm, times,
-                new float[] { 68.0f, 68.3f, 68.0f },
-                new float[] { -14.0f, -14.0f, -14.0f },
-                new float[] { -12.0f, -12.0f, -12.0f });
+                new float[] { -15.0f, -15.0f, -15.0f },
+                new float[] { -62.0f, -62.3f, -62.0f },
+                new float[] { -34.0f, -34.0f, -34.0f });
             AddRotCurve(clip, PathRLowerArm, times,
-                new float[] { 78.0f, 78.2f, 78.0f },
-                new float[] { 4.0f, 4.0f, 4.0f },
-                new float[] { 0.0f, 0.0f, 0.0f });
+                new float[] { 0.0f, 0.0f, 0.0f },
+                new float[] { 15.0f, 15.0f, 15.0f },
+                new float[] { -48.0f, -48.2f, -48.0f });
             AddRotCurve(clip, PathRHand, times,
-                new float[] { 12.0f, 12.0f, 12.0f },
-                new float[] { -6.0f, -6.0f, -6.0f },
-                new float[] { 0.0f, 0.0f, 0.0f });
+                new float[] { 0.0f, 0.0f, 0.0f },
+                new float[] { -10.0f, -10.0f, -10.0f },
+                new float[] { -15.0f, -15.0f, -15.0f });
 
             // Left hand supporting barrel / foregrip
             AddRotCurve(clip, PathLUpperArm, times,
-                new float[] { 54.0f, 54.2f, 54.0f },
-                new float[] { 28.0f, 28.0f, 28.0f },
-                new float[] { 18.0f, 18.0f, 18.0f });
+                new float[] { 15.0f, 15.0f, 15.0f },
+                new float[] { 55.0f, 55.0f, 55.0f },
+                new float[] { 38.0f, 38.0f, 38.0f });
             AddRotCurve(clip, PathLLowerArm, times,
-                new float[] { 82.0f, 82.1f, 82.0f },
-                new float[] { -18.0f, -18.0f, -18.0f },
-                new float[] { 0.0f, 0.0f, 0.0f });
+                new float[] { 0.0f, 0.0f, 0.0f },
+                new float[] { -20.0f, -20.0f, -20.0f },
+                new float[] { 56.0f, 56.1f, 56.0f });
+            AddRotCurve(clip, PathLHand, times,
+                new float[] { 0.0f, 0.0f, 0.0f },
+                new float[] { 10.0f, 10.0f, 10.0f },
+                new float[] { 15.0f, 15.0f, 15.0f });
 
             return clip;
         }
@@ -1356,19 +1400,19 @@ namespace OutrunAftermath.Client.Editor
                 new float[] { 0f, 0f, 0f, 0f, 0f, 0f });
 
             AddRotCurve(clip, PathRUpperArm, times,
-                new float[] { 68.0f, 85.0f, 78.0f, 71.5f, 68.8f, 68.0f },
-                new float[] { -14.0f, -18.5f, -16.0f, -14.8f, -14.2f, -14.0f },
-                new float[] { -12.0f, -17.0f, -14.5f, -12.8f, -12.2f, -12.0f });
+                new float[] { -15.0f, -18.0f, -17.0f, -16.0f, -15.2f, -15.0f },
+                new float[] { -62.0f, -66.0f, -64.5f, -63.2f, -62.3f, -62.0f },
+                new float[] { -34.0f, -38.0f, -36.5f, -35.2f, -34.3f, -34.0f });
 
             AddRotCurve(clip, PathRLowerArm, times,
-                new float[] { 78.0f, 68.0f, 73.0f, 76.5f, 77.8f, 78.0f },
-                new float[] { 4.0f, 8.0f, 6.0f, 4.8f, 4.2f, 4.0f },
-                new float[] { 0.0f, -2.0f, -1.0f, 0.0f, 0.0f, 0.0f });
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f },
+                new float[] { 15.0f, 18.0f, 16.5f, 15.5f, 15.2f, 15.0f },
+                new float[] { -48.0f, -54.0f, -51.5f, -49.5f, -48.4f, -48.0f });
 
             AddRotCurve(clip, PathRHand, times,
-                new float[] { 0f, 8.5f, 5.0f, 1.8f, 0.4f, 0f },
-                new float[] { 0f, -2.0f, -1.0f, 0f, 0f, 0f },
-                new float[] { 0f, 3.0f, 1.5f, 0f, 0f, 0f });
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f },
+                new float[] { -10.0f, -12.0f, -11.0f, -10.5f, -10.2f, -10.0f },
+                new float[] { -15.0f, -20.0f, -18.0f, -16.5f, -15.4f, -15.0f });
 
             // 5. Left Shoulder & Support Arm (Absorbing foregrip climb)
             AddRotCurve(clip, PathLClavicle, times,
@@ -1377,19 +1421,19 @@ namespace OutrunAftermath.Client.Editor
                 new float[] { 0f, 0f, 0f, 0f, 0f, 0f });
 
             AddRotCurve(clip, PathLUpperArm, times,
-                new float[] { 54.0f, 65.0f, 60.0f, 56.2f, 54.5f, 54.0f },
-                new float[] { 28.0f, 24.5f, 26.5f, 27.6f, 28.0f, 28.0f },
-                new float[] { 18.0f, 13.5f, 16.0f, 17.5f, 18.0f, 18.0f });
+                new float[] { 15.0f, 18.0f, 17.0f, 16.0f, 15.2f, 15.0f },
+                new float[] { 55.0f, 58.0f, 57.0f, 56.0f, 55.3f, 55.0f },
+                new float[] { 38.0f, 42.0f, 40.5f, 39.2f, 38.3f, 38.0f });
 
             AddRotCurve(clip, PathLLowerArm, times,
-                new float[] { 82.0f, 74.0f, 78.0f, 80.8f, 81.8f, 82.0f },
-                new float[] { -18.0f, -22.0f, -20.0f, -18.8f, -18.2f, -18.0f },
-                new float[] { 0.0f, 3.0f, 1.5f, 0.0f, 0.0f, 0.0f });
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f },
+                new float[] { -20.0f, -22.0f, -21.0f, -20.5f, -20.2f, -20.0f },
+                new float[] { 56.0f, 60.0f, 58.5f, 57.2f, 56.4f, 56.0f });
 
             AddRotCurve(clip, PathLHand, times,
-                new float[] { 0f, -5.0f, -3.0f, -1.0f, 0f, 0f },
-                new float[] { 0f, 2.0f, 1.0f, 0f, 0f, 0f },
-                new float[] { 0f, -2.5f, -1.0f, 0f, 0f, 0f });
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f },
+                new float[] { 10.0f, 12.0f, 11.0f, 10.5f, 10.2f, 10.0f },
+                new float[] { 15.0f, 18.0f, 16.5f, 15.5f, 15.2f, 15.0f });
 
             return clip;
         }
@@ -1433,19 +1477,19 @@ namespace OutrunAftermath.Client.Editor
                 new float[] { 0f, 0f, 0f, 0f, 0f, 0f, 0f });
 
             AddRotCurve(clip, PathRUpperArm, times,
-                new float[] { 68.0f, 55.0f, 48.0f, 52.0f, 60.0f, 65.0f, 68.0f },
-                new float[] { -14.0f, -8.0f, -6.0f, -10.0f, -13.0f, -14.0f, -14.0f },
-                new float[] { -12.0f, -6.0f, -4.0f, -8.0f, -11.0f, -12.0f, -12.0f });
+                new float[] { -15.0f, -12.0f, -10.0f, -12.0f, -14.0f, -15.0f, -15.0f },
+                new float[] { -62.0f, -50.0f, -44.0f, -48.0f, -56.0f, -60.0f, -62.0f },
+                new float[] { -34.0f, -28.0f, -24.0f, -27.0f, -31.0f, -33.0f, -34.0f });
 
             AddRotCurve(clip, PathRLowerArm, times,
-                new float[] { 78.0f, 85.0f, 90.0f, 86.0f, 82.0f, 79.0f, 78.0f },
-                new float[] { 4.0f, 10.0f, 14.0f, 8.0f, 5.0f, 4.0f, 4.0f },
-                new float[] { 0.0f, 4.0f, 6.0f, 3.0f, 1.0f, 0.0f, 0.0f });
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f, 0f },
+                new float[] { 15.0f, 20.0f, 24.0f, 20.0f, 17.0f, 15.5f, 15.0f },
+                new float[] { -48.0f, -55.0f, -60.0f, -56.0f, -52.0f, -49.0f, -48.0f });
 
             AddRotCurve(clip, PathRHand, times,
-                new float[] { 0f, -4.0f, -8.0f, -4.0f, 3.0f, 1.0f, 0f },
-                new float[] { 0f, 5.0f, 8.0f, 4.0f, 1.0f, 0f, 0f },
-                new float[] { 0f, 0f, 0f, 0f, 0f, 0f, 0f });
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f, 0f },
+                new float[] { -10.0f, -8.0f, -6.0f, -8.0f, -9.0f, -10.0f, -10.0f },
+                new float[] { -15.0f, -12.0f, -10.0f, -12.0f, -14.0f, -15.0f, -15.0f });
 
             // 4. Left arm sequence: Foregrip -> Pouch (0.65s) -> Mag Extraction (1.1s) -> Mag Slap (1.45s) -> Bolt (1.8s) -> Foregrip (2.2s)
             AddRotCurve(clip, PathLClavicle, times,
@@ -1454,19 +1498,19 @@ namespace OutrunAftermath.Client.Editor
                 new float[] { 0f, 0f, 0f, 0f, 0f, 0f, 0f });
 
             AddRotCurve(clip, PathLUpperArm, times,
-                new float[] { 54.0f, 20.0f, 8.0f, 42.0f, 58.0f, 64.0f, 54.0f },
-                new float[] { 28.0f, 12.0f, 5.0f, 18.0f, 26.0f, 29.0f, 28.0f },
-                new float[] { 18.0f, 6.0f, 2.0f, 10.0f, 16.0f, 19.0f, 18.0f });
+                new float[] { 15.0f, 5.0f, 0.0f, 8.0f, 12.0f, 14.0f, 15.0f },
+                new float[] { 55.0f, 25.0f, 12.0f, 35.0f, 48.0f, 52.0f, 55.0f },
+                new float[] { 38.0f, 65.0f, 75.0f, 55.0f, 42.0f, 40.0f, 38.0f });
 
             AddRotCurve(clip, PathLLowerArm, times,
-                new float[] { 82.0f, 48.0f, 38.0f, 78.0f, 96.0f, 92.0f, 82.0f },
-                new float[] { -18.0f, -8.0f, -4.0f, -14.0f, -20.0f, -19.0f, -18.0f },
-                new float[] { 0.0f, -5.0f, -8.0f, 2.0f, 5.0f, 2.0f, 0.0f });
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f, 0f },
+                new float[] { -20.0f, -10.0f, -5.0f, -12.0f, -18.0f, -19.0f, -20.0f },
+                new float[] { 56.0f, 30.0f, 22.0f, 50.0f, 65.0f, 60.0f, 56.0f });
 
             AddRotCurve(clip, PathLHand, times,
-                new float[] { 0f, 12.0f, 18.0f, 6.0f, -15.0f, -8.0f, 0f },
-                new float[] { 0f, -8.0f, -14.0f, -4.0f, 6.0f, 2.0f, 0f },
-                new float[] { 0f, 5.0f, 10.0f, 2.0f, -5.0f, -2.0f, 0f });
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f, 0f },
+                new float[] { 10.0f, 15.0f, 20.0f, 14.0f, 10.0f, 10.0f, 10.0f },
+                new float[] { 15.0f, 25.0f, 30.0f, 20.0f, 15.0f, 15.0f, 15.0f });
 
             return clip;
         }
@@ -1502,14 +1546,14 @@ namespace OutrunAftermath.Client.Editor
                 new float[] { 0f, 6.0f, 3.0f, 0f, 0f });
 
             AddRotCurve(clip, PathLUpperArm, times,
-                new float[] { 22f, 35f, 28f, 24f, 22f },
-                new float[] { 10f, 18f, 14f, 11f, 10f },
-                new float[] { 5f, 12f, 8f, 6f, 5f });
+                new float[] { 0f, 0f, 0f, 0f, 0f },
+                new float[] { 15f, 25f, 20f, 17f, 15f },
+                new float[] { 72f, 60f, 68f, 70f, 72f });
 
             AddRotCurve(clip, PathRUpperArm, times,
-                new float[] { 34f, 48f, 40f, 36f, 34f },
-                new float[] { -15f, -28f, -20f, -16f, -15f },
-                new float[] { -10f, -25f, -18f, -12f, -10f });
+                new float[] { 0f, 0f, 0f, 0f, 0f },
+                new float[] { -15f, -25f, -20f, -17f, -15f },
+                new float[] { -72f, -60f, -68f, -70f, -72f });
 
             return clip;
         }
@@ -1541,23 +1585,23 @@ namespace OutrunAftermath.Client.Editor
 
             // Propped on left arm
             AddRotCurve(clip, PathLUpperArm, times,
-                new float[] { 40f, 40f, 40f },
-                new float[] { 35f, 35f, 35f },
-                new float[] { 30f, 30f, 30f });
+                new float[] { 10f, 10f, 10f },
+                new float[] { 30f, 30f, 30f },
+                new float[] { 45f, 45f, 45f });
             AddRotCurve(clip, PathLLowerArm, times,
-                new float[] { 85f, 85f, 85f },
                 new float[] { 0f, 0f, 0f },
-                new float[] { 15f, 15f, 15f });
+                new float[] { 0f, 0f, 0f },
+                new float[] { 40f, 40f, 40f });
 
             // Right arm clutching chest
             AddRotCurve(clip, PathRUpperArm, times,
-                new float[] { 55f, 57f, 55f },
-                new float[] { -30f, -30f, -30f },
-                new float[] { -20f, -20f, -20f });
-            AddRotCurve(clip, PathRLowerArm, times,
-                new float[] { 85f, 86f, 85f },
                 new float[] { 0f, 0f, 0f },
-                new float[] { 0f, 0f, 0f });
+                new float[] { -30f, -30f, -30f },
+                new float[] { -45f, -45f, -45f });
+            AddRotCurve(clip, PathRLowerArm, times,
+                new float[] { 0f, 0f, 0f },
+                new float[] { 0f, 0f, 0f },
+                new float[] { -65f, -65f, -65f });
 
             // Sprawled legs
             AddRotCurve(clip, PathLThigh, times,
@@ -1620,9 +1664,14 @@ namespace OutrunAftermath.Client.Editor
                 new float[] { 0f, 0f, 0f, 0f, 0f, 0f });
 
             AddRotCurve(clip, PathRUpperArm, times,
-                new float[] { 55f, 40f, 20f, 30f, 34f, 34f },
-                new float[] { -30f, -20f, -15f, -15f, -15f, -15f },
-                new float[] { -20f, -10f, -10f, -10f, -10f, -10f });
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f },
+                new float[] { -30f, -25f, -20f, -18f, -15f, -15f },
+                new float[] { -45f, -52f, -60f, -66f, -72f, -72f });
+
+            AddRotCurve(clip, PathLUpperArm, times,
+                new float[] { 0f, 0f, 0f, 0f, 0f, 0f },
+                new float[] { 30f, 25f, 20f, 18f, 15f, 15f },
+                new float[] { 45f, 52f, 60f, 66f, 72f, 72f });
 
             return clip;
         }
@@ -1666,14 +1715,14 @@ namespace OutrunAftermath.Client.Editor
                 new float[] { 0f, 0f, 0f, 0f, 0f });
 
             AddRotCurve(clip, PathRUpperArm, times,
-                new float[] { 34f, 60f, 45f, 20f, 15f },
+                new float[] { 0f, 0f, 0f, 0f, 0f },
                 new float[] { -15f, -25f, -35f, -45f, -45f },
-                new float[] { -10f, -20f, -30f, -35f, -35f });
+                new float[] { -72f, -60f, -50f, -40f, -35f });
 
             AddRotCurve(clip, PathLUpperArm, times,
-                new float[] { 24f, 50f, 35f, 20f, 15f },
-                new float[] { 25f, 35f, 45f, 50f, 50f },
-                new float[] { 15f, 25f, 30f, 35f, 35f });
+                new float[] { 0f, 0f, 0f, 0f, 0f },
+                new float[] { 15f, 25f, 35f, 45f, 45f },
+                new float[] { 72f, 60f, 50f, 40f, 35f });
 
             return clip;
         }
@@ -1860,9 +1909,12 @@ namespace OutrunAftermath.Client.Editor
 
             var upperSm = layers[1].stateMachine;
 
+            var sLowReady = upperSm.AddState("LowReady");
+            sLowReady.motion = clips["Idle"];
+            upperSm.defaultState = sLowReady;
+
             var sAim = upperSm.AddState("Aim");
             sAim.motion = clips["Aim"];
-            upperSm.defaultState = sAim;
 
             var sFire = upperSm.AddState("Fire");
             sFire.motion = clips["Fire"];
@@ -1873,7 +1925,18 @@ namespace OutrunAftermath.Client.Editor
             var sHit = upperSm.AddState("HitReaction");
             sHit.motion = clips["HitReaction"];
 
-            // Combat Transitions
+            // Combat Stance Transitions: LowReady <-> Aim conditioned on IsAiming
+            var tLowReadyAim = sLowReady.AddTransition(sAim);
+            tLowReadyAim.AddCondition(AnimatorConditionMode.If, 0, "IsAiming");
+            tLowReadyAim.hasExitTime = false;
+            tLowReadyAim.duration = 0.15f;
+
+            var tAimLowReady = sAim.AddTransition(sLowReady);
+            tAimLowReady.AddCondition(AnimatorConditionMode.IfNot, 0, "IsAiming");
+            tAimLowReady.hasExitTime = false;
+            tAimLowReady.duration = 0.15f;
+
+            // Combat Transitions from Aim
             var tAimFire = sAim.AddTransition(sFire);
             tAimFire.AddCondition(AnimatorConditionMode.If, 0, "IsFiring");
             tAimFire.hasExitTime = false;
@@ -1884,6 +1947,17 @@ namespace OutrunAftermath.Client.Editor
             tFireAim.exitTime = 0.85f;
             tFireAim.duration = 0.15f;
 
+            // Combat Transitions from LowReady
+            var tLowReadyFire = sLowReady.AddTransition(sFire);
+            tLowReadyFire.AddCondition(AnimatorConditionMode.If, 0, "IsFiring");
+            tLowReadyFire.hasExitTime = false;
+            tLowReadyFire.duration = 0.05f;
+
+            var tFireLowReady = sFire.AddTransition(sLowReady);
+            tFireLowReady.hasExitTime = true;
+            tFireLowReady.exitTime = 0.85f;
+            tFireLowReady.duration = 0.15f;
+
             var tAimReload = sAim.AddTransition(sReload);
             tAimReload.AddCondition(AnimatorConditionMode.If, 0, "IsReloading");
             tAimReload.hasExitTime = false;
@@ -1893,6 +1967,16 @@ namespace OutrunAftermath.Client.Editor
             tReloadAim.hasExitTime = true;
             tReloadAim.exitTime = 0.90f;
             tReloadAim.duration = 0.20f;
+
+            var tLowReadyReload = sLowReady.AddTransition(sReload);
+            tLowReadyReload.AddCondition(AnimatorConditionMode.If, 0, "IsReloading");
+            tLowReadyReload.hasExitTime = false;
+            tLowReadyReload.duration = 0.15f;
+
+            var tReloadLowReady = sReload.AddTransition(sLowReady);
+            tReloadLowReady.hasExitTime = true;
+            tReloadLowReady.exitTime = 0.90f;
+            tReloadLowReady.duration = 0.20f;
 
             var tToHit = upperSm.AddAnyStateTransition(sHit);
             tToHit.AddCondition(AnimatorConditionMode.If, 0, "HitTrigger");
@@ -1986,7 +2070,7 @@ namespace OutrunAftermath.Client.Editor
 
                 var fpWeaponSock = new GameObject("FirstPersonWeaponSocket");
                 fpWeaponSock.transform.SetParent(fpRoot.transform, false);
-                fpWeaponSock.transform.localPosition = new Vector3(0.06f, -0.08f, 0.32f);
+                fpWeaponSock.transform.localPosition = new Vector3(0.12f, -0.16f, 0.46f);
                 fpWeaponSock.transform.localRotation = Quaternion.identity;
 
                 // 3. Build Skeleton Hierarchy inside ThirdPersonPresentation
@@ -2002,14 +2086,14 @@ namespace OutrunAftermath.Client.Editor
                 Transform bHead = CreateBone("Head", bNeck, new Vector3(0f, 0.14f, 0f), Quaternion.identity);
 
                 Transform bLClavicle = CreateBone("LeftClavicle", bUpperChest, new Vector3(-0.08f, 0.08f, 0.02f), Quaternion.identity);
-                Transform bLUpperArm = CreateBone("LeftUpperArm", bLClavicle, new Vector3(-0.16f, -0.02f, -0.02f), Quaternion.identity);
-                Transform bLLowerArm = CreateBone("LeftLowerArm", bLUpperArm, new Vector3(-0.24f, 0f, 0f), Quaternion.identity);
+                Transform bLUpperArm = CreateBone("LeftUpperArm", bLClavicle, new Vector3(-0.16f, -0.02f, -0.02f), Quaternion.Euler(0f, 15f, 72f));
+                Transform bLLowerArm = CreateBone("LeftLowerArm", bLUpperArm, new Vector3(-0.24f, 0f, 0f), Quaternion.Euler(0f, 10f, 22f));
                 Transform bLHand = CreateBone("LeftHand", bLLowerArm, new Vector3(-0.22f, 0f, 0f), Quaternion.identity);
                 Transform bLFingers = CreateBone("LeftHandFingers", bLHand, new Vector3(-0.08f, 0f, 0f), Quaternion.identity);
 
                 Transform bRClavicle = CreateBone("RightClavicle", bUpperChest, new Vector3(0.08f, 0.08f, 0.02f), Quaternion.identity);
-                Transform bRUpperArm = CreateBone("RightUpperArm", bRClavicle, new Vector3(0.16f, -0.02f, -0.02f), Quaternion.identity);
-                Transform bRLowerArm = CreateBone("RightLowerArm", bRUpperArm, new Vector3(0.24f, 0f, 0f), Quaternion.identity);
+                Transform bRUpperArm = CreateBone("RightUpperArm", bRClavicle, new Vector3(0.16f, -0.02f, -0.02f), Quaternion.Euler(0f, -15f, -72f));
+                Transform bRLowerArm = CreateBone("RightLowerArm", bRUpperArm, new Vector3(0.24f, 0f, 0f), Quaternion.Euler(0f, -10f, -22f));
                 Transform bRHand = CreateBone("RightHand", bRLowerArm, new Vector3(0.22f, 0f, 0f), Quaternion.identity);
                 Transform bRFingers = CreateBone("RightHandFingers", bRHand, new Vector3(0.08f, 0f, 0f), Quaternion.identity);
 

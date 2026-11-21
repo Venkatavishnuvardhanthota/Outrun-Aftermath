@@ -445,11 +445,21 @@ namespace OutrunAftermath.Client.Editor
 
         private static void ResetPose(GameObject root)
         {
-            var allT = root.GetComponentsInChildren<Transform>(true);
-            foreach (var t in allT)
+            var vc = root.GetComponent<OperatorVisualController>();
+            if (vc != null)
             {
-                if (t == root.transform) continue;
-                t.localRotation = Quaternion.identity;
+                vc.ResetSkeletonBonesToDefault();
+            }
+            else
+            {
+                var skeletonRoot = root.transform.Find("ThirdPersonPresentation/Skeleton");
+                if (skeletonRoot != null)
+                {
+                    foreach (var t in skeletonRoot.GetComponentsInChildren<Transform>(true))
+                    {
+                        if (t != skeletonRoot) t.localRotation = Quaternion.identity;
+                    }
+                }
             }
         }
 

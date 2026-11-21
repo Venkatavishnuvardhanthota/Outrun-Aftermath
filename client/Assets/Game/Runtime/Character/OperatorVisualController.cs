@@ -95,6 +95,12 @@ namespace OutrunAftermath.Client.Runtime.Character
         public Transform UtilityBeltSocket => utilityBeltSocket;
         public Transform FirstPersonWeaponSocket => firstPersonWeaponSocket;
 
+        public void SetLocalOwner(bool isLocalOwner)
+        {
+            _isLocalOwner = isLocalOwner;
+            ApplyPerspectiveMode(_currentPerspective);
+        }
+
         public void Initialize(string opId, string opFaction, CharacterMotor motor, WeaponSystem weapons, PlayerHealth health, CameraRig cameraRig, bool isLocalOwner)
         {
             operatorId = opId;
@@ -493,9 +499,9 @@ namespace OutrunAftermath.Client.Runtime.Character
 
             // Pre-create foregrip sockets for all two-handed weapons in loadout so transform hierarchy remains strictly invariant
             if (_weaponVisualInstances.TryGetValue(0, out var rGo) && rGo != null)
-                GetOrCreateForegripSocket(rGo, new Vector3(-0.03f, -0.02f, 0.02f));
+                GetOrCreateForegripSocket(rGo, new Vector3(-0.02f, -0.04f, 0.22f));
             if (_weaponVisualInstances.TryGetValue(1, out var sGo) && sGo != null)
-                GetOrCreateForegripSocket(sGo, new Vector3(-0.03f, -0.02f, 0.01f));
+                GetOrCreateForegripSocket(sGo, new Vector3(-0.02f, -0.04f, 0.20f));
 
             bool isFirstPerson = (_isLocalOwner && _currentPerspective == CameraPerspective.FirstPerson && firstPersonWeaponSocket != null);
             Transform activeWeaponParent = isFirstPerson ? firstPersonWeaponSocket : rightHandWeaponSocket;
@@ -601,7 +607,7 @@ namespace OutrunAftermath.Client.Runtime.Character
             {
                 if (_weaponVisualInstances.TryGetValue(0, out var rifle) && rifle != null)
                 {
-                    _activeForegripTarget = GetOrCreateForegripSocket(rifle, new Vector3(-0.03f, -0.02f, 0.02f));
+                    _activeForegripTarget = GetOrCreateForegripSocket(rifle, new Vector3(-0.02f, -0.04f, 0.22f));
                     _isTwoHandedGrip = true;
                 }
             }
@@ -609,7 +615,7 @@ namespace OutrunAftermath.Client.Runtime.Character
             {
                 if (_weaponVisualInstances.TryGetValue(1, out var shotgun) && shotgun != null)
                 {
-                    _activeForegripTarget = GetOrCreateForegripSocket(shotgun, new Vector3(-0.03f, -0.02f, 0.01f));
+                    _activeForegripTarget = GetOrCreateForegripSocket(shotgun, new Vector3(-0.02f, -0.04f, 0.20f));
                     _isTwoHandedGrip = true;
                 }
             }
@@ -1035,6 +1041,53 @@ namespace OutrunAftermath.Client.Runtime.Character
                 if (mat != null) mr.sharedMaterial = mat;
                 _weaponVisualInstances[slotIndex] = inst;
             }
+        }
+
+        /// <summary>
+        /// Resets only the humanoid skeleton bone rotations to natural resting posture.
+        /// Preserves weapon sockets, attachments, equipment, and viewmodel transforms.
+        /// </summary>
+        public void ResetSkeletonBonesToDefault()
+        {
+            Transform skeletonRoot = transform.Find("ThirdPersonPresentation/Skeleton");
+            if (skeletonRoot == null) return;
+
+            Transform bRoot = skeletonRoot.Find("Root");
+            if (bRoot == null) return;
+
+            // Reset bone rotations safely without destroying sockets or equipment
+            SetBoneRotationIfExists(bRoot, "Hips", Quaternion.identity);
+            SetBoneRotationIfExists(bRoot, "Hips/Spine", Quaternion.identity);
+            SetBoneRotationIfExists(bRoot, "Hips/Spine/Chest", Quaternion.identity);
+            SetBoneRotationIfExists(bRoot, "Hips/Spine/Chest/UpperChest", Quaternion.identity);
+            SetBoneRotationIfExists(bRoot, "Hips/Spine/Chest/UpperChest/Neck", Quaternion.identity);
+            SetBoneRotationIfExists(bRoot, "Hips/Spine/Chest/UpperChest/Neck/Head", Quaternion.identity);
+
+            // Natural arm angles: arms hang naturally down alongside torso
+            SetBoneRotationIfExists(bRoot, "Hips/Spine/Chest/UpperChest/RightClavicle", Quaternion.identity);
+            SetBoneRotationIfExists(bRoot, "Hips/Spine/Chest/UpperChest/RightClavicle/RightUpperArm", Quaternion.Euler(0f, -15f, -72f));
+            SetBoneRotationIfExists(bRoot, "Hips/Spine/Chest/UpperChest/RightClavicle/RightUpperArm/RightLowerArm", Quaternion.Euler(0f, -10f, -22f));
+            SetBoneRotationIfExists(bRoot, "Hips/Spine/Chest/UpperChest/RightClavicle/RightUpperArm/RightLowerArm/RightHand", Quaternion.identity);
+
+            SetBoneRotationIfExists(bRoot, "Hips/Spine/Chest/UpperChest/LeftClavicle", Quaternion.identity);
+            SetBoneRotationIfExists(bRoot, "Hips/Spine/Chest/UpperChest/LeftClavicle/LeftUpperArm", Quaternion.Euler(0f, 15f, 72f));
+            SetBoneRotationIfExists(bRoot, "Hips/Spine/Chest/UpperChest/LeftClavicle/LeftUpperArm/LeftLowerArm", Quaternion.Euler(0f, 10f, 22f));
+            SetBoneRotationIfExists(bRoot, "Hips/Spine/Chest/UpperChest/LeftClavicle/LeftUpperArm/LeftLowerArm/LeftHand", Quaternion.identity);
+
+            // Legs
+            SetBoneRotationIfExists(bRoot, "Hips/RightThigh", Quaternion.identity);
+            SetBoneRotationIfExists(bRoot, "Hips/RightThigh/RightCalf", Quaternion.identity);
+            SetBoneRotationIfExists(bRoot, "Hips/RightThigh/RightCalf/RightFoot", Quaternion.identity);
+
+            SetBoneRotationIfExists(bRoot, "Hips/LeftThigh", Quaternion.identity);
+            SetBoneRotationIfExists(bRoot, "Hips/LeftThigh/LeftCalf", Quaternion.identity);
+            SetBoneRotationIfExists(bRoot, "Hips/LeftThigh/LeftCalf/LeftFoot", Quaternion.identity);
+        }
+
+        private void SetBoneRotationIfExists(Transform root, string path, Quaternion rot)
+        {
+            var t = root.Find(path);
+            if (t != null) t.localRotation = rot;
         }
     }
 }

@@ -2,6 +2,42 @@
 
 All notable changes to OUTRUN: AFTERMATH are recorded here.
 
+## [1.4.9] - 2026-11-21 - Phase C.1.3.5: Runtime Character Pose, Weapon Attachment & Visual Acceptance
+
+### Added
+- **Runtime Acceptance & Evidence Pipeline (`client/Assets/Editor/CharacterRuntimeAcceptance.cs`)**:
+  - Full automated runtime verification suite evaluating true Mecanim runtime driving without `SampleAnimation` shortcuts.
+  - Automated parameter evaluation across all 13 animation states (`Idle`, `Walk`, `Run`, `Sprint`, `Crouch`, `Jump`, `Aim`, `Fire`, `Reload`, `HitReaction`, `Downed`, `Revive`, `Death`).
+  - Active runtime Two-Bone IK solver validation verifying exact support-hand foregrip contact ($residual = 0.0000\text{m}$) and natural elbow flex ($137.3^\circ$).
+  - Dynamic weapon attachment and holster cycling verification (Vanguard-4 AR, Breacher-12 Shotgun, Sidekick-9 Pistol) with invariant hierarchy and zero duplicate allocations.
+  - Camera presentation verification for First-Person viewmodel and Third-Person over-the-shoulder (OTS) camera with zero near-plane clipping ($z_{near} = 0.03\text{m}$, clearance $> 0.35\text{m}$).
+  - Remote proxy multiplayer presentation audit verifying third-person mesh isolation on non-owner clients.
+  - 22 high-resolution visual evidence screenshots ($1920\times 1080$, non-blank, distinct SHA-256 hashes) stored in `docs/phase-c1.3.5/evidence/`.
+  - Machine-readable manifest `docs/phase-c1.3.5/evidence/screenshot_manifest_c135.json`.
+  - Comprehensive Phase C.1.3.5 validation report `docs/phase-c1.3.5/PHASE_C1_3_5_VALIDATION_REPORT.json` (honest appraisal verdict: `PARTIAL`).
+  - Full technical documentation in `docs/phase-c1.3.5/README.md`.
+- **PowerShell Runner (`run_acceptance_c135.ps1`)**:
+  - Multi-step batchmode runner building assets, executing runtime acceptance capture, and verifying test suites.
+
+### Fixed
+- **Mathematical Root Cause of T-Pose (`client/Assets/Editor/CharacterAssetPipeline.cs`)**:
+  - Fixed animation curves across all 13 skeletal clips: in the 25-bone skeleton, arm bones extend along the local X-axis. True arm elevation is governed by rotation around the local Z-axis (RightUpperArm: $-72^\circ$, LeftUpperArm: $+72^\circ$), whereas previous curves incorrectly varied Euler X (axial roll) while locking Euler Z near horizontal ($-10^\circ$ / $+15^\circ$).
+- **Animator Controller Combat Layer Architecture (`client/Assets/Editor/CharacterAssetPipeline.cs`)**:
+  - Refactored Layer 1 (`UpperBody_Combat`): added `LowReady` as the default state with bidirectional transitions to/from `Aim` conditioned on the `IsAiming` boolean parameter. Fixed previously deadlocked `Aim` state which had overridden Layer 0 locomotion even when idle.
+- **Support-Hand Foregrip Alignment & Two-Bone IK Calibration (`client/Assets/Game/Runtime/Character/OperatorVisualController.cs`)**:
+  - Calibrated physical foregrip socket positions for Vanguard-4 AR to `(-0.02, -0.04, 0.22)` and Breacher-12 Shotgun to `(-0.02, -0.04, 0.20)`.
+  - Added downward-and-outward pole vector biasing in `AlignSupportHandToForegrip` ensuring anatomically plausible elbow angles ($137.3^\circ$).
+- **Skeleton Reset Routine (`client/Assets/Game/Runtime/Character/OperatorVisualController.cs`)**:
+  - Added `ResetSkeletonBonesToDefault()` which selectively resets only the 25 humanoid bones to natural resting drop while strictly preserving weapon sockets, holsters, equipment attachments, and viewmodel transforms. Replaces legacy `ResetPose()` that previously cleared all child transforms.
+- **First-Person Viewmodel Calibration & Local Ownership (`client/Assets/Game/Runtime/Character/OperatorVisualController.cs`)**:
+  - Added `SetLocalOwner(bool isLocalOwner)` properly encapsulating perspective switching and ownership rules.
+  - Calibrated `FirstPersonWeaponSocket` position to `(0.12, -0.16, 0.46)` ensuring the weapon and arms sit cleanly in the lower-right third of the view without clipping into camera near plane.
+
+### Verified Correct
+- Shared simulation unit tests (`shared/OutrunAftermath.Simulation.Tests`): 76/76 passed.
+- Backend API tests (`backend/tests/OutrunAftermath.Api.Tests`): 12/12 passed.
+
+
 ## [1.4.8] - 2026-11-20 - Phase C.1.3.4: Character Visual Remediation, Operator Assembly & Presentation Fix
 
 ### Added
