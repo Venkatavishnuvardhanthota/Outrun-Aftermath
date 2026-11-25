@@ -71,7 +71,11 @@ namespace OutrunAftermath.Client.Runtime.Character
             {
                 if (newState == PlayerLifeState.Downed) OnDowned?.Invoke();
                 else if (newState == PlayerLifeState.Alive) OnRevived?.Invoke();
-                else if (newState == PlayerLifeState.Eliminated) OnEliminated?.Invoke();
+                else if (newState == PlayerLifeState.Eliminated)
+                {
+                    _respawnTimer = respawnDelay > 0f ? respawnDelay : 5f;
+                    OnEliminated?.Invoke();
+                }
             }
         }
 

@@ -1304,6 +1304,57 @@ namespace OutrunAftermath.Client.Editor
             return clip;
         }
 
+        private static AnimationClip CreateLowReadyClip()
+        {
+            var clip = new AnimationClip { name = "Operator_LowReady", legacy = false, wrapMode = WrapMode.Loop };
+            float[] times = new float[] { 0.0f, 0.5f, 1.0f };
+
+            AddRotCurve(clip, PathSpine, times,
+                new float[] { 3f, 3.5f, 3f },
+                new float[] { 0f, 0f, 0f },
+                new float[] { 0f, 0f, 0f });
+
+            AddRotCurve(clip, PathChest, times,
+                new float[] { 0f, 0.5f, 0f },
+                new float[] { 0f, 0f, 0f },
+                new float[] { 0f, 0f, 0f });
+
+            AddRotCurve(clip, PathHead, times,
+                new float[] { 2f, 2f, 2f },
+                new float[] { -2f, -2f, -2f },
+                new float[] { 2f, 2f, 2f });
+
+            // Low-ready weapon held in right hand forward and depressed at 45 degrees
+            AddRotCurve(clip, PathRUpperArm, times,
+                new float[] { 20.0f, 20.0f, 20.0f },
+                new float[] { -40.0f, -40.2f, -40.0f },
+                new float[] { -25.0f, -25.0f, -25.0f });
+            AddRotCurve(clip, PathRLowerArm, times,
+                new float[] { 0.0f, 0.0f, 0.0f },
+                new float[] { 10.0f, 10.0f, 10.0f },
+                new float[] { 25.0f, 25.2f, 25.0f });
+            AddRotCurve(clip, PathRHand, times,
+                new float[] { 0.0f, 0.0f, 0.0f },
+                new float[] { -5.0f, -5.0f, -5.0f },
+                new float[] { -10.0f, -10.0f, -10.0f });
+
+            // Left hand reaching to support foregrip
+            AddRotCurve(clip, PathLUpperArm, times,
+                new float[] { 25.0f, 25.0f, 25.0f },
+                new float[] { 35.0f, 35.0f, 35.0f },
+                new float[] { 20.0f, 20.0f, 20.0f });
+            AddRotCurve(clip, PathLLowerArm, times,
+                new float[] { 0.0f, 0.0f, 0.0f },
+                new float[] { -15.0f, -15.0f, -15.0f },
+                new float[] { 40.0f, 40.1f, 40.0f });
+            AddRotCurve(clip, PathLHand, times,
+                new float[] { 0.0f, 0.0f, 0.0f },
+                new float[] { 5.0f, 5.0f, 5.0f },
+                new float[] { 10.0f, 10.0f, 10.0f });
+
+            return clip;
+        }
+
         private static AnimationClip CreateAimClip()
         {
             var clip = new AnimationClip { name = "Operator_Aim", legacy = false, wrapMode = WrapMode.Loop };
@@ -1747,6 +1798,7 @@ namespace OutrunAftermath.Client.Editor
             var clipFactories = new Dictionary<string, Func<AnimationClip>>
             {
                 { "Idle", CreateIdleClip },
+                { "LowReady", CreateLowReadyClip },
                 { "Walk", CreateWalkClip },
                 { "Run", CreateRunClip },
                 { "Sprint", CreateSprintClip },
@@ -1812,6 +1864,26 @@ namespace OutrunAftermath.Client.Editor
             tWalkIdle.AddCondition(AnimatorConditionMode.Less, 0.1f, "Speed");
             tWalkIdle.hasExitTime = false;
             tWalkIdle.duration = 0.15f;
+
+            var tIdleRun = sIdle.AddTransition(sRun);
+            tIdleRun.AddCondition(AnimatorConditionMode.Greater, 3.0f, "Speed");
+            tIdleRun.hasExitTime = false;
+            tIdleRun.duration = 0.15f;
+
+            var tRunIdle = sRun.AddTransition(sIdle);
+            tRunIdle.AddCondition(AnimatorConditionMode.Less, 0.1f, "Speed");
+            tRunIdle.hasExitTime = false;
+            tRunIdle.duration = 0.15f;
+
+            var tIdleSprint = sIdle.AddTransition(sSprint);
+            tIdleSprint.AddCondition(AnimatorConditionMode.Greater, 6.0f, "Speed");
+            tIdleSprint.hasExitTime = false;
+            tIdleSprint.duration = 0.15f;
+
+            var tSprintIdle = sSprint.AddTransition(sIdle);
+            tSprintIdle.AddCondition(AnimatorConditionMode.Less, 0.1f, "Speed");
+            tSprintIdle.hasExitTime = false;
+            tSprintIdle.duration = 0.15f;
 
             var tWalkRun = sWalk.AddTransition(sRun);
             tWalkRun.AddCondition(AnimatorConditionMode.Greater, 3.0f, "Speed");
@@ -1901,6 +1973,11 @@ namespace OutrunAftermath.Client.Editor
             tToDeath.canTransitionToSelf = false;
             tToDeath.duration = 0.20f;
 
+            var tDeathToIdle = sDeath.AddTransition(sIdle);
+            tDeathToIdle.AddCondition(AnimatorConditionMode.Equals, 0, "LifeState");
+            tDeathToIdle.hasExitTime = false;
+            tDeathToIdle.duration = 0.20f;
+
             // 3. Upper-Body Combat Layer (Layer 1 with AvatarMask)
             controller.AddLayer("UpperBody_Combat");
             var layers = controller.layers;
@@ -1910,7 +1987,7 @@ namespace OutrunAftermath.Client.Editor
             var upperSm = layers[1].stateMachine;
 
             var sLowReady = upperSm.AddState("LowReady");
-            sLowReady.motion = clips["Idle"];
+            sLowReady.motion = clips["LowReady"];
             upperSm.defaultState = sLowReady;
 
             var sAim = upperSm.AddState("Aim");
@@ -1936,7 +2013,13 @@ namespace OutrunAftermath.Client.Editor
             tAimLowReady.hasExitTime = false;
             tAimLowReady.duration = 0.15f;
 
-            // Combat Transitions from Aim
+            // Combat Transitions: Fire
+            var tToFire = upperSm.AddAnyStateTransition(sFire);
+            tToFire.AddCondition(AnimatorConditionMode.If, 0, "IsFiring");
+            tToFire.hasExitTime = false;
+            tToFire.canTransitionToSelf = false;
+            tToFire.duration = 0.05f;
+
             var tAimFire = sAim.AddTransition(sFire);
             tAimFire.AddCondition(AnimatorConditionMode.If, 0, "IsFiring");
             tAimFire.hasExitTime = false;
@@ -1958,24 +2041,33 @@ namespace OutrunAftermath.Client.Editor
             tFireLowReady.exitTime = 0.85f;
             tFireLowReady.duration = 0.15f;
 
+            var tToReload = upperSm.AddAnyStateTransition(sReload);
+            tToReload.AddCondition(AnimatorConditionMode.If, 0, "IsReloading");
+            tToReload.hasExitTime = false;
+            tToReload.canTransitionToSelf = false;
+            tToReload.duration = 0.10f;
+
             var tAimReload = sAim.AddTransition(sReload);
             tAimReload.AddCondition(AnimatorConditionMode.If, 0, "IsReloading");
             tAimReload.hasExitTime = false;
-            tAimReload.duration = 0.15f;
-
-            var tReloadAim = sReload.AddTransition(sAim);
-            tReloadAim.hasExitTime = true;
-            tReloadAim.exitTime = 0.90f;
-            tReloadAim.duration = 0.20f;
+            tAimReload.duration = 0.10f;
 
             var tLowReadyReload = sLowReady.AddTransition(sReload);
             tLowReadyReload.AddCondition(AnimatorConditionMode.If, 0, "IsReloading");
             tLowReadyReload.hasExitTime = false;
-            tLowReadyReload.duration = 0.15f;
+            tLowReadyReload.duration = 0.10f;
+
+            var tReloadAim = sReload.AddTransition(sAim);
+            tReloadAim.AddCondition(AnimatorConditionMode.If, 0, "IsAiming");
+            tReloadAim.hasExitTime = true;
+            tReloadAim.exitTime = 0.85f;
+            tReloadAim.duration = 0.15f;
 
             var tReloadLowReady = sReload.AddTransition(sLowReady);
+            tReloadLowReady.AddCondition(AnimatorConditionMode.IfNot, 0, "IsAiming");
             tReloadLowReady.hasExitTime = true;
-            tReloadLowReady.exitTime = 0.90f;
+            tReloadLowReady.exitTime = 0.85f;
+            tReloadLowReady.duration = 0.15f;
             tReloadLowReady.duration = 0.20f;
 
             var tToHit = upperSm.AddAnyStateTransition(sHit);
@@ -1984,9 +2076,16 @@ namespace OutrunAftermath.Client.Editor
             tToHit.duration = 0.08f;
 
             var tHitAim = sHit.AddTransition(sAim);
+            tHitAim.AddCondition(AnimatorConditionMode.If, 0, "IsAiming");
             tHitAim.hasExitTime = true;
             tHitAim.exitTime = 0.85f;
             tHitAim.duration = 0.15f;
+
+            var tHitLowReady = sHit.AddTransition(sLowReady);
+            tHitLowReady.AddCondition(AnimatorConditionMode.IfNot, 0, "IsAiming");
+            tHitLowReady.hasExitTime = true;
+            tHitLowReady.exitTime = 0.85f;
+            tHitLowReady.duration = 0.15f;
 
             // Create AvatarMask for UpperBody Layer
             string maskPath = $"{SharedAnimationsDir}/Mask_UpperBody_Combat.mask";

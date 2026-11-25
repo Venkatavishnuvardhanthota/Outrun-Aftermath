@@ -425,11 +425,16 @@ namespace OutrunAftermath.Client.Multiplayer
             NetLifeState.Value = lifeState;
             if (_health != null)
             {
+                if (lifeState == (int)PlayerLifeState.Eliminated)
+                {
+                    _health.SetAllowRespawn(false);
+                }
+                float bleedOut = (lifeState == (int)PlayerLifeState.Downed || lifeState == (int)PlayerLifeState.BeingRevived) ? 30f : _health.BleedOutRemaining;
                 _health.ApplyReplicatedState(
                     lifeState == (int)PlayerLifeState.Alive ? 100f : (lifeState == (int)PlayerLifeState.Eliminated ? 0f : _health.CurrentHealth),
                     _health.CurrentArmor,
                     (PlayerLifeState)lifeState,
-                    _health.BleedOutRemaining,
+                    bleedOut,
                     _health.ReviveProgress);
             }
             string sName = lifeState == 1 ? "DownedState" : (lifeState == 2 ? "ReviveState" : (lifeState == 3 ? "DeathState" : "AliveState"));
@@ -449,6 +454,7 @@ namespace OutrunAftermath.Client.Multiplayer
             NetIsReloading.Value = false;
             if (_health != null)
             {
+                _health.SetAllowRespawn(true);
                 _health.Respawn();
             }
             string corr = corrId.IsEmpty ? "None" : corrId.ToString();
@@ -487,6 +493,7 @@ namespace OutrunAftermath.Client.Multiplayer
         private bool _lastLoggedAim = false;
         private bool _lastLoggedReload = false;
         private int _lastLoggedLifeState = -1;
+        private string _lastLoggedCorr = "";
 
         private float _lastServerLoggedSpeed = -1f;
         private int _lastServerLoggedSlot = -1;
@@ -521,6 +528,16 @@ namespace OutrunAftermath.Client.Multiplayer
                 bool aimChanged = NetIsAiming.Value != _lastLoggedAim;
                 bool reloadChanged = NetIsReloading.Value != _lastLoggedReload;
                 bool lifeChanged = NetLifeState.Value != _lastLoggedLifeState;
+                bool corrChanged = corr != _lastLoggedCorr;
+
+                if (corrChanged)
+                {
+                    _lastLoggedCorr = corr;
+                    if (corr.Contains("Respawn") && NetLifeState.Value == 0)
+                    {
+                        Debug.Log($"[NET_ANIM_RECV] CorrId={corr} TargetClientId={OwnerClientId} CallSign={NetCallsign.Value} State=RespawnAction Value=0 Speed={NetMoveSpeed.Value:F1} Crouch={NetIsCrouched.Value} Aim={NetIsAiming.Value} Slot={NetActiveSlot.Value} Reload={NetIsReloading.Value} LifeState={NetLifeState.Value}");
+                    }
+                }
 
                 if (speedChanged)
                 {
@@ -560,7 +577,7 @@ namespace OutrunAftermath.Client.Multiplayer
                 if (lifeChanged)
                 {
                     _lastLoggedLifeState = NetLifeState.Value;
-                    string sName = NetLifeState.Value == 1 ? "DownedState" : (NetLifeState.Value == 2 ? "ReviveState" : (NetLifeState.Value == 3 ? "DeathState" : "AliveState"));
+                    string sName = NetLifeState.Value == 1 ? "DownedState" : (NetLifeState.Value == 2 ? "ReviveState" : (NetLifeState.Value == 3 ? "DeathState" : (corr.Contains("Respawn") ? "RespawnAction" : "AliveState")));
                     string sVal = NetLifeState.Value.ToString();
                     Debug.Log($"[NET_ANIM_RECV] CorrId={corr} TargetClientId={OwnerClientId} CallSign={NetCallsign.Value} State={sName} Value={sVal} Speed={NetMoveSpeed.Value:F1} Crouch={NetIsCrouched.Value} Aim={NetIsAiming.Value} Slot={NetActiveSlot.Value} Reload={NetIsReloading.Value} LifeState={NetLifeState.Value}");
                 }
@@ -613,7 +630,7 @@ namespace OutrunAftermath.Client.Multiplayer
                 if (sLifeChanged)
                 {
                     _lastServerLoggedLifeState = NetLifeState.Value;
-                    string sName = NetLifeState.Value == 1 ? "DownedState" : (NetLifeState.Value == 2 ? "ReviveState" : (NetLifeState.Value == 3 ? "DeathState" : "AliveState"));
+                    string sName = NetLifeState.Value == 1 ? "DownedState" : (NetLifeState.Value == 2 ? "ReviveState" : (NetLifeState.Value == 3 ? "DeathState" : (sCorr.Contains("Respawn") ? "RespawnAction" : "AliveState")));
                     Debug.Log($"[NET_ANIM_SERVER] CorrId={sCorr} ClientId={OwnerClientId} CallSign={NetCallsign.Value} State={sName} Speed={NetMoveSpeed.Value:F1} Crouch={NetIsCrouched.Value} Aim={NetIsAiming.Value} Slot={NetActiveSlot.Value} Reload={NetIsReloading.Value} LifeState={NetLifeState.Value}");
                 }
             }
