@@ -1,0 +1,108 @@
+{
+    "items": [
+        {
+            "operatorId": "rex",
+            "stateName": "idle",
+            "triggeredParameters": "Idle Stance (Speed=0)",
+            "observedLayer0State": "2081823275",
+            "observedLayer1State": "1606374408",
+            "normalizedTime": 0.14966295659542084,
+            "stateReached": true,
+            "boneDeltaMagnitude": 0.0,
+            "supportHandDistanceMeters": 0.14055652916431427,
+            "elbowAngleDeg": 178.37791442871094,
+            "pass": true
+        },
+        {
+            "operatorId": "rex",
+            "stateName": "downed",
+            "triggeredParameters": "Incapacitated / Downed (LifeState=1)",
+            "observedLayer0State": "-660779543",
+            "observedLayer1State": "1606374408",
+            "normalizedTime": 0.19994249939918518,
+            "stateReached": true,
+            "boneDeltaMagnitude": 0.0,
+            "supportHandDistanceMeters": 0.14055652916431427,
+            "elbowAngleDeg": 178.37791442871094,
+            "pass": false
+        },
+        {
+            "operatorId": "rex",
+            "stateName": "revive",
+            "triggeredParameters": "Revive Progression (LifeState=2, IsReviving=true)",
+            "observedLayer0State": "-323374038",
+            "observedLayer1State": "1606374408",
+            "normalizedTime": 0.15994170308113098,
+            "stateReached": true,
+            "boneDeltaMagnitude": 0.0,
+            "supportHandDistanceMeters": 0.14055652916431427,
+            "elbowAngleDeg": 178.37791442871094,
+            "pass": false
+        },
+        {
+            "operatorId": "rex",
+            "stateName": "death",
+            "triggeredParameters": "K.I.A. / Neutralized (LifeState=3)",
+            "observedLayer0State": "646380074",
+            "observedLayer1State": "1606374408",
+            "normalizedTime": 0.2666040360927582,
+            "stateReached": true,
+            "boneDeltaMagnitude": 0.0,
+            "supportHandDistanceMeters": 0.14055652916431427,
+            "elbowAngleDeg": 178.37791442871094,
+            "pass": false
+        },
+        {
+            "operatorId": "trace",
+            "stateName": "idle",
+            "triggeredParameters": "Idle Stance (Speed=0)",
+            "observedLayer0State": "2081823275",
+            "observedLayer1State": "1606374408",
+            "normalizedTime": 0.14415138959884644,
+            "stateReached": true,
+            "boneDeltaMagnitude": 0.0,
+            "supportHandDistanceMeters": 0.14055652916431427,
+            "elbowAngleDeg": 178.37791442871094,
+            "pass": true
+        },
+        {
+            "operatorId": "trace",
+            "stateName": "downed",
+            "triggeredParameters": "Incapacitated / Downed (LifeState=1)",
+            "observedLayer0State": "-660779543",
+            "observedLayer1State": "1606374408",
+            "normalizedTime": 0.19995558261871338,
+            "stateReached": true,
+            "boneDeltaMagnitude": 0.0,
+            "supportHandDistanceMeters": 0.14055652916431427,
+            "elbowAngleDeg": 178.37791442871094,
+            "pass": false
+        },
+        {
+            "operatorId": "trace",
+            "stateName": "revive",
+            "triggeredParameters": "Revive Progression (LifeState=2, IsReviving=true)",
+            "observedLayer0State": "-323374038",
+            "observedLayer1State": "1606374408",
+            "normalizedTime": 0.15997451543807983,
+            "stateReached": true,
+            "boneDeltaMagnitude": 0.0,
+            "supportHandDistanceMeters": 0.14055652916431427,
+            "elbowAngleDeg": 178.37791442871094,
+            "pass": false
+        },
+        {
+            "operatorId": "trace",
+            "stateName": "death",
+            "triggeredParameters": "K.I.A. / Neutralized (LifeState=3)",
+            "observedLayer0State": "646380074",
+            "observedLayer1State": "1606374408",
+            "normalizedTime": 0.26662710309028625,
+            "stateReached": true,
+            "boneDeltaMagnitude": 0.0,
+            "supportHandDistanceMeters": 0.14055652916431427,
+            "elbowAngleDeg": 178.37791442871094,
+            "pass": false
+        }
+    ]
+}

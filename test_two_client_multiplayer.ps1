@@ -101,13 +101,7 @@ $clientBHasRemote = ($clientBLogText -match "OwnerClientId=(\d+),\s*IsOwner=Fals
 $clientAHasRemote = ($clientALogText -match "OwnerClientId=(\d+),\s*IsOwner=False")
 
 $clientASentMatches = [regex]::Matches($clientALogText, "\[NET_ANIM_SEND\][^\r\n]+")
-if ($clientASentMatches.Count -eq 0) {
-    $clientASentMatches = [regex]::Matches($clientBLogText, "\[NET_ANIM_SEND\][^\r\n]+")
-}
 $clientBRecvMatches = [regex]::Matches($clientBLogText, "\[NET_ANIM_RECV\][^\r\n]+")
-if ($clientBRecvMatches.Count -eq 0) {
-    $clientBRecvMatches = [regex]::Matches($clientALogText, "\[NET_ANIM_RECV\][^\r\n]+")
-}
 
 # Correlate all 17 mandatory animation replication scenarios (Phase C.1.3.2)
 $mandatoryStates = @(
@@ -138,18 +132,15 @@ foreach ($ms in $mandatoryStates) {
     $state = $ms.State
     $exp = $ms.Expected
 
-    # Check sender
+    # Strict Sender Check: Client A (Actor) MUST be the sender
     $sendMatch = [regex]::Match($clientALogText, "\[NET_ANIM_SEND\][^\r\n]*State=$state\s+Expected=([^\s\r\n]+)")
-    if (-not $sendMatch.Success) {
-        $sendMatch = [regex]::Match($clientBLogText, "\[NET_ANIM_SEND\][^\r\n]*State=$state\s+Expected=([^\s\r\n]+)")
-    }
     $senderFound = $sendMatch.Success
     $senderExpected = if ($senderFound) { $sendMatch.Groups[1].Value } else { $null }
 
     $corrMatch = if ($senderFound) { [regex]::Match($sendMatch.Value, "CorrId=([^\s\r\n]+)") } else { $null }
     $corrId = if ($corrMatch -and $corrMatch.Success) { $corrMatch.Groups[1].Value } else { "N/A" }
 
-    # Check server
+    # Strict Server Check: Relay MUST process event with matching CorrId
     $serverMatch = if ($corrId -ne "N/A") {
         [regex]::Match($serverLogText, "\[NET_ANIM_SERVER\][^\r\n]*CorrId=$corrId[^\r\n]*State=$state")
     } else {
@@ -157,19 +148,16 @@ foreach ($ms in $mandatoryStates) {
     }
     $serverFound = $serverMatch.Success
 
-    # Check receiver
+    # Strict Receiver Check: Client B (Observer) MUST be the receiver
     $recvMatch = if ($corrId -ne "N/A") {
         [regex]::Match($clientBLogText, "\[NET_ANIM_RECV\][^\r\n]*CorrId=$corrId[^\r\n]*State=$state\s+Value=([^\s\r\n]+)")
     } else {
         [regex]::Match($clientBLogText, "\[NET_ANIM_RECV\][^\r\n]*State=$state\s+Value=([^\s\r\n]+)")
     }
-    if (-not $recvMatch.Success -and $corrId -ne "N/A") {
-        $recvMatch = [regex]::Match($clientALogText, "\[NET_ANIM_RECV\][^\r\n]*CorrId=$corrId[^\r\n]*State=$state\s+Value=([^\s\r\n]+)")
-    }
     $receiverFound = $recvMatch.Success
     $receivedVal = if ($receiverFound) { $recvMatch.Groups[1].Value } else { $null }
 
-    # Strict matching: requires exact sender, server, and receiver correlation without fuzzy fallbacks
+    # Strict matching: requires exact sender (A), server, and receiver (B) correlation without cross-client fallbacks
     $isMatch = $senderFound -and $serverFound -and $receiverFound -and ($receivedVal -eq $exp)
     if (-not $receiverFound) {
         $missingEvents += $state
@@ -229,6 +217,15 @@ $report = [ordered]@{
 $json = $report | ConvertTo-Json -Depth 6
 Set-Content -Path $reportPath -Value $json -Force
 Write-Host "Report written to $reportPath" -ForegroundColor Green
+
+# Save copies to Phase C.1.3.7.1 docs and test-results directories
+$phaseDocDir = "$PSScriptRoot\docs\phase-c1.3.7.1"
+$phaseResultsDir = "$phaseDocDir\test-results"
+if (-not (Test-Path $phaseDocDir)) { New-Item -ItemType Directory -Path $phaseDocDir -Force | Out-Null }
+if (-not (Test-Path $phaseResultsDir)) { New-Item -ItemType Directory -Path $phaseResultsDir -Force | Out-Null }
+Set-Content -Path "$phaseDocDir\multiplayer-correlation-report.json" -Value $json -Force
+Set-Content -Path "$phaseResultsDir\multiplayer_replication_report.json" -Value $json -Force
+Write-Host "Replication report archived to $phaseDocDir\multiplayer-correlation-report.json" -ForegroundColor Green
 
 if ($replicationPassed) {
     Write-Host "[SUCCESS] Two-client animation replication PASSED with $($serverClientIds.Count) clients and $($correlatedEvents.Count)/$($mandatoryStates.Count) correlated states!" -ForegroundColor Green

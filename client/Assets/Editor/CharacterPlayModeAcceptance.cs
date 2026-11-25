@@ -13,7 +13,7 @@ namespace OutrunAftermath.Client.Editor
         private const string ScenePath = "Assets/Scenes/CharacterVisualAcceptance.unity";
         private const string AcceptanceExeRelative = "Builds/AcceptancePlayer/OutrunAftermath_Acceptance.exe";
 
-        [MenuItem("Outrun/Run Phase C.1.3.7 Play Mode Acceptance (In Editor)")]
+        [MenuItem("Outrun/Run Phase C.1.3.7.1 Play Mode Acceptance (In Editor)")]
         public static void RunPlayModeMenu()
         {
             SetupSceneAndEnterPlayMode();
@@ -29,14 +29,14 @@ namespace OutrunAftermath.Client.Editor
         {
             try
             {
-                Debug.Log("[CharacterPlayModeAcceptance C.1.3.7] Initiating Standalone Acceptance Player Build...");
+                Debug.Log("[CharacterPlayModeAcceptance C.1.3.7.1] Initiating Standalone Acceptance Player Build...");
                 BuildAcceptancePlayer();
-                Debug.Log("[CharacterPlayModeAcceptance C.1.3.7] Acceptance Player Build Succeeded!");
+                Debug.Log("[CharacterPlayModeAcceptance C.1.3.7.1] Acceptance Player Build Succeeded!");
                 EditorApplication.Exit(0);
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[CharacterPlayModeAcceptance C.1.3.7] Build failed: {ex}");
+                Debug.LogError($"[CharacterPlayModeAcceptance C.1.3.7.1] Build failed: {ex}");
                 EditorApplication.Exit(1);
             }
         }
@@ -48,7 +48,7 @@ namespace OutrunAftermath.Client.Editor
             string sentinelPath = Path.Combine(Application.dataPath, "..", "playmode_acceptance_done.txt");
             if (File.Exists(sentinelPath)) File.Delete(sentinelPath);
 
-            Debug.Log("[CharacterPlayModeAcceptance C.1.3.7] Entering Play Mode now...");
+            Debug.Log("[CharacterPlayModeAcceptance C.1.3.7.1] Entering Play Mode now...");
             EditorApplication.EnterPlaymode();
         }
 

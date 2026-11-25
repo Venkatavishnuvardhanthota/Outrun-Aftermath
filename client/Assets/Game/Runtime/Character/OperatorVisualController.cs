@@ -501,9 +501,9 @@ namespace OutrunAftermath.Client.Runtime.Character
 
             // Pre-create foregrip sockets for all two-handed weapons in loadout so transform hierarchy remains strictly invariant
             if (_weaponVisualInstances.TryGetValue(0, out var rGo) && rGo != null)
-                GetOrCreateForegripSocket(rGo, new Vector3(-0.06f, -0.02f, 0.02f));
+                GetOrCreateForegripSocket(rGo, new Vector3(0f, -0.035f, 0.22f));
             if (_weaponVisualInstances.TryGetValue(1, out var sGo) && sGo != null)
-                GetOrCreateForegripSocket(sGo, new Vector3(-0.06f, -0.02f, 0.02f));
+                GetOrCreateForegripSocket(sGo, new Vector3(0f, -0.025f, 0.20f));
 
             bool isFirstPerson = (_isLocalOwner && _currentPerspective == CameraPerspective.FirstPerson && firstPersonWeaponSocket != null);
             Transform activeWeaponParent = isFirstPerson ? firstPersonWeaponSocket : rightHandWeaponSocket;
@@ -609,7 +609,7 @@ namespace OutrunAftermath.Client.Runtime.Character
             {
                 if (_weaponVisualInstances.TryGetValue(0, out var rifle) && rifle != null)
                 {
-                    _activeForegripTarget = GetOrCreateForegripSocket(rifle, new Vector3(-0.06f, -0.02f, 0.02f));
+                    _activeForegripTarget = GetOrCreateForegripSocket(rifle, new Vector3(0f, -0.04f, 0.12f));
                     _isTwoHandedGrip = true;
                 }
             }
@@ -617,7 +617,7 @@ namespace OutrunAftermath.Client.Runtime.Character
             {
                 if (_weaponVisualInstances.TryGetValue(1, out var shotgun) && shotgun != null)
                 {
-                    _activeForegripTarget = GetOrCreateForegripSocket(shotgun, new Vector3(-0.06f, -0.02f, 0.02f));
+                    _activeForegripTarget = GetOrCreateForegripSocket(shotgun, new Vector3(0f, -0.025f, 0.20f));
                     _isTwoHandedGrip = true;
                 }
             }
@@ -723,47 +723,28 @@ namespace OutrunAftermath.Client.Runtime.Character
             }
 
             // Ideal combat grip geometry: right hand on grip, left hand on foregrip
-            Vector3 idealRightHandPos = transform.position + transform.right * 0.08f + transform.up * 1.24f + transform.forward * 0.16f;
-            Quaternion rightHandRot = Quaternion.LookRotation(transform.forward - transform.right * 0.10f, transform.up);
-            Vector3 rightElbowHint = rightUpperArm != null ? (rightUpperArm.position - transform.up * 0.40f + transform.right * 0.25f) : Vector3.zero;
+            Vector3 idealRightHandPos = transform.position + transform.right * 0.12f + transform.up * 1.20f + transform.forward * 0.22f;
+            Quaternion rightHandRot = Quaternion.LookRotation(transform.forward - transform.right * 0.05f, transform.up) * Quaternion.Euler(15f, -10f, 0f);
+            Vector3 rightElbowHint = rightUpperArm != null ? (rightUpperArm.position - transform.up * 0.40f + transform.right * 0.20f) : Vector3.zero;
 
             if (rightUpperArm != null && rightLowerArm != null && rightHandBone != null)
             {
                 SolveTwoBoneIKDetailed(rightUpperArm, rightLowerArm, rightHandBone, idealRightHandPos, rightHandRot, rightElbowHint, 1.0f);
-                rightHandBone.position = idealRightHandPos;
                 rightHandBone.rotation = rightHandRot;
-
-                if (rightHandWeaponSocket != null)
-                {
-                    rightHandWeaponSocket.position = idealRightHandPos;
-                    rightHandWeaponSocket.rotation = rightHandRot;
-                }
             }
 
             if (leftUpperArm != null && leftLowerArm != null && leftHandBone != null)
             {
-                // Strict relative anatomical target from shoulder: forward, across chest to rifle foregrip
-                Vector3 targetPos = leftUpperArm.position + transform.forward * 0.22f + transform.right * 0.14f - transform.up * 0.15f;
-                _activeForegripTarget.position = targetPos;
-                Quaternion targetHandRot = Quaternion.LookRotation(transform.forward, transform.up) * Quaternion.Euler(0f, 90f, 0f);
-
-                // Elbow pole hint: natural downward and outward bias for tactical combat grip
-                Vector3 elbowHint = leftUpperArm.position - transform.up * 0.35f - transform.right * 0.25f + transform.forward * 0.05f;
+                Vector3 targetPos = _activeForegripTarget.position;
+                Quaternion targetHandRot = Quaternion.LookRotation(transform.forward, transform.up) * Quaternion.Euler(20f, 45f, -30f);
+                Vector3 elbowHint = leftUpperArm.position - transform.up * 0.35f - transform.right * 0.15f + transform.forward * 0.05f;
                 LastIKResult = SolveTwoBoneIKDetailed(leftUpperArm, leftLowerArm, leftHandBone, targetPos, targetHandRot, elbowHint, 1.0f);
-
-                leftHandBone.position = targetPos;
                 leftHandBone.rotation = targetHandRot;
-            }
-            else if (leftHandBone != null)
-            {
-                Vector3 targetPos = transform.position + transform.forward * 0.22f - transform.right * 0.04f + transform.up * 1.22f;
-                _activeForegripTarget.position = targetPos;
-                leftHandBone.position = targetPos;
             }
 
             if (leftHandSupportSocket != null)
             {
-                leftHandSupportSocket.position = _activeForegripTarget.position;
+                leftHandSupportSocket.position = leftHandBone != null ? leftHandBone.position : _activeForegripTarget.position;
                 leftHandSupportSocket.rotation = _activeForegripTarget.rotation * Quaternion.Euler(0f, 90f, 0f);
             }
         }
@@ -919,13 +900,12 @@ namespace OutrunAftermath.Client.Runtime.Character
                 midJoint.rotation = Quaternion.Slerp(origMidRot, solvedMidRot, weight);
             }
 
-            // 3. Rotate endJoint (wrist orientation) and position at clampedTargetPos
-            endJoint.position = clampedTargetPos;
+            // 3. Rotate endJoint (wrist orientation)
             endJoint.rotation = Quaternion.Slerp(origEndRot, targetRot, weight);
 
-            // Numerical metrics computation
-            result.finalUpperArmLength = Vector3.Distance(rootJoint.position, desiredElbowPos);
-            result.finalForearmLength = Vector3.Distance(desiredElbowPos, endJoint.position);
+            // Numerical metrics computation (strict bone length preservation)
+            result.finalUpperArmLength = Vector3.Distance(rootJoint.position, midJoint.position);
+            result.finalForearmLength = Vector3.Distance(midJoint.position, endJoint.position);
             result.achievedHandDistance = Vector3.Distance(endJoint.position, targetPos);
             result.residualError = result.achievedHandDistance;
             result.elbowAngle = angleBeta;
@@ -1049,19 +1029,15 @@ namespace OutrunAftermath.Client.Runtime.Character
         {
             return slotIndex switch
             {
-                1 => new Vector3(0.01f, -0.02f, 0.02f), // Breacher-12 Shotgun (direct palm grip)
+                1 => new Vector3(0.01f, -0.02f, 0.04f), // Breacher-12 Shotgun (direct palm grip)
                 2 => new Vector3(0.01f, -0.02f, 0.02f), // Sidekick-9 Pistol (direct palm grip)
-                _ => new Vector3(0.01f, -0.02f, 0.02f)  // Vanguard-4 AR (direct palm grip)
+                _ => new Vector3(0.01f, -0.02f, 0.04f)  // Vanguard-4 AR (direct palm grip)
             };
         }
 
         private Quaternion GetWeaponHandRotation(int slotIndex)
         {
-            return slotIndex switch
-            {
-                2 => Quaternion.Euler(0f, 90f, 0f),
-                _ => Quaternion.Euler(0f, 90f, 0f)
-            };
+            return Quaternion.identity;
         }
 
         private void EnsureSocketedWeaponInstance(int slotIndex, string prefabName)

@@ -1951,6 +1951,12 @@ namespace OutrunAftermath.Client.Editor
             tToDowned.canTransitionToSelf = false;
             tToDowned.duration = 0.25f;
 
+            var tAnyToRevive = rootSm.AddAnyStateTransition(sRevive);
+            tAnyToRevive.AddCondition(AnimatorConditionMode.Equals, 2, "LifeState");
+            tAnyToRevive.hasExitTime = false;
+            tAnyToRevive.canTransitionToSelf = false;
+            tAnyToRevive.duration = 0.20f;
+
             var tToRevive = sDowned.AddTransition(sRevive);
             tToRevive.AddCondition(AnimatorConditionMode.If, 0, "IsReviving");
             tToRevive.hasExitTime = false;
@@ -2169,7 +2175,7 @@ namespace OutrunAftermath.Client.Editor
 
                 var fpWeaponSock = new GameObject("FirstPersonWeaponSocket");
                 fpWeaponSock.transform.SetParent(fpRoot.transform, false);
-                fpWeaponSock.transform.localPosition = new Vector3(0.12f, -0.16f, 0.46f);
+                fpWeaponSock.transform.localPosition = new Vector3(0.10f, -0.12f, 0.38f);
                 fpWeaponSock.transform.localRotation = Quaternion.identity;
 
                 // 3. Build Skeleton Hierarchy inside ThirdPersonPresentation
@@ -2185,14 +2191,14 @@ namespace OutrunAftermath.Client.Editor
                 Transform bHead = CreateBone("Head", bNeck, new Vector3(0f, 0.14f, 0f), Quaternion.identity);
 
                 Transform bLClavicle = CreateBone("LeftClavicle", bUpperChest, new Vector3(-0.08f, 0.08f, 0.02f), Quaternion.identity);
-                Transform bLUpperArm = CreateBone("LeftUpperArm", bLClavicle, new Vector3(-0.16f, -0.02f, -0.02f), Quaternion.Euler(0f, 15f, 72f));
-                Transform bLLowerArm = CreateBone("LeftLowerArm", bLUpperArm, new Vector3(-0.24f, 0f, 0f), Quaternion.Euler(0f, 10f, 22f));
+                Transform bLUpperArm = CreateBone("LeftUpperArm", bLClavicle, new Vector3(-0.16f, -0.02f, -0.02f), Quaternion.identity);
+                Transform bLLowerArm = CreateBone("LeftLowerArm", bLUpperArm, new Vector3(-0.24f, 0f, 0f), Quaternion.identity);
                 Transform bLHand = CreateBone("LeftHand", bLLowerArm, new Vector3(-0.22f, 0f, 0f), Quaternion.identity);
                 Transform bLFingers = CreateBone("LeftHandFingers", bLHand, new Vector3(-0.08f, 0f, 0f), Quaternion.identity);
 
                 Transform bRClavicle = CreateBone("RightClavicle", bUpperChest, new Vector3(0.08f, 0.08f, 0.02f), Quaternion.identity);
-                Transform bRUpperArm = CreateBone("RightUpperArm", bRClavicle, new Vector3(0.16f, -0.02f, -0.02f), Quaternion.Euler(0f, -15f, -72f));
-                Transform bRLowerArm = CreateBone("RightLowerArm", bRUpperArm, new Vector3(0.24f, 0f, 0f), Quaternion.Euler(0f, -10f, -22f));
+                Transform bRUpperArm = CreateBone("RightUpperArm", bRClavicle, new Vector3(0.16f, -0.02f, -0.02f), Quaternion.identity);
+                Transform bRLowerArm = CreateBone("RightLowerArm", bRUpperArm, new Vector3(0.24f, 0f, 0f), Quaternion.identity);
                 Transform bRHand = CreateBone("RightHand", bRLowerArm, new Vector3(0.22f, 0f, 0f), Quaternion.identity);
                 Transform bRFingers = CreateBone("RightHandFingers", bRHand, new Vector3(0.08f, 0f, 0f), Quaternion.identity);
 
